@@ -136,7 +136,7 @@ export default function LoginPopup({ delay = 5000 }: LoginPopupProps) {
                                 width={24}
                                 height={16}
                                 style={{ height: 'auto' }}
-                                className="rounded-sm w-6"
+                                className="rounded-sm w-6 border border-gray-200 dark:border-gray-700"
                               />
                               <span
                                 className={`block truncate ${

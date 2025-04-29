@@ -50,15 +50,57 @@ export default function TermsAndConditionsPage() {
     },
     {
       icon: InformationCircleIcon,
-      title: 'Listing and Transaction Guidelines',
+      title: 'Dealer Accounts',
       content: [
         {
-          subtitle: 'Listing Accuracy',
-          details: 'All vehicle listings must contain precise, truthful information. Sellers are responsible for the accuracy of vehicle descriptions, specifications, and condition.'
+          subtitle: 'Dealer Registration',
+          details: 'Dealer accounts are subject to additional verification and may require business documentation. Dealers agree to maintain accurate showroom information and comply with all platform regulations.'
         },
         {
-          subtitle: 'Transaction Disclaimer',
-          details: 'Mawater974 serves as a facilitator and is not a direct party to transactions. Users are responsible for due diligence, negotiation, and finalizing sales.'
+          subtitle: 'Dealer Obligations',
+          details: 'Dealers must ensure all listings are accurate, up-to-date, and comply with local regulations. Dealers are responsible for managing their showroom profiles and responding to customer inquiries in a timely manner.'
+        }
+      ]
+    },
+    {
+      icon: ShieldCheckIcon,
+      title: 'Featured Content',
+      content: [
+        {
+          subtitle: 'Featured Showrooms',
+          details: 'Mawater974 may feature select showrooms based on quality, service, and user engagement. Featured status does not guarantee sales or special treatment.'
+        },
+        {
+          subtitle: 'Featured Listings',
+          details: 'Dealers may request featured status for their listings. Featured listings are subject to additional verification and may require additional fees.'
+        }
+      ]
+    },
+    {
+      icon: DocumentCheckIcon,
+      title: 'User Content',
+      content: [
+        {
+          subtitle: 'Image Uploads',
+          details: 'Users may upload images for their listings. All images must be original and not violate copyright laws. Mawater974 reserves the right to remove any inappropriate or copyrighted content.'
+        },
+        {
+          subtitle: 'Content Ownership',
+          details: 'Users retain ownership of their uploaded content. By uploading content, users grant Mawater974 a non-exclusive, worldwide license to use, display, and distribute the content for platform purposes.'
+        }
+      ]
+    },
+    {
+      icon: InformationCircleIcon,
+      title: 'Contact Form Usage',
+      content: [
+        {
+          subtitle: 'Communication',
+          details: 'The contact form is for general inquiries and support. Users agree not to use the form for spam, harassment, or unauthorized marketing.'
+        },
+        {
+          subtitle: 'Response Time',
+          details: 'Mawater974 will make reasonable efforts to respond to contact form submissions within 48 hours during business days. Response times may vary based on volume and complexity.'
         }
       ]
     }

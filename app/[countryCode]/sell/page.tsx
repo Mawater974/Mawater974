@@ -8,6 +8,7 @@ import { toast } from 'react-hot-toast';
 import { Database } from '@/types/supabase';
 import ImageUpload from '@/components/ImageUpload';
 import Link from 'next/link';
+import { getCountryFromIP } from '@/utils/geoLocation';
 import { CheckIcon } from '@heroicons/react/24/outline';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCarSide } from '@fortawesome/free-solid-svg-icons';
@@ -327,21 +328,43 @@ useEffect(() => {
   if (currentCountry?.code) {
     const trackPageView = async () => {
       try {
-        const response = await fetch('/api/analytics/page-view', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            countryCode: currentCountry.code,
-            userId: user?.id,
-            pageType: 'sell' // Change this to your page type
-          })
-        });
+        // Get the current URL and referrer
+        const currentUrl = window.location.pathname;
+        const referrer = document.referrer;
+        const referrerUrl = referrer ? new URL(referrer) : null;
+        
+        // Only track if:
+        // 1. This is a direct visit (no referrer)
+        // 2. Referrer is not our root page
+        // 3. Referrer is from a different site
+        const shouldTrack = !referrer || 
+          (referrerUrl && referrerUrl.pathname !== '/') || 
+          (referrerUrl && referrerUrl.origin !== window.location.origin);
+        
+        if (shouldTrack) {
+          // Get real location from IP
+          const geoInfo = await getCountryFromIP();
+          
+          const response = await fetch('/api/analytics/page-view', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              countryCode: currentCountry?.code || '--',
+              countryName: geoInfo?.name || '--', // Default to -- if no geo
+              userId: user?.id,
+              pageType: 'sell',
+              page_path: currentUrl,
+              is_direct_visit: !referrer,
+              referrer_domain: referrerUrl ? referrerUrl.hostname : null
+            })
+          });
 
-        if (!response.ok) {
-          const error = await response.json();
-          console.error('Failed to track page view:', error);
+          if (!response.ok) {
+            const error = await response.json();
+            console.error('Failed to track page view:', error);
+          }
         }
       } catch (error) {
         console.error('Failed to track page view:', error);
@@ -1274,14 +1297,31 @@ useEffect(() => {
       setCurrentStep('step1');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else if (currentStep === 'step1') {
-      setCurrentStep('plan-selection');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
-  const handleSubmit = async (e?: React.FormEvent) => {
-    if (e) {
-      e.preventDefault();
+  const createNotification = async (userId: string, title: string, message: string, type: string) => {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .insert([
+          {
+            user_id: userId,
+            type,
+            title,
+            message,
+          }
+        ]);
+
+      if (error) throw error;
+    } catch (err) {
+      console.error('Error creating notification:', err);
+    }
+  };
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    if (event) {
+      event.preventDefault();
     }
 
     if (!isConfirmed) {
@@ -1415,6 +1455,22 @@ useEffect(() => {
           console.error('Error deleting images:', deleteError);
           throw deleteError;
         }
+      }
+
+      // Notification will be created below
+
+      // Create notification for the user if logged in
+      if (user) {
+        // Get brand and model names from the form data
+        const brandName = brands.find(b => b.id === parseInt(formData.brand))?.name || formData.brand;
+        const modelName = models.find(m => m.id === parseInt(formData.model))?.name || formData.model;
+        
+        await createNotification(
+          user.id,
+          'Car Ad Submitted',
+          `Your car ad for ${brandName} ${modelName} has been submitted and is pending approval. We'll notify you once it's reviewed.`,
+          'pending'
+        );
       }
 
       setIsSubmitted(true);

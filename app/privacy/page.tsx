@@ -14,10 +14,12 @@ import {
 } from '@heroicons/react/24/outline';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEffect } from 'react';
+import { useCountry } from '@/contexts/CountryContext';
 
 export default function PrivacyPolicyPage() {
   const { t, dir } = useLanguage();
   const { user } = useAuth();
+  const { currentCountry } = useCountry();
   const [activeSection, setActiveSection] = useState<number | null>(null);
 
   const toggleSection = (index: number) => {
@@ -70,21 +72,57 @@ export default function PrivacyPolicyPage() {
     },
     {
       icon: LockClosedIcon,
-      title: t('privacy.security.title'),
+      title: t('privacy.analytics.title'),
       content: [
         {
-          subtitle: '',
-          details: t('privacy.security.desc')
+          subtitle: t('privacy.analytics.data'),
+          details: t('privacy.analytics.dataDesc')
+        },
+        {
+          subtitle: t('privacy.analytics.usage'),
+          details: t('privacy.analytics.usageDesc')
         }
       ]
     },
     {
       icon: ShieldCheckIcon,
-      title: t('privacy.cookies.title'),
+      title: t('privacy.countryData.title'),
       content: [
         {
-          subtitle: '',
-          details: t('privacy.cookies.desc')
+          subtitle: t('privacy.countryData.collection'),
+          details: t('privacy.countryData.collectionDesc')
+        },
+        {
+          subtitle: t('privacy.countryData.usage'),
+          details: t('privacy.countryData.usageDesc')
+        }
+      ]
+    },
+    {
+      icon: UserIcon,
+      title: t('privacy.contactForm.title'),
+      content: [
+        {
+          subtitle: t('privacy.contactForm.collection'),
+          details: t('privacy.contactForm.collectionDesc')
+        },
+        {
+          subtitle: t('privacy.contactForm.usage'),
+          details: t('privacy.contactForm.usageDesc')
+        }
+      ]
+    },
+    {
+      icon: DocumentTextIcon,
+      title: t('privacy.imageUpload.title'),
+      content: [
+        {
+          subtitle: t('privacy.imageUpload.collection'),
+          details: t('privacy.imageUpload.collectionDesc')
+        },
+        {
+          subtitle: t('privacy.imageUpload.storage'),
+          details: t('privacy.imageUpload.storageDesc')
         }
       ]
     }
@@ -123,7 +161,7 @@ export default function PrivacyPolicyPage() {
         {/* Header */}
         <div className="mb-12 relative">
           <Link 
-            href="/" 
+            href="/"
             className="inline-flex items-center text-qatar-maroon hover:text-qatar-maroon/80 mb-4 transition-colors"
           >
             <ArrowLeftIcon className="h-5 w-5 mr-2" />
@@ -223,8 +261,8 @@ export default function PrivacyPolicyPage() {
           </p>
           <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg">
             <p className="font-medium text-gray-800 dark:text-white">Mawater974</p>
-            <p className="text-gray-600 dark:text-gray-300">Email: info@mawater974.com</p>
-            <p className="text-gray-600 dark:text-gray-300">Phone: +974 1234 5678</p>
+            <p className="text-gray-600 dark:text-gray-300">Email: mawater974@gmail.com</p>
+            <p className="text-gray-600 dark:text-gray-300">Phone: +974 5519 0947</p>
             <p className="text-gray-600 dark:text-gray-300">Address: Doha, Qatar</p>
           </div>
         </div>

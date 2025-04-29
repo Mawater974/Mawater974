@@ -127,13 +127,24 @@ export default function Navbar() {
     if (!user) return;
 
     try {
-      const { count, error } = await supabase
+      const { count, error, data } = await supabase
         .from('notifications')
-        .select('*', { count: 'exact', head: true })
+        .select('*', { count: 'exact', head: false })
         .eq('user_id', user.id)
         .eq('is_read', false);
 
       if (error) throw error;
+      
+      console.log('Unread Notifications:', {
+        count,
+        userId: user.id,
+        notifications: data?.map(n => ({
+          id: n.id, 
+          type: n.type, 
+          createdAt: n.created_at
+        }))
+      });
+
       setUnreadCount(count || 0);
     } catch (err) {
       console.error('Error fetching unread count:', err);
@@ -226,7 +237,7 @@ export default function Navbar() {
               {/* Theme Toggle */}
               <button
                 onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-                className="p-2 text-gray-700 dark:text-gray-200 hover:text-qatar-maroon dark:hover:text-qatar-maroon"
+                className="p-1.5 text-gray-700 dark:text-gray-200 hover:text-qatar-maroon dark:hover:text-qatar-maroon border border-gray-200 dark:border-gray-700 rounded-lg hover:border-qatar-maroon dark:hover:border-qatar-maroon transition-colors"
               >
                 {theme === 'light' ? (
                   <MoonIcon className="h-5 w-5" />
@@ -274,13 +285,13 @@ export default function Navbar() {
                       <Menu.Item>
                         {({ active }) => (
                           <Link
-                            href="/messages"
+                            href="/notifications"
                             className={`${
                               active ? 'bg-gray-100 dark:bg-gray-700' : ''
                             } flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 relative`}
                           >
                             <BellIcon className={`h-5 w-5 ${language === 'ar' ? 'ml-3' : 'mr-3'}`} />
-                            {t('user.messages')}
+                            {t('user.notifications')}
                             {unreadCount > 0 && (
                               <span className={`absolute ${language === 'ar' ? 'left-3' : 'right-3'} top-1/2 -translate-y-1/2 bg-qatar-maroon text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center`}>
                                 {unreadCount}

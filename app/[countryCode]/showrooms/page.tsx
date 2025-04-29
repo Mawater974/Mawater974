@@ -12,6 +12,7 @@ import { useCountry } from '@/contexts/CountryContext';
 import { City } from '@/types/supabase';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import LoginPopup from '@/components/LoginPopup';
+import { getCountryFromIP } from '@/utils/getCountryFromIP';
 
 export default function ShowroomsPage() {
   const { t, language, currentLanguage } = useLanguage();
@@ -98,36 +99,6 @@ export default function ShowroomsPage() {
     }
   }, [currentCountry]);
 
-  // Track page view when component mounts
-  useEffect(() => {
-    if (currentCountry?.code) {
-      const trackPageView = async () => {
-        try {
-          const response = await fetch('/api/analytics/page-view', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              countryCode: currentCountry.code,
-              userId: user?.id,
-              pageType: 'showrooms'
-            })
-          });
-
-          if (!response.ok) {
-            const error = await response.json();
-            console.error('Failed to track page view:', error);
-          }
-        } catch (error) {
-          console.error('Failed to track page view:', error);
-        }
-      };
-
-      trackPageView();
-    }
-  }, [currentCountry?.code, user?.id]);
-
   useEffect(() => {
     if (currentCountry) {
       setShowrooms([]); // Clear existing showrooms
@@ -149,21 +120,43 @@ export default function ShowroomsPage() {
     if (currentCountry?.code) {
       const trackPageView = async () => {
         try {
-          const response = await fetch('/api/analytics/page-view', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              countryCode: currentCountry.code,
-              userId: user?.id,
-              pageType: 'showrooms'
-            })
-          });
+          // Get the current URL and referrer
+          const currentUrl = window.location.pathname;
+          const referrer = document.referrer;
+          const referrerUrl = referrer ? new URL(referrer) : null;
+          
+          // Only track if:
+          // 1. This is a direct visit (no referrer)
+          // 2. Referrer is not our root page
+          // 3. Referrer is from a different site
+          const shouldTrack = !referrer || 
+            (referrerUrl && referrerUrl.pathname !== '/') || 
+            (referrerUrl && referrerUrl.origin !== window.location.origin);
+          
+          if (shouldTrack) {
+            // Get real location from IP
+            const geoInfo = await getCountryFromIP();
+            
+            const response = await fetch('/api/analytics/page-view', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                countryCode: currentCountry?.code || '--',
+                countryName: geoInfo?.name || '--', // Default to -- if no geo
+                userId: user?.id,
+                pageType: 'showroom',
+                page_path: currentUrl,
+                is_direct_visit: !referrer,
+                referrer_domain: referrerUrl ? referrerUrl.hostname : null
+              })
+            });
 
-          if (!response.ok) {
-            const error = await response.json();
-            console.error('Failed to track page view:', error);
+            if (!response.ok) {
+              const error = await response.json();
+              console.error('Failed to track page view:', error);
+            }
           }
         } catch (error) {
           console.error('Failed to track page view:', error);
@@ -173,7 +166,7 @@ export default function ShowroomsPage() {
       trackPageView();
     }
   }, [currentCountry?.code, user?.id]);
-
+  
   const filteredShowrooms = showrooms.filter(showroom => {
     const searchText = searchQuery.toLowerCase();
     const nameMatch = language === 'ar' 

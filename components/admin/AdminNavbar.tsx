@@ -27,6 +27,7 @@ export default function AdminNavbar() {
     { name: 'Settings', href: '/admin/settings' },
     { name: 'Contacts', href: '/admin/contact-messages' },
     { name: 'Reports', href: '/admin/reports' },
+    { name: 'Export', href: '/admin/export' },
   ];
 
   const isActive = (path: string) => {

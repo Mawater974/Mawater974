@@ -3,12 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { Database } from '@/types/supabase';
 import Image from 'next/image';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import {
-  TruckIcon,
   PlusCircleIcon,
   CheckCircleIcon,
   ClockIcon,
@@ -24,13 +22,24 @@ import { useCountry } from '@/contexts/CountryContext';
 import EditCarModal from '@/components/EditCarModal';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
-type Car = Database['public']['Tables']['cars']['Row'];
-type Brand = Database['public']['Tables']['brands']['Row'];
-type Model = Database['public']['Tables']['models']['Row'];
-type City = Database['public']['Tables']['cities']['Row'];
-type Country = Database['public']['Tables']['countries']['Row'];
+import type { ExtendedCar as Car, Country, City } from '../../types/supabase';
 
-interface ExtendedCar extends Car {
+interface Brand {
+  id: number;
+  name: string;
+  name_ar?: string;
+  logo_url?: string | null;
+}
+
+interface Model {
+  id: number;
+  name: string;
+  name_ar?: string;
+}
+
+interface ExtendedCarWithStatus extends Car {
+  status: 'Pending' | 'Approved' | 'Rejected' | 'Expired' | 'Sold';
+  expiration_date?: string;
   id: number;
   brand?: Brand;
   model?: Model;
@@ -39,6 +48,10 @@ interface ExtendedCar extends Car {
   location?: string;
   images: { url: string; is_main: boolean }[];
   views_count?: number;
+  exact_model?: string;
+  price: number;
+  mileage: number;
+  created_at: string;
 }
 
 export default function MyAdsPage() {
@@ -46,14 +59,15 @@ export default function MyAdsPage() {
   const router = useRouter();
   const { t, language } = useLanguage();
   const { currentCountry } = useCountry();
-  const [cars, setCars] = useState<ExtendedCar[]>([]);
+  const [cars, setCars] = useState<ExtendedCarWithStatus[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'sold'>('all');
-  const [selectedCar, setSelectedCar] = useState<ExtendedCar | null>(null);
+  const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'expired' | 'sold'>('all');
+  const [selectedCar, setSelectedCar] = useState<ExtendedCarWithStatus | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showSoldModal, setShowSoldModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [renewingCarId, setRenewingCarId] = useState<number | null>(null);
   const [notifications, setNotifications] = useState<Array<{
     id: string;
     title: string;
@@ -140,38 +154,89 @@ export default function MyAdsPage() {
 
   const fetchNotifications = async () => {
     try {
-      const { count } = await supabase
-        .from('notifications')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user?.id);
-
-      const { data, error } = await supabase
+      const { data: notifications, error: notificationsError } = await supabase
         .from('notifications')
         .select('*')
         .eq('user_id', user?.id)
         .order('created_at', { ascending: false })
         .limit(3);
 
-      if (error) throw error;
-      setNotifications(data || []);
-      setTotalCount(count || 0);
+      if (notificationsError) throw notificationsError;
+
+      setNotifications(notifications || []);
     } catch (error) {
       console.error('Error fetching notifications:', error);
+      toast.error(t('myAds.notifications.error'));
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'Approved':
-        return <CheckCircleIcon className="h-5 w-5 text-green-500" />;
       case 'Pending':
         return <ClockIcon className="h-5 w-5 text-yellow-500" />;
-      case 'Sold':
-        return <TagIcon className="h-5 w-5 text-blue-500" />;
+      case 'Approved':
+        return <CheckCircleIcon className="h-5 w-5 text-green-500" />;
       case 'Rejected':
         return <XCircleIcon className="h-5 w-5 text-red-500" />;
+      case 'Expired':
+        return <XCircleIcon className="h-5 w-5 text-red-500" />;
+      case 'Sold':
+        return <TagIcon className="h-5 w-5 text-blue-500" />;
       default:
-        return <XCircleIcon className="h-5 w-5 text-gray-500" />;
+        return null;
+    }
+  };
+
+  const isExpired = (car: ExtendedCarWithStatus) => {
+    if (!car.expiration_date) return false;
+    return new Date(car.expiration_date) < new Date();
+  };
+
+  const handleRenew = async (carId: number) => {
+    try {
+      setRenewingCarId(carId);
+      const newExpirationDate = new Date();
+      newExpirationDate.setDate(newExpirationDate.getDate() + 30); // Add 30 days
+
+      const { error } = await supabase
+        .from('cars')
+        .update({ expiration_date: newExpirationDate.toISOString() })
+        .eq('id', carId);
+
+      if (error) throw error;
+
+      toast.success(t('myAds.renew.success'));
+      fetchCars();
+    } catch (error) {
+      console.error('Error renewing ad:', error);
+      toast.error(t('myAds.renew.error'));
+    } finally {
+      setRenewingCarId(null);
+    }
+  };
+
+  const handleRenewAd = async (carId: number) => {
+    try {
+      // Update the car's expiration date and status
+      const { data, error } = await supabase
+        .from('cars')
+        .update({ 
+          status: 'Approved', 
+          expiration_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days from now
+        })
+        .eq('id', carId)
+        .select();
+
+      if (error) throw error;
+
+      // Show success toast
+      toast.success(t('myAds.renew.success'));
+
+      // Refresh the cars list
+      await fetchCars();
+    } catch (error) {
+      console.error('Error renewing ad:', error);
+      toast.error(t('myAds.renew.error'));
     }
   };
 
@@ -222,7 +287,10 @@ export default function MyAdsPage() {
         .insert({
           user_id: user?.id,
           title: t('myAds.success.soldNotification'),
-          message: t('myAds.success.soldMessage', { brand: selectedCar.brand.name, model: selectedCar.model.name }),
+          message: t('myAds.success.soldMessage', { 
+            brand: selectedCar?.brand?.name || 'Unknown Brand', 
+            model: selectedCar?.model?.name || 'Unknown Model' 
+          }),
           type: 'sold',
           is_read: false,
         });
@@ -244,7 +312,7 @@ export default function MyAdsPage() {
     }
   };
 
-  const handleEditCar = (car: ExtendedCar) => {
+  const handleEditCar = (car: ExtendedCarWithStatus) => {
     setSelectedCar(car);
     setIsEditModalOpen(true);
   };
@@ -361,7 +429,6 @@ useEffect(() => {
                 : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
             }`}
           >
-            <TruckIcon className="h-5 w-5 mr-2" />
             {t('myAds.filters.all')}
           </button>
           <button
@@ -398,13 +465,24 @@ useEffect(() => {
             {t('myAds.filters.rejected')}
           </button>
           <button
+            onClick={() => setFilter('expired')}
+            className={`flex items-center px-4 py-2 rounded-lg transition-colors ${
+              filter === 'expired'
+                ? 'bg-qatar-maroon text-white'
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+            }`}
+          >
+            <TagIcon className="h-5 w-5 mr-2" />
+            {t('myAds.filters.expired')}
+          </button>
+          <button
             onClick={() => setFilter('sold')}
             className={`flex items-center px-4 py-2 rounded-lg transition-colors ${
               filter === 'sold'
                 ? 'bg-qatar-maroon text-white'
                 : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
             }`}
-          >
+            >
             <TagIcon className="h-5 w-5 mr-2" />
             {t('myAds.filters.sold')}
           </button>
@@ -427,7 +505,7 @@ useEffect(() => {
                   {car.images && car.images.length > 0 ? (
                     <Image
                       src={car.images.find(img => img.is_main)?.url || car.images[0].url}
-                      alt={t`${car.brand.name} ${car.model.name}`}
+                      alt={`${car.brand?.name} ${car.model?.name}`}
                       fill
                       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                       priority={false}
@@ -436,31 +514,50 @@ useEffect(() => {
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-700">
-                      <TruckIcon className="h-12 w-12 text-gray-400" />
+                      <Image 
+                        src="/placeholder-car copy.svg" 
+                        alt="Car placeholder" 
+                        width={48} 
+                        height={48} 
+                        className="h-16 w-16 text-gray-400" 
+                      />
                     </div>
                   )}
                   </Link>
-                  <div className="absolute top-2 right-2 px-3 py-1 rounded-full text-sm font-medium shadow-lg" style={{
-                    backgroundColor: car.status === 'Approved' ? 'rgba(34, 197, 94, 0.9)' : 
-                                   car.status === 'Pending' ? 'rgba(234, 179, 8, 0.9)' :
-                                   car.status === 'Rejected' ? 'rgba(239, 68, 68, 0.9)' :
-                                   car.status === 'Sold' ? 'rgba(59, 130, 246, 0.9)' :
-                                   'rgba(239, 68, 68, 0.9)',
-                    color: 'white'
-                  }}>
-                    {t(`myAds.status.${car.status}`)}
+                  <div className="absolute top-2 right-2 flex gap-2">
+                    {isExpired(car) && (
+                      <div className="px-3 py-1 rounded-full text-sm font-medium shadow-lg" style={{
+                        backgroundColor: 'rgba(239, 68, 68, 0.9)',
+                        color: 'white'
+                      }}>
+                        {t('myAds.expired')}
+                      </div>
+                    )}
+                    <div className="px-3 py-1 rounded-full text-sm font-medium shadow-lg" style={{
+                      backgroundColor: car.status === 'Approved' ? 'rgba(34, 197, 94, 0.9)' : 
+                                     car.status === 'Pending' ? 'rgba(234, 179, 8, 0.9)' :
+                                     car.status === 'Rejected' ? 'rgba(239, 68, 68, 0.9)' :
+                                     car.status === 'Expired' ? 'rgba(239, 68, 68, 0.9)' :
+                                     car.status === 'Sold' ? 'rgba(59, 130, 246, 0.9)' :
+                                     'rgba(239, 68, 68, 0.9)',
+                      color: 'white'
+                    }}>
+                      {t(`myAds.status.${car.status}`)}
+                    </div>
                   </div>
                 </div>
 
                 {/* Car Details */}
                 <div className="p-4">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    {car.brand?.name} {car.model?.name} {car.exact_model && `(${car.exact_model})`}
+                    {car.brand?.name || 'Unknown Brand'} {' '}
+                    {car.model?.name || 'Unknown Model'} 
+                    {car.exact_model && `(${car.exact_model})`}
                   </h3>
                   <div className="mt-2 text-sm text-gray-500 dark:text-gray-400 space-y-1">
                     <p>
                       <span className="font-medium">{t('myAds.car.price')}:</span>{' '}
-                      {car.price.toLocaleString('en-US')} {t(`common.currency.${car.country?.currency_code || 'QAR'}`)}
+                      {car.price.toLocaleString('en-US')} {t(`common.currency.${car.country?.currency || 'QAR'}`)}
                     </p>
                     <p>
                       <span className="font-medium">{t('myAds.car.mileage')}:</span>{' '}
@@ -481,22 +578,44 @@ useEffect(() => {
                       {car.views_count || 0}
                     </p>
                   </div>
-                  <div className="mt-4 flex justify-end gap-.5">
-                    <button
-                      onClick={() => handleEditCar(car)}
-                      className="flex items-center px-2 py-1.5 text-sm rounded-lg text-gray-600 hover:text-qatar-maroon dark:text-gray-400 dark:hover:text-qatar-maroon hover:bg-qatar-maroon/10 transition-colors"
-                    >
-                      <PencilIcon className="h-4 w-4 mr-1.5" />
-                      {t('myAds.actions.edit')}
-                    </button>
+                  <div className="flex space-x-2 rtl:space-x-reverse py-2">
+                      {car.status === 'Approved' && isExpired(car) && (
+                        <button
+                          onClick={() => handleRenew(car.id)}
+                          disabled={renewingCarId === car.id}
+                          className="inline-flex items-center px-2.5 py-1.5 border border-qatar-maroon shadow-sm text-xs font-medium rounded text-white bg-qatar-maroon hover:bg-qatar-maroon-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon disabled:opacity-50"
+                        >
+                          {renewingCarId === car.id ? (
+                            <div className="h-4 w-4 mr-1 rtl:ml-1 rtl:mr-0"><LoadingSpinner /></div>
+                          ) : (
+                            <ClockIcon className="h-4 w-4 mr-1 rtl:ml-1 rtl:mr-0" />
+                          )}
+                          {t('myAds.renew')}
+                        </button>
+                      )}
+                      {car.status === 'Expired' && (
+                        <button 
+                          onClick={() => handleRenewAd(car.id)}
+                          className="text-white bg-green-500 hover:bg-green-600 rounded-md px-3 py-1 text-sm"
+                        >
+                          {t('myAds.renew')}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleEditCar(car)}
+                        className="inline-flex items-center px-2.5 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon"
+                      >
+                        <PencilIcon className="h-4 w-4 mr-1 rtl:ml-1 rtl:mr-0" />
+                        {t('myAds.edit')}
+                      </button>
                     <button
                       onClick={() => {
                         setSelectedCar(car);
                         setShowSoldModal(true);
                       }}
-                      className="flex items-center px-2 py-1.5 text-sm rounded-lg text-gray-600 hover:text-qatar-maroon dark:text-gray-400 dark:hover:text-qatar-maroon hover:bg-qatar-maroon/10 transition-colors"
+                      className="inline-flex items-center px-2.5 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon"
                     >
-                      <ShoppingBagIcon className="h-4 w-4 mr-1.5" />
+                      <ShoppingBagIcon className="h-4 w-4 mr-1 rtl:ml-1 rtl:mr-0" />
                       {t('myAds.actions.markSold')}
                     </button>
                     <button
@@ -504,9 +623,9 @@ useEffect(() => {
                         setSelectedCar(car);
                         setShowDeleteModal(true);
                       }}
-                      className="flex items-center px-3 py-1.5 text-sm rounded-lg text-gray-600 hover:text-qatar-maroon dark:text-gray-400 dark:hover:text-qatar-maroon hover:bg-qatar-maroon/10 transition-colors"
+                      className="inline-flex items-center px-2.5 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon"
                     >
-                      <TrashIcon className="h-4 w-4 mr-1.5" />
+                      <TrashIcon className="h-4 w-4 mr-1 rtl:ml-1 rtl:mr-0" />
                       {t('myAds.actions.delete')}
                     </button>
                   </div>
@@ -519,7 +638,13 @@ useEffect(() => {
         {/* No listings state */}
         {cars.length === 0 && (
           <div className="text-center py-12">
-            <TruckIcon className="mx-auto h-12 w-12 text-gray-400" />
+            <Image 
+              src="/placeholder-car copy.svg" 
+              alt="Car placeholder" 
+              width={48} 
+              height={48} 
+              className="mx-auto h-16 w-16 text-gray-400" 
+            />
             <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
               {t('myAds.noListings')}
             </h3>

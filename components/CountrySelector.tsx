@@ -35,14 +35,14 @@ export default function CountrySelector() {
     <div className="relative">
       <Listbox value={currentCountry} onChange={handleCountryChange}>
         <div className="relative">
-          <Listbox.Button className="relative w-full cursor-pointer rounded-md bg-white dark:bg-gray-800 py-2 pl-2 pr-7 text-left shadow-sm border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-gray-900 dark:text-white">
+          <Listbox.Button className="relative w-full cursor-pointer rounded-md py-2 pl-2 pr-7 text-left shadow-sm border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-gray-900 dark:text-white">
             <div className="flex items-center">
               <Image
                 src={`/flags/${currentCountry.code.toLowerCase()}.svg`}
                 alt={`${currentCountry.name} flag`}
                 width={24}
                 height={16}
-                className="rounded-sm"
+                className="rounded-sm border border-gray-200 dark:border-gray-700"
               />
             </div>
             <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
@@ -77,7 +77,7 @@ export default function CountrySelector() {
                           alt={`${country.name} flag`}
                           width={24}
                           height={16}
-                          className="rounded-sm"
+                          className="rounded-sm border border-gray-200 dark:border-gray-700"
                         />
                         <span
                           className={`block truncate ${

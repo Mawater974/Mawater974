@@ -13,6 +13,14 @@ interface LanguageContextType {
 }
 
 const translations = {
+  /**
+ * English translations for the application.
+ * This object contains key-value pairs where keys represent
+ * specific sections and functionality within the application,
+ * and values are the corresponding English language strings.
+ * This includes navigation labels, authentication prompts,
+ * user interface messages, car details, and more.
+ */
   en: {
     // Navigation
     'nav.home': 'Home',
@@ -46,7 +54,7 @@ const translations = {
     'user.profile': 'Profile',
     'user.settings': 'Settings',
     'user.signOut': 'Sign Out',
-    'user.messages': 'Messages',
+    'user.notifications': 'Notifications',
     // Home Page
     'home.hero.title1': 'Exclusive Cars',
     'home.hero.title2': 'in {country}',
@@ -197,6 +205,62 @@ const translations = {
     'currency.kwd': 'KWD',
     'currency.syp': 'SYP',
     'currency.egp': 'EGP',
+
+    // Privacy Policy - Analytics
+    'privacy.analytics.title': 'Analytics Tracking',
+    'privacy.analytics.data': 'Data Collection',
+    'privacy.analytics.dataDesc': 'We collect data about your interactions with our platform, including page views and user engagement metrics to improve our services.',
+    'privacy.analytics.usage': 'Data Usage',
+    'privacy.analytics.usageDesc': 'Analytics data is used to understand user behavior, optimize our platform, and provide better services. We do not share this data with third parties without your consent.',
+
+    // Privacy Policy - Country Data
+    'privacy.countryData.title': 'Country Information',
+    'privacy.countryData.collection': 'Data Collection',
+    'privacy.countryData.collectionDesc': 'We collect your country information during registration to provide country-specific services and content.',
+    'privacy.countryData.usage': 'Data Usage',
+    'privacy.countryData.usageDesc': 'Country data is used to redirect you to the appropriate country-specific homepage and provide relevant content based on your location.',
+
+    // Privacy Policy - Contact Form
+    'privacy.contactForm.title': 'Contact Form',
+    'privacy.contactForm.collection': 'Data Collection',
+    'privacy.contactForm.collectionDesc': 'When you use our contact form, we collect your name, email, and message to respond to your inquiry.',
+    'privacy.contactForm.usage': 'Data Usage',
+    'privacy.contactForm.usageDesc': 'Contact form data is used solely for communication purposes and is stored securely for customer service purposes.',
+
+    // Privacy Policy - Image Upload
+    'privacy.imageUpload.title': 'Image Uploads',
+    'privacy.imageUpload.collection': 'Data Collection',
+    'privacy.imageUpload.collectionDesc': 'When you upload images for your listings, we collect and store the images along with metadata about the upload.',
+    'privacy.imageUpload.storage': 'Data Storage',
+    'privacy.imageUpload.storageDesc': 'Images are stored securely in our cloud storage system and are only accessible to authorized users.',
+
+    // Terms of Service - Dealer Accounts
+    'terms.dealerAccounts.title': 'Dealer Accounts',
+    'terms.dealerAccounts.registration': 'Dealer Registration',
+    'terms.dealerAccounts.registrationDesc': 'Dealer accounts are subject to additional verification and may require business documentation. Dealers agree to maintain accurate showroom information and comply with all platform regulations.',
+    'terms.dealerAccounts.obligations': 'Dealer Obligations',
+    'terms.dealerAccounts.obligationsDesc': 'Dealers must ensure all listings are accurate, up-to-date, and comply with local regulations. Dealers are responsible for managing their showroom profiles and responding to customer inquiries in a timely manner.',
+
+    // Terms of Service - Featured Content
+    'terms.featuredContent.title': 'Featured Content',
+    'terms.featuredContent.showrooms': 'Featured Showrooms',
+    'terms.featuredContent.showroomsDesc': 'Mawater974 may feature select showrooms based on quality, service, and user engagement. Featured status does not guarantee sales or special treatment.',
+    'terms.featuredContent.listings': 'Featured Listings',
+    'terms.featuredContent.listingsDesc': 'Dealers may request featured status for their listings. Featured listings are subject to additional verification and may require additional fees.',
+
+    // Terms of Service - User Content
+    'terms.userContent.title': 'User Content',
+    'terms.userContent.images': 'Image Uploads',
+    'terms.userContent.imagesDesc': 'Users may upload images for their listings. All images must be original and not violate copyright laws. Mawater974 reserves the right to remove any inappropriate or copyrighted content.',
+    'terms.userContent.ownership': 'Content Ownership',
+    'terms.userContent.ownershipDesc': 'Users retain ownership of their uploaded content. By uploading content, users grant Mawater974 a non-exclusive, worldwide license to use, display, and distribute the content for platform purposes.',
+
+    // Terms of Service - Contact Form
+    'terms.contactForm.title': 'Contact Form Usage',
+    'terms.contactForm.communication': 'Communication',
+    'terms.contactForm.communicationDesc': 'The contact form is for general inquiries and support. Users agree not to use the form for spam, harassment, or unauthorized marketing.',
+    'terms.contactForm.response': 'Response Time',
+    'terms.contactForm.responseDesc': 'Mawater974 will make reasonable efforts to respond to contact form submissions within 48 hours during business days. Response times may vary based on volume and complexity.',
     // Car Details Page
     'car.details.back': 'Back to Cars',
     'car.details.cars': 'Cars',
@@ -365,7 +429,7 @@ const translations = {
     'profile.links.title': 'Quick Links',
     'profile.links.myAds': 'My Ads',
     'profile.links.favorites': 'Favorites',
-    'profile.links.messages': 'Messages',
+    'profile.links.notifications': 'Notifications',
     'profile.links.settings': 'Settings',
     // Auth Messages
     'auth.success.signedOut': 'You have been successfully signed out.',
@@ -581,7 +645,7 @@ const translations = {
     'myAds.listings': 'My Car Listings',
     'myAds.filter.all': 'All Listings',
     'myAds.filter.pending': 'Pending',
-    'myAds.filter.approved': 'Approved',
+    'myAds.filter.approved': 'Active',
     'myAds.filter.sold': 'Sold',
     'myAds.filter.expired': 'Expired',
     'myAds.filter.rejected': 'Rejected',
@@ -598,7 +662,7 @@ const translations = {
     'myAds.noListings': 'You haven\'t listed any cars yet',
     'myAds.filters.all': 'All Listings',
     'myAds.filters.pending': 'Pending',
-    'myAds.filters.approved': 'Approved',
+    'myAds.filters.approved': 'Active',
     'myAds.filters.sold': 'Sold',
     'myAds.filters.expired': 'Expired',
     'myAds.filters.rejected': 'Rejected',
@@ -635,6 +699,7 @@ const translations = {
     'myAds.status.Pending': 'Pending Review',
     'myAds.status.Approved': 'Active',
     'myAds.status.Sold': 'Sold',
+    'myAds.status.Hidden': 'Hidden',
     'myAds.status.Expired': 'Expired',
     'myAds.status.Rejected': 'Rejected',
     'myAds.notifications.title': 'Notifications',
@@ -658,6 +723,7 @@ const translations = {
     'myAds.markSold.message': 'Are you sure you want to mark this car as sold?',
     'myAds.markSold.confirm': 'Yes, Sold',
     'myAds.markSold.cancel': 'Cancel',
+    'myAds.edit': 'Edit',
     'myAds.loading': 'Loading listings...',
     'myAds.details.price': 'Price',
     'myAds.details.mileage': 'Mileage',
@@ -866,13 +932,13 @@ const translations = {
     'dashboard.pendingDescription': 'Your showroom registration is currently under review. We will notify you once it is approved.',
     'dashboard.rejectedDescription': 'Your showroom registration was rejected. You can reapply with updated information.',
     'dashboard.reapply': 'Reapply',
-    'dashboard.approvedListings': 'Approved Listings',
+    'dashboard.approvedListings': 'Active Listings',
     'dashboard.pendingListings': 'Pending Listings',
     'dashboard.rejectedListings': 'Rejected Listings',
     'dashboard.expiredListings': 'Expired Listings',
     'dashboard.soldListings': 'Sold Listings',
     'dashboard.all': 'All',
-    'dashboard.approved': 'Approved',
+    'dashboard.approved': 'Active',
     'dashboard.rejected': 'Rejected',
     'dashboard.pending': 'Pending',
     'dashboard.expired': 'Expired',
@@ -898,8 +964,9 @@ const translations = {
     'dashboard.registerShowroom': 'Register a showroom',
     'dashboard.error.loading': 'Failed to load data',
     'dashboard.error.deleting': 'Failed to delete car. Please try again.',
+    'dashboard.renewAd': 'Renew Ad',
     'admin.dealership.status.pending': 'Pending',
-    'admin.dealership.status.approved': 'Approved',
+    'admin.dealership.status.approved': 'Active',
     'admin.dealership.status.rejected': 'Rejected',
     'admin.dealership.status.expired': 'Expired',
     'admin.dealership.status.sold': 'Sold',
@@ -976,8 +1043,8 @@ const translations = {
     'contact.success': 'Message sent successfully',
     'contact.error': 'Error sending message',
     'contact.info.title': 'Contact Information',
-    'contact.info.email': 'info@mawater974.com',
-    'contact.info.phone': '+974 1234 5678',
+    'contact.info.email': 'mawater974@gmail.com',
+    'contact.info.phone': '+974 5519 0947',
     'contact.info.address': 'Doha, Qatar',
     'contact.info.workingHours': 'Working Hours',
     'contact.info.workingHoursValue': 'Sunday - Thursday: 9:00 AM - 6:00 PM',
@@ -1086,7 +1153,10 @@ const translations = {
     'admin.analytics.userType': 'User Type',
     'admin.analytics.authenticated': 'Authenticated',
     'admin.analytics.anonymous': 'Anonymous',
-
+    'admin.analytics.exportPageViewsCSV': 'Export Page Views (CSV)',
+    'admin.analytics.exportPageViewsJSON': 'Export Page Views (JSON)',
+    'admin.analytics.exportUserPageViewsCSV': 'Export User Page Views (CSV)',
+    'admin.analytics.exportUserPageViewsJSON': 'Export User Page Views (JSON)',
     // Footer
     'footer.tagline': 'Ride In Style.',
     'footer.quickLinks': 'Quick Links',
@@ -1101,8 +1171,8 @@ const translations = {
     'footer.legal.contact': 'Contact Us',
     'footer.followUs': 'Follow Us',
     'footer.contact.title': 'Contact Us',
-    'footer.contact.email': 'contact@mawater974.com',
-    'footer.contact.phone': '+974 50505050',
+    'footer.contact.email': 'mawater974@gmail.com',
+    'footer.contact.phone': '+974 5519 0947',
     'footer.contact.address': 'Doha, Qatar',
     'footer.copyright': '{year} Mawater974. All rights reserved.',
 
@@ -1167,6 +1237,13 @@ const translations = {
     'car.details.deleteConfirm': 'Are you sure you want to delete this comment?',
     'car.details.commentDeleted': 'Comment deleted successfully',
     'car.details.commentUpdated': 'Comment updated successfully',
+
+    // My Ads
+    'myAds.expired': 'Expired',
+
+    'myAds.renew': 'Renew',
+    'myAds.renew.success': 'Ad renewed successfully',
+    'myAds.renew.error': 'Failed to renew ad',
     'car.details.viewDetails': 'View Details',
 
     // Common location labels
@@ -1226,7 +1303,7 @@ const translations = {
     'user.profile': 'الملف الشخصي',
     'user.settings': 'الإعدادات',
     'user.signOut': 'تسجيل الخروج',
-    'user.messages': 'الرسائل',
+    'user.notifications': 'الإشعارات',
     // Home Page
     'home.hero.title1': 'سيارات مميزة',
     'home.hero.title2': 'في {country}',
@@ -1772,7 +1849,7 @@ const translations = {
     'myAds.listings': 'إعلانات السيارات الخاصة بك',
     'myAds.filter.all': 'كل الإعلانات',
     'myAds.filter.pending': 'قيد المراجعة',
-    'myAds.filter.approved': 'معتمد',
+    'myAds.filter.approved': 'نشط',
     'myAds.filter.sold': 'تم البيع',
     'myAds.filter.expired': 'انتهت الصلاحية',
     'myAds.filter.rejected': 'مرفوض',
@@ -1789,7 +1866,7 @@ const translations = {
     'myAds.noListings': 'لم تقم بإدراج أي سيارات بعد',
     'myAds.filters.all': 'كل الإعلانات',
     'myAds.filters.pending': 'قيد المراجعة',
-    'myAds.filters.approved': 'معتمد',
+    'myAds.filters.approved': 'نشط',
     'myAds.filters.sold': 'تم البيع',
     'myAds.filters.expired': 'انتهت الصلاحية',
     'myAds.filters.rejected': 'مرفوض',
@@ -1797,6 +1874,7 @@ const translations = {
     'myAds.actions.delete': 'حذف',
     'myAds.actions.markSold': 'تحديد كمباع',
     'myAds.edit.title': 'تعديل السيارة',
+    'myAds.edit': 'تعديل',
     'myAds.edit.success': 'سيارة تم تحديثها بنجاح',
     'myAds.edit.cancel': 'إلغاء',
     'myAds.edit.confirm': 'تعديل',
@@ -1832,6 +1910,7 @@ const translations = {
     'myAds.status.Approved': 'نشط',
     'myAds.status.Sold': 'تم البيع',
     'myAds.status.Rejected': 'مرفوض',
+    'myAds.status.Hidden': 'مخفية',
     'myAds.status.expired': 'انتهت الصلاحية',
     'myAds.notifications.title': 'الإشعارات',
     'myAds.notifications.viewAll': 'عرض الكل',
@@ -1849,6 +1928,7 @@ const translations = {
     'myAds.markSold.message': 'هل أنت متأكد من تحديد هذه السيارة كمباعة؟',
     'myAds.markSold.confirm': 'نعم، تم البيع',
     'myAds.markSold.cancel': 'إلغاء',
+    'myAds.edit.': 'تعديل',
     'myAds.loading': 'جاري تحميل الإعلانات...',
     'myAds.details.price': 'السعر',
     'myAds.details.mileage': 'المسافة المقطوعة',
@@ -2025,13 +2105,13 @@ const translations = {
     'dashboard.pendingDescription': 'تسجيل معرضك قيد المراجعة حاليًا. سنخطرك بمجرد الموافقة عليه.',
     'dashboard.rejectedDescription': 'تم رفض تسجيل معرضك. يمكنك إعادة التقديم بمعلومات محدثة.',
     'dashboard.reapply': 'إعادة التقديم',
-    'dashboard.approvedListings': 'القوائم المفعلة',
+    'dashboard.approvedListings': 'القوائم النشطة',
     'dashboard.pendingListings': 'القوائم المعلقة',
     'dashboard.expiredListings': 'القوائم المنتهية الصلاحية',
     'dashboard.rejectedListings': 'القوائم المرفوضة',
     'dashboard.soldListings': 'القوائم المباعة',
     'dashboard.all': 'الكل',
-    'dashboard.approved': 'مفعل',
+    'dashboard.approved': 'نشط',
     'dashboard.rejected': 'مرفوض',
     'dashboard.pending': 'معلق',
     'dashboard.expired': 'انتهت الصلاحية',
@@ -2046,7 +2126,6 @@ const translations = {
     'dashboard.setFeatured': 'جعله مميز',
     'dashboard.addCar': 'إضافة سيارة',
     'dashboard.dealerDashboard': 'لوحة تحكم الوكيل',
-    'dashboard.sold': 'تم بيعه',
     'dashboard.confirmDelete': 'هل أنت متأكد من حذف هذه السيارة؟',
     'dashboard.deleteSuccess': 'تم حذف السيارة بنجاح!',
     'dashboard.deleteError': 'فشل في حذف السيارة. يرجى المحاولة مرة أخرى.',
@@ -2058,7 +2137,7 @@ const translations = {
     'dashboard.registerShowroom': 'تسجيل معرضك',
     'dashboard.error.loading': 'فشل في جلب البيانات',
     'dashboard.error.deleting': 'فشل في حذف السيارة. يرجى المحاولة مرة أخرى.',
-
+    'dashboard.renewAd': 'تجديد الإعلان',
     // Dealership Approval Notifications
     'dealership.requestSubmitted': 'تم تقديم طلب الوكالة بنجاح.',
     'dealership.requestError': 'حدث خطأ أثناء تقديم طلبك. يرجى المحاولة مرة أخرى.',
@@ -2112,7 +2191,33 @@ const translations = {
     'privacy.cookies.desc': 'نستخدم ملفات تعريف الارتباط للمساعدة في تحسين تجربتك على موقعنا. ملف تعريف الارتباط هو قطعة صغيرة من البيانات المخزنة على جهاز الكمبيوتر الخاص بك أو الجهاز المحمول بواسطة متصفح الويب الخاص بك. نستخدم ملفات تعريف الارتباط للحفاظ على تسجيل دخولك، وتذكر تفضيلاتك، وتوفير المعلومات للتطوير المستقبلي للموقع.',
     'privacy.contact.title': 'اتصل بنا',
     'privacy.contact.desc': 'إذا كانت لديك أسئلة أو تعليقات حول سياسة الخصوصية هذه، يرجى الاتصال بنا على:',
-        
+    // Privacy Policy - Analytics
+    'privacy.analytics.title': 'تحليلات',
+    'privacy.analytics.data': 'البيانات',
+    'privacy.analytics.dataDesc': 'نحن نجمع بيانات حول تفاعلاتك مع منصتنا، بما في ذلك المشاهدات على الصفحة والرسائل المستخدمة لتحسين خدماتنا.',
+    'privacy.analytics.usage': 'الاستخدام',
+    'privacy.analytics.usageDesc': 'البيانات المستخدمة لفهم سلوك المستخدم، تحسين منصتنا، وتقديم خدمات أفضل. نحن لا نشارك هذه البيانات مع الأطراف الثالثة بدون موافقتك.',
+    // Privacy Policy - Country Data
+    'privacy.countryData.title': 'بيانات البلد',
+    'privacy.countryData.collection': 'الجمع',
+    'privacy.countryData.collectionDesc': 'نحن نجمع بيانات البلد أثناء التسجيل لتقديم خدمات و محتوى مخصّٔين للبلد.',
+    'privacy.countryData.usage': 'الاستخدام',
+    'privacy.countryData.usageDesc': 'بيانات البلد المستخدمة لتحويلك إلى الصفحة الرئيسية المخصّٔة للبلد المناسب وتقديم محتوى مخصّٔٔين بناءً على موقعك.',
+
+    // Privacy Policy - Contact Form
+    'privacy.contactForm.title': 'الاتصال',
+    'privacy.contactForm.collection': 'الجمع',
+    'privacy.contactForm.collectionDesc': 'عند استخدامك لصفحة الاتصال، نقوم بجمع اسمك، بريدك الإلكتروني، ورسالتك لرد على استفسارك.',
+    'privacy.contactForm.usage': 'الاستخدام',
+    'privacy.contactForm.usageDesc': 'بيانات الاتصال المستخدمة فقط للاتصال وتخزينها بامن لخدمة العملاء.',
+
+    // Privacy Policy - Image Upload
+    'privacy.imageUpload.title': 'رفع الصور',
+    'privacy.imageUpload.collection': 'الجمع',
+    'privacy.imageUpload.collectionDesc': 'عندك رفع الصور للقوائم، نقوم بجمع الصور والبيانات المرتبطة بالرفع.',
+    'privacy.imageUpload.storage': 'التخزين',
+    'privacy.imageUpload.storageDesc': ' الصور تخزين بامن في نظام التخزين السحري وحدهم قادرين على الوصول إليها.',
+
     // Contact Page
     'contact.title': 'اتصل بنا',
     'contact.subtitle': 'تواصل معنا',
@@ -2125,8 +2230,8 @@ const translations = {
     'contact.success': 'رسالةك قد تم إرسالها بنجاح',
     'contact.error': 'خطأ في إرسال الرسالة',
     'contact.info.title': 'معلومات الاتصال',
-    'contact.info.email': 'info@mawater974.com',
-    'contact.info.phone': '+974 1234 5678',
+    'contact.info.email': 'mawater974@gmail.com',
+    'contact.info.phone': '+974 5519 0947',
     'contact.info.address': 'الدوحة، قطر',
     'contact.info.workingHours': 'ساعات العمل',
     'contact.info.workingHoursValue': 'الأحد - الخميس: 9:00 صباحاً - 6:00 مساءً',
@@ -2244,8 +2349,8 @@ const translations = {
     'footer.legal.contact': 'اتصل بنا',
     'footer.followUs': 'تابعنا',
     'footer.contact.title': 'اتصل بنا',
-    'footer.contact.email': 'contact@mawater974.com',
-    'footer.contact.phone': '+974 50505050',
+    'footer.contact.email': 'mawater974@gmail.com',
+    'footer.contact.phone': '+974 5519 0947',
     'footer.contact.address': 'الدوحة، قطر',
     'footer.copyright': '{year} مواتر974. جميع الحقوق محفوظة',
     
@@ -2268,6 +2373,12 @@ const translations = {
     'car.details.deleteConfirm': 'هل أنت متأكد من حذف هذا التعليق؟',
     'car.details.commentDeleted': 'تم حذف التعليق بنجاح',
     'car.details.commentUpdated': 'تم تحديث التعليق بنجاح',
+
+    // My Ads
+    'myAds.expired': 'منتهي الصلاحية',
+    'myAds.renew': 'تجديد',
+    'myAds.renew.success': 'تم تجديد الإعلان بنجاح',
+    'myAds.renew.error': 'فشل في تجديد الإعلان',
 
     // Car Listings
     'car.year': 'السنة',

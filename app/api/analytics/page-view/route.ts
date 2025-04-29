@@ -45,11 +45,14 @@ export async function POST(request: Request) {
                 console.error('Error inserting view:', insertError);
             }
 
-            // Increment view count using SQL increment
+            // Increment view count using Supabase RPC
             const { error: updateError } = await supabase
                 .from('page_views')
                 .update({
-                    view_count: { sql: 'view_count + 1' },
+                    view_count: supabase.rpc('increment_view_count', { 
+                        p_country_code: countryCode.toLowerCase(), 
+                        p_page_type: pageType 
+                    }),
                     last_viewed_at: new Date().toISOString()
                 })
                 .eq('country_code', countryCode.toLowerCase())

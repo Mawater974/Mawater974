@@ -81,8 +81,8 @@ export default function WebsiteSettingsPage() {
   const createDefaultSettings = async () => {
     const defaultSettings = [
       // Contact settings
-      { key: 'email', value: 'contact@mawater974.com', description: 'Primary contact email', category: 'contact' },
-      { key: 'phone', value: '+974 1234 5678', description: 'Primary contact phone number', category: 'contact' },
+      { key: 'email', value: 'mawater974@gmail.com', description: 'Primary contact email', category: 'contact' },
+      { key: 'phone', value: '+974 5519 0947', description: 'Primary contact phone number', category: 'contact' },
       { key: 'address', value: 'Doha, Qatar', value_ar: 'الدوحة، قطر', description: 'Office address', category: 'contact' },
       { key: 'working_hours', value: 'Mon-Fri: 9am-5pm', value_ar: 'الإثنين-الجمعة: 9 صباحًا - 5 مساءً', description: 'Working hours', category: 'contact' },
       

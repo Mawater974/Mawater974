@@ -118,7 +118,7 @@ export default function ContactPage() {
                   <EnvelopeIcon className="h-6 w-6 text-qatar-maroon mt-1" />
                   <div className="ml-4">
                     <p className="text-sm font-medium">Email</p>
-                    <a href="mailto:info@mawater974.com" className="text-sm text-gray-600 dark:text-gray-400 hover:text-qatar-maroon">
+                    <a href="mailto:mawater974@gmail.com" className="text-sm text-gray-600 dark:text-gray-400 hover:text-qatar-maroon">
                       {t('contact.info.email')}
                     </a>
                   </div>
@@ -127,7 +127,7 @@ export default function ContactPage() {
                   <PhoneIcon className="h-6 w-6 text-qatar-maroon mt-1" />
                   <div className="ml-4">
                     <p className="text-sm font-medium">Phone</p>
-                    <a href="tel:+97412345678" className="text-sm text-gray-600 dark:text-gray-400 hover:text-qatar-maroon">
+                    <a href="tel:+97455190947" className="text-sm text-gray-600 dark:text-gray-400 hover:text-qatar-maroon">
                       {t('contact.info.phone')}
                     </a>
                   </div>

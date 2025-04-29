@@ -23,7 +23,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+    <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
       <AuthProvider>
         <LanguageProvider>
           <div className="min-h-screen bg-gray-50 dark:bg-gray-900">

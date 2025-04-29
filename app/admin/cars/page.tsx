@@ -15,23 +15,63 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 
 
 interface ExtendedCar extends Car {
-  brand: {
+  id: number;
+  user_id?: string;
+  brand_id?: number;
+  model_id?: number;
+  year: number;
+  mileage: number;
+  price: number;
+  color: string;
+  description?: string;
+  fuel_type: string;
+  gearbox_type: string;
+  body_type: string;
+  condition: string;
+  status: string;
+  images?: string[];
+  thumbnail?: string;
+  created_at: string;
+  updated_at?: string;
+  image?: string;
+  is_featured?: boolean;
+  location?: string;
+  cylinders?: string;
+  views_count?: number;
+  dealership_id?: number;
+  country_id?: number;
+  city_id?: number;
+  exact_model?: string;
+  rejection_reason?: any;
+  expiration_date?: string;
+  
+  brand?: {
     name: string;
   };
-  model: {
+  model?: {
     name: string;
   };
-  user: {
+  country?: {
+    name: string;
+  };
+  city?: {
+    name: string;
+  };
+  dealership?: {
+    name: string;
+  };
+  user?: {
+    id?: string;
     full_name: string;
     email: string;
   };
-  images: {
+  images_array?: {
     url: string;
     is_main: boolean;
   }[];
 }
 
-type CarStatus = 'Pending' | 'Approved' | 'Rejected' | 'Sold';
+type CarStatus = 'Pending' | 'Approved' | 'Rejected' | 'Sold' | 'Expired' | 'Hidden';
 type SortOrder = 'newest' | 'oldest' | 'price_high' | 'price_low';
 
 export default function AdminCarsPage() {
@@ -49,6 +89,7 @@ export default function AdminCarsPage() {
   useEffect(() => {
     checkAdminStatus();
     fetchCars();
+    checkExpiredCars();
   }, [user, activeStatus, sortOrder]);
 
   const checkAdminStatus = async () => {
@@ -139,21 +180,21 @@ export default function AdminCarsPage() {
         if (newStatus === 'Approved') {
           await createNotification(
             car.user_id,
-            'Car Listing Approved! 🎉',
+            'Car Listing Approved!',
             `Great news! Your ${car.brand.name} ${car.model.name} listing has been approved and is now live on our platform. Your car is now visible to potential buyers.`,
             'approval'
           );
         } else if (newStatus === 'Rejected') {
           await createNotification(
             car.user_id,
-            'Car Listing Needs Updates ⚠️',
-            `Your ${car.brand.name} ${car.model.name} listing requires some changes. You can edit and resubmit your listing at any time.`,
+            'Car Ad Rejected',
+            `Your car ad for ${car.brand.name} ${car.model.name} has been rejected. Please review and update your listing.`,
             'rejection'
           );
         } else if (newStatus === 'Sold') {
           await createNotification(
             car.user_id,
-            'Car Marked as Sold 🎊',
+            'Car Marked as Sold!',
             `Your ${car.brand.name} ${car.model.name} has been marked as sold. Congratulations on your sale!`,
             'sold'
           );
@@ -219,7 +260,7 @@ export default function AdminCarsPage() {
       if (fetchError) throw fetchError;
 
       if (!pendingCars || pendingCars.length === 0) {
-        toast.info('No pending cars to approve');
+        toast('No pending cars to approve', { icon: '📋' });
         return;
       }
 
@@ -235,13 +276,13 @@ export default function AdminCarsPage() {
       for (const car of pendingCars) {
         await createNotification(
           car.user_id,
-          'Car Listing Approved! 🎉',
+          'Car Listing Approved!',
           `Great news! Your ${car.brand.name} ${car.model.name} listing has been approved and is now live on our platform. Your car is now visible to potential buyers.`,
           'approval'
         );
       }
 
-      toast.success(`Successfully approved ${pendingCars.length} cars`);
+      toast('Successfully approved cars', { icon: '✅' });
       fetchCars();
     } catch (err) {
       console.error('Error approving all cars:', err);
@@ -260,7 +301,7 @@ export default function AdminCarsPage() {
       if (fetchError) throw fetchError;
 
       if (!approvedCars || approvedCars.length === 0) {
-        toast.info('No approved cars to set as sold');
+        toast('No approved cars to set as sold', { icon: '📋' });
         return;
       }
 
@@ -276,13 +317,13 @@ export default function AdminCarsPage() {
       for (const car of approvedCars) {
         await createNotification(
           car.user_id,
-          'Car Marked as Sold 🎊',
+          'Car Marked as Sold!',
           `Your ${car.brand.name} ${car.model.name} has been marked as sold. Congratulations on your sale!`,
           'sold'
         );
       }
 
-      toast.success(`Successfully set ${approvedCars.length} cars as sold`);
+      toast('Successfully set cars as sold', { icon: '✅' });
       fetchCars();
     } catch (err) {
       console.error('Error setting all cars as sold:', err);
@@ -292,116 +333,447 @@ export default function AdminCarsPage() {
 
   const handleSetApproved = async (carId?: number) => {
     try {
-      if (carId) {
-        // Get car details first
-        const { data: car, error: fetchError } = await supabase
-          .from('cars')
-          .select('*, brand:brands(name), model:models(name)')
-          .eq('id', carId)
-          .single();
-
-        if (fetchError) throw fetchError;
-
-        // Update car status
-        const { error } = await supabase
-          .from('cars')
-          .update({ status: 'Approved' })
-          .eq('id', carId);
-
-        if (error) throw error;
-
-        // Create notification
-        await createNotification(
-          car.user_id,
-          'Car Listing Approved! 🎉',
-          `Great news! Your ${car.brand.name} ${car.model.name} listing has been approved and is now live on our platform. Your car is now visible to potential buyers.`,
-          'approval'
-        );
-
-        toast.success('Car listing approved successfully');
-        fetchCars();
-      } else {
-        // Get all rejected cars
-        const { data: rejectedCars, error: fetchError } = await supabase
-          .from('cars')
-          .select('id, brand:brands(name), model:models(name), user_id')
-          .eq('status', 'Rejected');
-
-        if (fetchError) throw fetchError;
-
-        if (!rejectedCars || rejectedCars.length === 0) {
-          toast.info('No rejected cars to approve');
-          return;
-        }
-
-        // Update all rejected cars to approved
-        const { error: updateError } = await supabase
-          .from('cars')
-          .update({ status: 'Approved' })
-          .eq('status', 'Rejected');
-
-        if (updateError) throw updateError;
-
-        // Create notifications for all users
-        for (const car of rejectedCars) {
-          await createNotification(
-            car.user_id,
-            'Car Listing Approved! 🎉',
-            `Great news! Your ${car.brand.name} ${car.model.name} listing has been approved and is now live on our platform. Your car is now visible to potential buyers.`,
-            'approval'
-          );
-        }
-
-        toast.success(`Successfully approved ${rejectedCars.length} cars`);
-        fetchCars();
+      if (!carId) {
+        toast.error('Invalid car ID');
+        return;
       }
+
+      // Get car details first
+      const { data: carData, error: fetchError } = await supabase
+        .from('cars')
+        .select('*, brand:brands(name), model:models(name), user_id')
+        .eq('id', carId)
+        .single();
+
+      if (fetchError) {
+        console.error('Error fetching car details:', fetchError);
+        toast.error('Failed to fetch car details');
+        return;
+      }
+
+      // Update car status to Approved
+      const { error: updateError } = await supabase
+        .from('cars')
+        .update({ status: 'Approved' })
+        .eq('id', carId);
+
+      if (updateError) {
+        console.error('Error updating car status:', updateError);
+        toast.error('Failed to approve car');
+        return;
+      }
+
+      // Create notification for the user
+      await createNotification(
+        carData.user_id,
+        'Car Listing Approved!',
+        `Great news! Your ${carData.brand.name} ${carData.model.name} listing has been approved and is now live on our platform. Your car is now visible to potential buyers.`,
+        'approval'
+      );
+
+      // Refresh the cars list
+      fetchCars();
+
+      toast('Car successfully approved', { icon: '✅' });
     } catch (err) {
-      console.error('Error approving car:', err);
-      toast.error('Failed to approve car listing');
+      console.error('Error in handleSetApproved:', err);
+      toast.error('An unexpected error occurred');
     }
   };
 
   const handleSetPending = async (carId?: number) => {
     try {
-      if (carId) {
-        // Update single car to pending
-        const { error } = await supabase
-          .from('cars')
-          .update({ status: 'Pending' })
-          .eq('id', carId);
-
-        if (error) throw error;
-
-        toast.success('Car listing set to pending successfully');
-      } else {
-        // Get all rejected cars
-        const { data: rejectedCars, error: fetchError } = await supabase
-          .from('cars')
-          .select('id')
-          .eq('status', 'Rejected');
-
-        if (fetchError) throw fetchError;
-
-        if (!rejectedCars || rejectedCars.length === 0) {
-          toast.info('No rejected cars to set to pending');
-          return;
-        }
-
-        // Update all rejected cars to pending
-        const { error: updateError } = await supabase
-          .from('cars')
-          .update({ status: 'Pending' })
-          .eq('status', 'Rejected');
-
-        if (updateError) throw updateError;
-
-        toast.success(`Successfully set ${rejectedCars.length} cars to pending`);
+      if (!carId) {
+        toast.error('Invalid car ID');
+        return;
       }
 
-      fetchCars();
+      // Update single car to pending
+      const { error } = await supabase
+        .from('cars')
+        .update({ status: 'Pending' })
+        .eq('id', carId);
+
+      if (error) throw error;
+
+      toast('Car listing set to pending successfully', { icon: '✅' });
     } catch (err) {
       console.error('Error setting car to pending:', err);
       toast.error('Failed to set car to pending');
+    }
+  };
+
+  const checkExpiredCars = async () => {
+    try {
+      // Manually trigger the update_expired_car_status function in Supabase
+      const { data, error } = await supabase.rpc('update_expired_car_status');
+
+      if (error) {
+        console.error('Error updating expired cars:', error);
+        toast.error('Failed to update expired cars');
+        return;
+      }
+
+      // Refresh the cars list after updating
+      await fetchCars();
+      
+      toast('Successfully updated expired cars', { icon: '✅' });
+    } catch (err) {
+      console.error('Error in checkExpiredCars:', err);
+      toast.error('An unexpected error occurred');
+    }
+  };
+
+  // Export function for specific car statuses with format selection
+  const exportCarsByStatus = async (statuses: CarStatus[], format: 'json' | 'csv' | 'both' = 'both') => {
+    try {
+      // Show loading toast
+      const loadingToastId = toast.loading('Preparing export...');
+      
+      // Filter cars by specified statuses
+      const filteredCars = cars.filter(car => 
+        statuses.includes(car.status as CarStatus)
+      );
+
+      if (!filteredCars || filteredCars.length === 0) {
+        toast.dismiss(loadingToastId);
+        toast.error(`No cars found with status: ${statuses.join(', ')}`);
+        return;
+      }
+
+      // Prepare data for export with safe property access - memoize to improve performance
+      const exportData = filteredCars.map(car => ({
+        id: car?.id ?? '',
+        user_id: car?.user_id ?? '',
+        brand_id: car?.brand_id ?? '',
+        model_id: car?.model_id ?? '',
+        year: car?.year ?? '',
+        mileage: car?.mileage ?? '',
+        price: car?.price ?? '',
+        color: car?.color ?? '',
+        description: car?.description ?? '',
+        fuel_type: car?.fuel_type ?? '',
+        gearbox_type: car?.gearbox_type ?? '',
+        body_type: car?.body_type ?? '',
+        condition: car?.condition ?? '',
+        status: car?.status ?? '',
+        images: car?.images ?? [],
+        thumbnail: car?.thumbnail ?? '',
+        created_at: car?.created_at ?? '',
+        updated_at: car?.updated_at ?? '',
+        image: car?.image ?? '',
+        is_featured: car?.is_featured ?? false,
+        location: car?.location ?? '',
+        cylinders: car?.cylinders ?? '',
+        views_count: car?.views_count ?? '',
+        dealership_id: car?.dealership_id ?? '',
+        country_id: car?.country_id ?? '',
+        city_id: car?.city_id ?? '',
+        exact_model: car?.exact_model ?? '',
+        rejection_reason: car?.rejection_reason ?? null,
+        expiration_date: car?.expiration_date ?? '',
+        
+        // Additional descriptive fields
+        brand_name: car?.brand?.name ?? '',
+        model_name: car?.model?.name ?? '',
+        country_name: car?.country?.name ?? '',
+        city_name: car?.city?.name ?? '',
+        dealership_name: car?.dealership?.name ?? '',
+        user_full_name: car?.user?.full_name ?? '',
+        user_email: car?.user?.email ?? ''
+      }));
+
+      // Generate timestamp for filenames
+      const timestamp = new Date().toISOString().split('T')[0];
+      const statusString = statuses.join('_');
+      let exportCount = 0;
+
+      // Export to JSON if requested
+      if (format === 'json' || format === 'both') {
+        try {
+          const jsonString = JSON.stringify(exportData, null, 2);
+          const jsonBlob = new Blob([jsonString], { type: 'application/json' });
+          const jsonUrl = URL.createObjectURL(jsonBlob);
+          const jsonLink = document.createElement('a');
+          jsonLink.href = jsonUrl;
+          jsonLink.download = `cars_export_${statusString}_${timestamp}.json`;
+          document.body.appendChild(jsonLink);
+          jsonLink.click();
+          document.body.removeChild(jsonLink);
+          URL.revokeObjectURL(jsonUrl);
+          exportCount++;
+        } catch (jsonError) {
+          console.error('JSON export error:', jsonError);
+          toast.error('Failed to export JSON format');
+        }
+      }
+
+      // Export to CSV if requested
+      if (format === 'csv' || format === 'both') {
+        try {
+          // Define columns for CSV in a comprehensive order
+          const columns = [
+            'ID', 'User ID', 'Brand ID', 'Model ID', 
+            'Year', 'Mileage', 'Price', 'Color', 
+            'Description', 'Fuel Type', 'Gearbox Type', 
+            'Body Type', 'Condition', 'Status', 
+            'Images', 'Thumbnail', 'Created At', 
+            'Updated At', 'Image', 'Is Featured', 
+            'Location', 'Cylinders', 'Views Count', 
+            'Dealership ID', 'Country ID', 'City ID', 
+            'Exact Model', 'Expiration Date',
+            // Additional descriptive fields
+            'Brand Name', 'Model Name', 
+            'Country Name', 'City Name', 
+            'Dealership Name', 
+            'User Full Name', 'User Email'
+          ];
+
+          const csvRows = [
+            columns.join(','), // Header
+            ...filteredCars.map(car => [
+              car?.id ?? '',
+              car?.user_id ?? '',
+              car?.brand_id ?? '',
+              car?.model_id ?? '',
+              car?.year ?? '',
+              car?.mileage ?? '',
+              car?.price ?? '',
+              car?.color ?? '',
+              car?.description?.replace(/,/g, ';').replace(/\n/g, ' ') ?? '',
+              car?.fuel_type ?? '',
+              car?.gearbox_type ?? '',
+              car?.body_type ?? '',
+              car?.condition ?? '',
+              car?.status ?? '',
+              (car?.images?.join('|') ?? '').replace(/,/g, ';'),
+              car?.thumbnail ?? '',
+              car?.created_at ?? '',
+              car?.updated_at ?? '',
+              car?.image ?? '',
+              car?.is_featured ?? '',
+              car?.location ?? '',
+              car?.cylinders ?? '',
+              car?.views_count ?? '',
+              car?.dealership_id ?? '',
+              car?.country_id ?? '',
+              car?.city_id ?? '',
+              car?.exact_model?.replace(/,/g, ';') ?? '',
+              car?.expiration_date ?? '',
+              // Additional descriptive fields
+              car?.brand?.name?.replace(/,/g, ';') ?? '',
+              car?.model?.name?.replace(/,/g, ';') ?? '',
+              car?.country?.name?.replace(/,/g, ';') ?? '',
+              car?.city?.name?.replace(/,/g, ';') ?? '',
+              car?.dealership?.name?.replace(/,/g, ';') ?? '',
+              car?.user?.full_name?.replace(/,/g, ';') ?? '',
+              car?.user?.email?.replace(/,/g, ';') ?? ''
+            ].map(value => 
+              value !== null && value !== undefined 
+                ? `"${String(value).replace(/"/g, '""')}"` 
+                : '""'
+            ).join(','))
+          ].join('\n');
+
+          const csvBlob = new Blob([csvRows], { type: 'text/csv;charset=utf-8;' });
+          const csvUrl = URL.createObjectURL(csvBlob);
+          const csvLink = document.createElement('a');
+          csvLink.href = csvUrl;
+          csvLink.download = `cars_export_${statusString}_${timestamp}.csv`;
+          document.body.appendChild(csvLink);
+          csvLink.click();
+          document.body.removeChild(csvLink);
+          URL.revokeObjectURL(csvUrl);
+          exportCount++;
+        } catch (csvError) {
+          console.error('CSV export error:', csvError);
+          toast.error('Failed to export CSV format');
+        }
+      }
+
+      // Dismiss loading toast and show success message
+      toast.dismiss(loadingToastId);
+      
+      if (exportCount > 0) {
+        const formatMsg = format === 'both' ? 'JSON and CSV formats' : `${format.toUpperCase()} format`;
+        toast.success(`Exported ${filteredCars.length} cars with status: ${statuses.join(', ')} in ${formatMsg}`);
+      } else {
+        toast.error('Export failed. No files were created.');
+      }
+    } catch (err) {
+      console.error('Export by status error:', err);
+      toast.error('Failed to export cars: ' + (err instanceof Error ? err.message : 'Unknown error'));
+    }
+  };
+
+  // Convenience methods for exporting specific statuses
+  const exportPendingCars = (format?: 'json' | 'csv' | 'both') => exportCarsByStatus(['Pending'], format);
+  const exportApprovedCars = (format?: 'json' | 'csv' | 'both') => exportCarsByStatus(['Approved'], format);
+  const exportRejectedCars = (format?: 'json' | 'csv' | 'both') => exportCarsByStatus(['Rejected'], format);
+  const exportSoldCars = (format?: 'json' | 'csv' | 'both') => exportCarsByStatus(['Sold'], format);
+  const exportExpiredCars = (format?: 'json' | 'csv' | 'both') => exportCarsByStatus(['Expired'], format);
+  const exportHiddenCars = (format?: 'json' | 'csv' | 'both') => exportCarsByStatus(['Hidden'], format);
+  
+  // Export all statuses together
+  const exportAllCars = (format?: 'json' | 'csv' | 'both') => exportCarsByStatus([
+    'Pending', 'Approved', 'Rejected', 
+    'Sold', 'Expired', 'Hidden'
+  ], format);
+
+  // Export functions
+  const exportToJSON = () => {
+    try {
+      if (!cars || cars.length === 0) {
+        toast.error('No cars to export');
+        return;
+      }
+
+      // Prepare data for export with safe property access
+      const exportData = cars.map(car => ({
+        id: car?.id ?? '',
+        user_id: car?.user_id ?? '',
+        brand_id: car?.brand_id ?? '',
+        model_id: car?.model_id ?? '',
+        year: car?.year ?? '',
+        mileage: car?.mileage ?? '',
+        price: car?.price ?? '',
+        color: car?.color ?? '',
+        description: car?.description ?? '',
+        fuel_type: car?.fuel_type ?? '',
+        gearbox_type: car?.gearbox_type ?? '',
+        body_type: car?.body_type ?? '',
+        condition: car?.condition ?? '',
+        status: car?.status ?? '',
+        images: car?.images ?? [],
+        thumbnail: car?.thumbnail ?? '',
+        created_at: car?.created_at ?? '',
+        updated_at: car?.updated_at ?? '',
+        image: car?.image ?? '',
+        is_featured: car?.is_featured ?? false,
+        location: car?.location ?? '',
+        cylinders: car?.cylinders ?? '',
+        views_count: car?.views_count ?? '',
+        dealership_id: car?.dealership_id ?? '',
+        country_id: car?.country_id ?? '',
+        city_id: car?.city_id ?? '',
+        exact_model: car?.exact_model ?? '',
+        rejection_reason: car?.rejection_reason ?? null,
+        expiration_date: car?.expiration_date ?? '',
+        
+        // Additional descriptive fields
+        brand_name: car?.brand?.name ?? '',
+        model_name: car?.model?.name ?? '',
+        country_name: car?.country?.name ?? '',
+        city_name: car?.city?.name ?? '',
+        dealership_name: car?.dealership?.name ?? '',
+        user_full_name: car?.user?.full_name ?? '',
+        user_email: car?.user?.email ?? ''
+      }));
+
+      const jsonString = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `cars_export_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success(`Exported ${exportData.length} cars`);
+    } catch (err) {
+      console.error('Export to JSON error:', err);
+      toast.error('Failed to export cars');
+    }
+  };
+
+  const exportToCSV = () => {
+    try {
+      if (!cars || cars.length === 0) {
+        toast.error('No cars to export');
+        return;
+      }
+
+      // Define columns for CSV in a comprehensive order
+      const columns = [
+        'ID', 'User ID', 'Brand ID', 'Model ID', 
+        'Year', 'Mileage', 'Price', 'Color', 
+        'Description', 'Fuel Type', 'Gearbox Type', 
+        'Body Type', 'Condition', 'Status', 
+        'Images', 'Thumbnail', 'Created At', 
+        'Updated At', 'Image', 'Is Featured', 
+        'Location', 'Cylinders', 'Views Count', 
+        'Dealership ID', 'Country ID', 'City ID', 
+        'Exact Model', 'Expiration Date',
+        // Additional descriptive fields
+        'Brand Name', 'Model Name', 
+        'Country Name', 'City Name', 
+        'Dealership Name', 
+        'User Full Name', 'User Email'
+      ];
+
+      // Prepare CSV content with safe property access
+      const csvRows = [
+        columns.join(','), // Header
+        ...cars.map(car => [
+          car?.id ?? '',
+          car?.user_id ?? '',
+          car?.brand_id ?? '',
+          car?.model_id ?? '',
+          car?.year ?? '',
+          car?.mileage ?? '',
+          car?.price ?? '',
+          car?.color ?? '',
+          car?.description?.replace(/,/g, ';') ?? '',
+          car?.fuel_type ?? '',
+          car?.gearbox_type ?? '',
+          car?.body_type ?? '',
+          car?.condition ?? '',
+          car?.status ?? '',
+          (car?.images?.join('|') ?? '').replace(/,/g, ';'),
+          car?.thumbnail ?? '',
+          car?.created_at ?? '',
+          car?.updated_at ?? '',
+          car?.image ?? '',
+          car?.is_featured ?? '',
+          car?.location ?? '',
+          car?.cylinders ?? '',
+          car?.views_count ?? '',
+          car?.dealership_id ?? '',
+          car?.country_id ?? '',
+          car?.city_id ?? '',
+          car?.exact_model?.replace(/,/g, ';') ?? '',
+          car?.expiration_date ?? '',
+          // Additional descriptive fields
+          car?.brand?.name?.replace(/,/g, ';') ?? '',
+          car?.model?.name?.replace(/,/g, ';') ?? '',
+          car?.country?.name?.replace(/,/g, ';') ?? '',
+          car?.city?.name?.replace(/,/g, ';') ?? '',
+          car?.dealership?.name?.replace(/,/g, ';') ?? '',
+          car?.user?.full_name?.replace(/,/g, ';') ?? '',
+          car?.user?.email?.replace(/,/g, ';') ?? ''
+        ].map(value => 
+          value !== null && value !== undefined 
+            ? `"${String(value).replace(/"/g, '""')}"` 
+            : '""'
+        ).join(','))
+      ].join('\n');
+
+      const blob = new Blob([csvRows], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `cars_export_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success(`Exported ${cars.length} cars`);
+    } catch (err) {
+      console.error('Export to CSV error:', err);
+      toast.error('Failed to export cars');
     }
   };
 
@@ -422,7 +794,9 @@ export default function AdminCarsPage() {
     { status: 'Pending', label: 'Pending' },
     { status: 'Approved', label: 'Approved' },
     { status: 'Rejected', label: 'Rejected' },
-    { status: 'Sold', label: 'Sold' }
+    { status: 'Expired', label: 'Expired' },
+    { status: 'Sold', label: 'Sold' },
+    { status: 'Hidden', label: 'Hidden' }
   ];
 
   const sortOptions = [
@@ -441,7 +815,7 @@ export default function AdminCarsPage() {
   }
   return (
     <div className="min-h-screen">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between">
@@ -540,6 +914,144 @@ export default function AdminCarsPage() {
                             )}
                           </Menu.Item>
                         ))}
+                      </div>
+                    </Menu.Items>
+                  </Transition>
+                </Menu>
+                {/* Export Menu */}
+                <Menu as="div" className="relative">
+                  <Menu.Button className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon">
+                    Export
+                    <ChevronDownIcon className="ml-2 h-5 w-5" />
+                  </Menu.Button>
+                  <Transition
+                    as={Fragment}
+                    enter="transition ease-out duration-100"
+                    enterFrom="transform opacity-0 scale-95"
+                    enterTo="transform opacity-100 scale-100"
+                    leave="transition ease-in duration-75"
+                    leaveFrom="transform opacity-100 scale-100"
+                    leaveTo="transform opacity-0 scale-95"
+                  >
+                    <Menu.Items className="absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white dark:bg-gray-700 ring-1 ring-black ring-opacity-5 focus:outline-none z-10">
+                      <div className="py-1">
+                        <Menu.Item>
+                          {({ active }) => (
+                            <button
+                              onClick={exportToJSON}
+                              className={`
+                                ${active ? 'bg-gray-100 dark:bg-gray-600' : ''}
+                                text-gray-700 dark:text-gray-200 group flex items-center w-full px-4 py-2 text-sm
+                              `}
+                            >
+                              JSON
+                            </button>
+                          )}
+                        </Menu.Item>
+                        <Menu.Item>
+                          {({ active }) => (
+                            <button
+                              onClick={exportToCSV}
+                              className={`
+                                ${active ? 'bg-gray-100 dark:bg-gray-600' : ''}
+                                text-gray-700 dark:text-gray-200 group flex items-center w-full px-4 py-2 text-sm
+                              `}
+                            >
+                              CSV
+                            </button>
+                          )}
+                        </Menu.Item>
+                        <Menu.Item>
+                          {({ active }) => (
+                            <button
+                              onClick={exportPendingCars}
+                              className={`
+                                ${active ? 'bg-gray-100 dark:bg-gray-600' : ''}
+                                text-gray-700 dark:text-gray-200 group flex items-center w-full px-4 py-2 text-sm
+                              `}
+                            >
+                              Pending Cars
+                            </button>
+                          )}
+                        </Menu.Item>
+                        <Menu.Item>
+                          {({ active }) => (
+                            <button
+                              onClick={exportApprovedCars}
+                              className={`
+                                ${active ? 'bg-gray-100 dark:bg-gray-600' : ''}
+                                text-gray-700 dark:text-gray-200 group flex items-center w-full px-4 py-2 text-sm
+                              `}
+                            >
+                              Approved Cars
+                            </button>
+                          )}
+                        </Menu.Item>
+                        <Menu.Item>
+                          {({ active }) => (
+                            <button
+                              onClick={exportRejectedCars}
+                              className={`
+                                ${active ? 'bg-gray-100 dark:bg-gray-600' : ''}
+                                text-gray-700 dark:text-gray-200 group flex items-center w-full px-4 py-2 text-sm
+                              `}
+                            >
+                              Rejected Cars
+                            </button>
+                          )}
+                        </Menu.Item>
+                        <Menu.Item>
+                          {({ active }) => (
+                            <button
+                              onClick={exportSoldCars}
+                              className={`
+                                ${active ? 'bg-gray-100 dark:bg-gray-600' : ''}
+                                text-gray-700 dark:text-gray-200 group flex items-center w-full px-4 py-2 text-sm
+                              `}
+                            >
+                              Sold Cars
+                            </button>
+                          )}
+                        </Menu.Item>
+                        <Menu.Item>
+                          {({ active }) => (
+                            <button
+                              onClick={exportExpiredCars}
+                              className={`
+                                ${active ? 'bg-gray-100 dark:bg-gray-600' : ''}
+                                text-gray-700 dark:text-gray-200 group flex items-center w-full px-4 py-2 text-sm
+                              `}
+                            >
+                              Expired Cars
+                            </button>
+                          )}
+                        </Menu.Item>
+                        <Menu.Item>
+                          {({ active }) => (
+                            <button
+                              onClick={exportHiddenCars}
+                              className={`
+                                ${active ? 'bg-gray-100 dark:bg-gray-600' : ''}
+                                text-gray-700 dark:text-gray-200 group flex items-center w-full px-4 py-2 text-sm
+                              `}
+                            >
+                              Hidden Cars
+                            </button>
+                          )}
+                        </Menu.Item>
+                        <Menu.Item>
+                          {({ active }) => (
+                            <button
+                              onClick={exportAllCars}
+                              className={`
+                                ${active ? 'bg-gray-100 dark:bg-gray-600' : ''}
+                                text-gray-700 dark:text-gray-200 group flex items-center w-full px-4 py-2 text-sm
+                              `}
+                            >
+                              All Cars
+                            </button>
+                          )}
+                        </Menu.Item>
                       </div>
                     </Menu.Items>
                   </Transition>
@@ -771,7 +1283,13 @@ export default function AdminCarsPage() {
                               ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
                               : car.status === 'Sold'
                               ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                              : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                              : car.status === 'Expired'
+                              ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                              : car.status === 'Hidden'
+                              ? 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+                              : car.status === 'Pending'
+                              ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                              : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
                           }
                         `}>
                           {car.status}

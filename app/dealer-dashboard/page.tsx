@@ -55,7 +55,7 @@ interface CarListing {
   currency: string;
   status: string;
   created_at: string;
-  views: number;
+  views_count: number;
   images?: { url: string; is_main?: boolean }[];
   description?: string;
   description_ar?: string;
@@ -65,6 +65,7 @@ interface CarListing {
   body_type?: string;
   condition?: string;
   featured?: boolean;
+  expiration_date?: string;
 }
 
 interface DashboardStats {
@@ -74,6 +75,22 @@ interface DashboardStats {
   rejectedListings: number;
   soldListings: number;
   totalViews: number;
+  expiredListings: number;
+}
+
+interface City {
+  id: number;
+  name: string;
+  name_ar?: string;
+  country_id?: number;
+}
+
+interface Country {
+  id: number;
+  name: string;
+  name_ar?: string;
+  code: string;
+  currency_code?: string;
 }
 
 export default function DealerDashboard() {
@@ -97,13 +114,15 @@ export default function DealerDashboard() {
     pendingListings: 0,
     rejectedListings: 0,
     soldListings: 0,
-    totalViews: 0
+    totalViews: 0,
+    expiredListings: 0
   });
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
+
   function formatPrice(price: number, currencyCode?: string): string {
     const formatter = new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: currencyCode || country?.currency || 'QAR',
+      currency: currencyCode || country?.currency_code || 'QAR',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     });
@@ -120,7 +139,6 @@ export default function DealerDashboard() {
       router.push(`/${currentCountry?.code.toLowerCase()}`);
       return;
     }
-
     const fetchDealerData = async () => {
       try {
         setLoading(true);
@@ -160,11 +178,12 @@ export default function DealerDashboard() {
         // Calculate stats
         const stats: DashboardStats = {
           totalListings: listings?.length || 0,
-          totalViews: listings?.reduce((sum, car) => sum + (car.views || 0), 0) || 0,
+          totalViews: listings?.reduce((sum, car) => sum + (car.views_count || 0), 0) || 0,
           approvedListings: listings?.filter(car => car.status.toLowerCase() === 'approved').length || 0,
           pendingListings: listings?.filter(car => car.status.toLowerCase() === 'pending').length || 0,
           rejectedListings: listings?.filter(car => car.status.toLowerCase() === 'rejected').length || 0,
-          soldListings: listings?.filter(car => car.status.toLowerCase() === 'sold').length || 0
+          soldListings: listings?.filter(car => car.status.toLowerCase() === 'sold').length || 0,
+          expiredListings: listings?.filter(car => car.status.toLowerCase() === 'expired').length || 0
         };
         setStats(stats);
 
@@ -177,7 +196,48 @@ export default function DealerDashboard() {
     };
 
     fetchDealerData();
-  }, [supabase, user?.id, profile?.role, authLoading, countryLoading, currentCountry?.code, country?.currency, router]);
+  }, [supabase, user?.id, profile?.role, authLoading, countryLoading, currentCountry?.code, country?.currency_code, router]);
+
+  useEffect(() => {
+    const viewCountSubscription = supabase
+      .channel('view_count_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'cars',
+          filter: `user_id=eq.${user?.id}`
+        },
+        (payload) => {
+          if (payload.new.views_count !== payload.old.views_count) {
+            // Update the specific car's view count in the local state
+            setCarListings(prev => 
+              prev.map(car => 
+                car.id === payload.new.id 
+                  ? { ...car, views_count: payload.new.views_count } 
+                  : car
+              )
+            );
+
+            // Recalculate total views
+            const updatedTotalViews = carListings.reduce((sum, car) => 
+              sum + (car.views_count || 0), 0
+            );
+
+            setStats(prev => ({
+              ...prev,
+              totalViews: updatedTotalViews
+            }));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      viewCountSubscription.unsubscribe();
+    };
+  }, [user, carListings]);
 
   const handleDeleteCar = async (carId: number) => {
     if (!confirm(t('dashboard.confirmDelete'))) return;
@@ -206,11 +266,12 @@ export default function DealerDashboard() {
       setStats(prev => ({
         ...prev,
         totalListings: (prev.totalListings || 0) - 1,
-        totalViews: prev.totalViews - (carListings.find(car => car.id === carId)?.views || 0),
+        totalViews: prev.totalViews - (carListings.find(car => car.id === carId)?.views_count || 0),
         approvedListings: prev.approvedListings - (carListings.find(car => car.id === carId)?.status.toLowerCase() === 'approved' ? 1 : 0),
         pendingListings: prev.pendingListings - (carListings.find(car => car.id === carId)?.status.toLowerCase() === 'pending' ? 1 : 0),
         rejectedListings: prev.rejectedListings - (carListings.find(car => car.id === carId)?.status.toLowerCase() === 'rejected' ? 1 : 0),
-        soldListings: prev.soldListings - (carListings.find(car => car.id === carId)?.status.toLowerCase() === 'sold' ? 1 : 0)
+        soldListings: prev.soldListings - (carListings.find(car => car.id === carId)?.status.toLowerCase() === 'sold' ? 1 : 0),
+        expiredListings: prev.expiredListings - (carListings.find(car => car.id === carId)?.status.toLowerCase() === 'expired' ? 1 : 0)
       }));
 
       toast.success(t('dashboard.deleteSuccess'));
@@ -218,6 +279,30 @@ export default function DealerDashboard() {
       console.error('Error deleting car:', error);
       setError('Error deleting car');
       toast.error(t('dashboard.deleteError'));
+    }
+  };
+
+  const handleRenew = async (carId: number) => {
+    try {
+      const newExpirationDate = new Date();
+      newExpirationDate.setDate(newExpirationDate.getDate() + 30); // Add 30 days
+
+      const { error } = await supabase
+        .from('cars')
+        .update({ 
+          expiration_date: newExpirationDate.toISOString(),
+          status: 'Approved' 
+        })
+        .eq('id', carId)
+        .eq('dealership_id', dealership?.id);
+
+      if (error) throw error;
+
+      toast.success(t('dashboard.adRenewed'));
+      await fetchCars();
+    } catch (error) {
+      console.error('Error renewing ad:', error);
+      toast.error(t('dashboard.renewError'));
     }
   };
 
@@ -230,6 +315,8 @@ export default function DealerDashboard() {
       case 'rejected':
         return 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-100';
       case 'sold':
+        return 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100';
+      case 'expired':
         return 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100';
       default:
         return 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100';
@@ -287,11 +374,12 @@ export default function DealerDashboard() {
       // Update stats
       const stats = {
         totalListings: carListings?.length || 0,
-        totalViews: carListings?.reduce((sum, car) => sum + (car.views || 0), 0) || 0,
+        totalViews: carListings?.reduce((sum, car) => sum + (car.views_count || 0), 0) || 0,
         approvedListings: carListings?.filter(car => car.status.toLowerCase() === 'approved').length || 0,
         pendingListings: carListings?.filter(car => car.status.toLowerCase() === 'pending').length || 0,
         rejectedListings: carListings?.filter(car => car.status.toLowerCase() === 'rejected').length || 0,
-        soldListings: carListings?.filter(car => car.status.toLowerCase() === 'sold').length || 0
+        soldListings: carListings?.filter(car => car.status.toLowerCase() === 'sold').length || 0,
+        expiredListings: carListings?.filter(car => car.status.toLowerCase() === 'expired').length || 0
       };
       setStats(stats);
     } catch (error) {
@@ -412,6 +500,12 @@ export default function DealerDashboard() {
               bgGradient: 'from-green-100 to-green-50 dark:from-green-900/20 dark:to-green-900/10'
             },
             { 
+              label: 'dashboard.expiredListings', 
+              value: stats.expiredListings, 
+              icon: <XCircleIcon className="h-8 w-8 text-red-500 dark:text-red-400" />,
+              bgGradient: 'from-red-100 to-red-50 dark:from-red-900/20 dark:to-red-900/10'
+            },
+            { 
               label: 'dashboard.totalViews', 
               value: stats.totalViews, 
               icon: <ChartBarIcon className="h-8 w-8 text-blue-500 dark:text-blue-400" />,
@@ -454,7 +548,7 @@ export default function DealerDashboard() {
               <div className="w-full">
                 <Tab.Group>
                   <Tab.List className="flex space-x-2 rounded-xl bg-qatar-maroon/20 p-1">
-                    {['all', 'approved', 'pending', 'rejected', 'sold', 'expired'].map((status) => (
+                    {['all', 'approved', 'pending', 'rejected', 'expired', 'sold'].map((status) => (
                       <Tab
                         key={status}
                         onClick={() => setSelectedStatus(status)}
@@ -530,6 +624,15 @@ export default function DealerDashboard() {
                           >
                             <PencilIcon className="h-5 w-5" />
                           </button>
+                          {car.status.toLowerCase() === 'expired' && (
+                            <button
+                              onClick={() => handleRenew(car.id)}
+                              className="inline-flex items-center px-2.5 py-1.5 border border-qatar-maroon shadow-sm text-xs font-medium rounded text-white bg-qatar-maroon hover:bg-qatar-maroon-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon"
+                            >
+                              <ClockIcon className="h-4 w-4 mr-1 rtl:ml-1 rtl:mr-0" />
+                              {t('dashboard.renewAd')}
+                            </button>
+                          )}
                           <button
                             onClick={() => handleDeleteCar(car.id)}
                             className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 transition-colors"

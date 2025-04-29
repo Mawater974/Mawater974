@@ -86,7 +86,23 @@ function exportToCSV(data: any[], filename: string) {
   }
 }
 
-async function exportPageViews() {
+function exportToJSON(data: any[], filename: string) {
+  const jsonContent = JSON.stringify(data, null, 2);
+  const blob = new Blob([jsonContent], { type: 'application/json' });
+  const link = document.createElement('a');
+  if (link.download !== undefined) {
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+}
+
+async function exportPageViews(format: 'csv' | 'json') {
   const { data: pageViews, error } = await supabase
     .from('page_views')
     .select('*')
@@ -98,11 +114,16 @@ async function exportPageViews() {
   }
 
   if (pageViews) {
-    exportToCSV(pageViews, 'page-views.csv');
+    const currentDate = new Date().toISOString().split('T')[0];
+    if (format === 'csv') {
+      exportToCSV(pageViews, `page-views-${currentDate}.csv`);
+    } else {
+      exportToJSON(pageViews, `page-views-${currentDate}.json`);
+    }
   }
 }
 
-async function exportUserPageViews() {
+async function exportUserPageViews(format: 'csv' | 'json') {
   const { data: userPageViews, error } = await supabase
     .from('user_page_views')
     .select('*')
@@ -114,7 +135,12 @@ async function exportUserPageViews() {
   }
 
   if (userPageViews) {
-    exportToCSV(userPageViews, 'user-page-views.csv');
+    const currentDate = new Date().toISOString().split('T')[0];
+    if (format === 'csv') {
+      exportToCSV(userPageViews, `user-page-views-${currentDate}.csv`);
+    } else {
+      exportToJSON(userPageViews, `user-page-views-${currentDate}.json`);
+    }
   }
 }
 
@@ -435,15 +461,41 @@ export default function AnalyticsDashboard() {
             {t('admin.analytics.lastUpdated')}: {new Date().toLocaleString()}
           </p>
         </div>
-        <select
-          className="px-4 py-2 border rounded-lg dark:bg-gray-800 dark:text-white dark:border-gray-600"
-          value={timeRange}
-          onChange={(e) => setTimeRange(e.target.value)}
-        >
-          <option value="24h">{t('admin.analytics.timeRange.24h')}</option>
-          <option value="7d">{t('admin.analytics.timeRange.7d')}</option>
-          <option value="30d">{t('admin.analytics.timeRange.30d')}</option>
-        </select>
+        <div className="flex gap-4">
+          <select
+            className="px-4 py-2 border rounded-lg dark:bg-gray-800 dark:text-white dark:border-gray-600"
+            value={timeRange}
+            onChange={(e) => setTimeRange(e.target.value)}
+          >
+            <option value="24h">{t('admin.analytics.timeRange.24h')}</option>
+            <option value="7d">{t('admin.analytics.timeRange.7d')}</option>
+            <option value="30d">{t('admin.analytics.timeRange.30d')}</option>
+          </select>
+          <button
+            onClick={() => exportPageViews('csv')}
+            className="px-4 py-2 bg-qatar-maroon text-white rounded-lg hover:bg-qatar-maroon-dark transition-colors dark:bg-qatar-maroon-light dark:text-gray-800 dark:hover:bg-qatar-maroon"
+          >
+            {t('admin.analytics.exportPageViewsCSV')}
+          </button>
+          <button
+            onClick={() => exportPageViews('json')}
+            className="px-4 py-2 bg-qatar-maroon text-white rounded-lg hover:bg-qatar-maroon-dark transition-colors dark:bg-qatar-maroon-light dark:text-gray-800 dark:hover:bg-qatar-maroon"
+          >
+            {t('admin.analytics.exportPageViewsJSON')}
+          </button>
+          <button
+            onClick={() => exportUserPageViews('csv')}
+            className="px-4 py-2 bg-qatar-maroon text-white rounded-lg hover:bg-qatar-maroon-dark transition-colors dark:bg-qatar-maroon-light dark:text-gray-800 dark:hover:bg-qatar-maroon"
+          >
+            {t('admin.analytics.exportUserPageViewsCSV')}
+          </button>
+          <button
+            onClick={() => exportUserPageViews('json')}
+            className="px-4 py-2 bg-qatar-maroon text-white rounded-lg hover:bg-qatar-maroon-dark transition-colors dark:bg-qatar-maroon-light dark:text-gray-800 dark:hover:bg-qatar-maroon"
+          >
+            {t('admin.analytics.exportUserPageViewsJSON')}
+          </button>
+        </div>
       </div>
 
       {/* Overview Stats */}
@@ -649,16 +701,16 @@ export default function AnalyticsDashboard() {
         <h3 className="text-lg font-semibold mb-4 dark:text-white">{t('admin.analytics.recentActivity')}</h3>
         <div className="flex justify-end mb-4 space-x-4">
           <button
-            onClick={() => exportPageViews()}
+            onClick={() => exportPageViews('csv')}
             className="px-4 py-2 text-sm font-medium text-white bg-qatar-maroon hover:bg-qatar-maroon-dark rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon"
           >
-            {t('admin.analytics.exportPageViews')}
+            {t('admin.analytics.exportPageViewsCSV')}
           </button>
           <button
-            onClick={() => exportUserPageViews()}
+            onClick={() => exportUserPageViews('csv')}
             className="px-4 py-2 text-sm font-medium text-white bg-qatar-maroon hover:bg-qatar-maroon-dark rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon"
           >
-            {t('admin.analytics.exportUserPageViews')}
+            {t('admin.analytics.exportUserPageViewsCSV')}
           </button>
         </div>
         <div className="overflow-x-auto">
