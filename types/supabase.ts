@@ -17,6 +17,11 @@ export interface ExtendedCar {
   user_id: string;
   created_at: string;
   updated_at: string;
+  // New fields from recent updates
+  doors?: number | null;
+  drive_type?: 'FWD' | 'RWD' | 'AWD' | '4WD' | null;
+  warranty_type?: 'Yes' | 'No' | null;
+  warranty_months_remaining?: number | null;
   brand?: {
     id: number;
     name: string;
