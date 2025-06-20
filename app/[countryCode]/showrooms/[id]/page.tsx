@@ -10,7 +10,7 @@ import { MapPinIcon, PhoneIcon, EnvelopeIcon } from '@heroicons/react/24/outline
 import Image from 'next/image';
 import CarCard from '@/components/CarCard';
 import toast from 'react-hot-toast';
-import { ArrowRightIcon } from '@heroicons/react/24/outline';
+import { ArrowRightIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import { useCountry } from '@/contexts/CountryContext';
 import LoginPopup from '@/components/LoginPopup';
@@ -19,6 +19,12 @@ import { getCountryFromIP } from '@/utils/getCountryFromIP';
 
 type BusinessType = 'dealership' | 'service center' | 'spare parts dealership' | 'showroom';
 type DealershipType = 'Official' | 'Private';
+
+type SortOption = 'newest' | 'oldest' | 'price_asc' | 'price_desc' | 'year_asc' | 'year_desc';
+
+interface Filters {
+  sort?: SortOption;
+}
 
 interface ShowroomRegistration {
   id: number;
@@ -62,6 +68,8 @@ interface CarListingData {
   color: string;
   country: { id: number; name: string; name_ar?: string };
   user: { full_name: string; email: string; phone_number: string; role: string };
+  created_at: string;
+  updated_at: string;
 }
 
 export default function ShowroomPage() {
@@ -76,9 +84,50 @@ export default function ShowroomPage() {
   const [carListings, setCarListings] = useState<CarListingData[]>([]);
   const [loading, setLoading] = useState(true);
   const [isOwner, setIsOwner] = useState(false);
+  const [filters, setFilters] = useState<{sort?: 'newest' | 'oldest' | 'price_asc' | 'price_desc' | 'year_asc' | 'year_desc'}>({ sort: 'newest' });
+  const [showSortOptions, setShowSortOptions] = useState(false);
   const [dealerInfo, setDealerInfo] = useState<any>(null);
   const { currentCountry } = useCountry();
-  const [featured, setFeatured] = useState<CarListingData[]>([]);
+  
+  const sortOptions = [
+    { value: 'newest', label: t('car.sort.newest') },
+    { value: 'oldest', label: t('car.sort.oldest') },
+    { value: 'price_asc', label: t('car.sort.priceLow') },
+    { value: 'price_desc', label: t('car.sort.priceHigh') },
+    { value: 'year_asc', label: t('car.sort.yearOld') },
+    { value: 'year_desc', label: t('car.sort.yearNew') },
+  ];
+
+  const sortCars = (cars: CarListingData[]) => {
+    return [...cars].sort((a, b) => {
+      switch (filters.sort) {
+        case 'newest':
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case 'oldest':
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        case 'price_asc':
+          return a.price - b.price;
+        case 'price_desc':
+          return b.price - a.price;
+        case 'year_asc':
+          return a.year - b.year;
+        case 'year_desc':
+          return b.year - a.year;
+        default:
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }
+    });
+  };
+
+  const sortedCarListings = sortCars(carListings);
+
+  const handleSort = (value: string) => {
+    setFilters(prev => ({
+      ...prev,
+      sort: value as Filters['sort']
+    }));
+    setShowSortOptions(false);
+  };
   const handleFavoriteToggle = async (carId: number) => {
     if (!user) {
       toast.error(t('car.favorite.login'));
@@ -200,13 +249,17 @@ export default function ShowroomPage() {
             fuel_type: car.fuel_type,
             gearbox_type: car.gearbox_type,
             body_type: car.body_type,
+            city: car.city, // Include city data
+            location: car.location, // Include location data
+            country: car.country, // Include country data
             condition: car.condition,
             images: car.images || [],
             is_featured: car.is_featured || false,
             favorite: favorites.includes(car.id),
             color: car.color || '',
-            country: car.country,
-            user: car.user
+            user: car.user,
+            created_at: car.created_at || new Date().toISOString(),
+            updated_at: car.updated_at || new Date().toISOString()
           }));
           setCarListings(processedCarData);
         }
@@ -364,7 +417,7 @@ export default function ShowroomPage() {
       </div>
 
       {/* Showroom Information */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-8">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
         <div className="flex flex-col gap-4">
           {/* Description */}
           {(showroom.description || showroom.description_ar) && (
@@ -429,15 +482,58 @@ export default function ShowroomPage() {
       {showroom.business_type === 'showroom' ? (
         <div>
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">{t('showroom.availableCars')}</h3>
-            <p className="text-gray-700 dark:text-gray-300">
-              {t('showroom.availableCarsDesc')}
-            </p>
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 ">
+              <div>
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white">{t('showroom.availableCars')} <span className="text-sm text-gray-500">({carListings.length})</span></h3>
+                <p className="text-gray-700 dark:text-gray-300 mt-2">
+                  {t('showroom.availableCarsDesc')}
+                </p>
+              </div>
+              <div className="flex-shrink-0">
+                <div className="relative inline-block text-left">
+                  <button 
+                    onClick={() => setShowSortOptions(!showSortOptions)}
+                    className={`flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${language === 'ar' ? 'flex-row-reverse' : ''}`}
+                  >
+                    <span>{sortOptions.find(opt => opt.value === filters.sort)?.label || t('car.sort.newest')}</span>
+                    <ChevronDownIcon className="h-4 w-4" />
+                  </button>
+                  
+                  {showSortOptions && (
+                    <div 
+                      className={`absolute z-10 mt-2 w-48 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 focus:outline-none ${language === 'ar' ? 'left-0' : 'right-0'}`}
+                      role="menu"
+                      aria-orientation="vertical"
+                      aria-labelledby="menu-button"
+                      tabIndex={-1}
+                    >
+                      <div className="py-1" role="none">
+                        {sortOptions.map((option) => (
+                          <button
+                            key={option.value}
+                            onClick={() => handleSort(option.value)}
+                            className={`w-full text-left px-4 py-2 text-sm ${
+                              filters.sort === option.value
+                                ? 'bg-qatar-maroon text-white'
+                                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                            } ${language === 'ar' ? 'text-right' : 'text-left'}`}
+                            role="menuitem"
+                            tabIndex={-1}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
-            {carListings.length > 0 ? (
-              carListings.map((car) => (
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
+            {sortedCarListings.length > 0 ? (
+              sortedCarListings.map((car) => (
                 <CarCard 
                   key={`car-${car.id}`}
                   car={{

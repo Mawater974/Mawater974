@@ -25,7 +25,7 @@ export default function AdminExportPage() {
   // Tables that can be exported
   const exportableTables = [
     { name: 'cars', label: 'Cars', description: 'All car listings with their details' },
-    { name: 'users', label: 'Users', description: 'User accounts and profiles' },
+    { name: 'profiles', label: 'Profiles', description: 'User accounts and profiles' },
     { name: 'brands', label: 'Brands', description: 'Car brands' },
     { name: 'models', label: 'Models', description: 'Car models for each brand' },
     { name: 'countries', label: 'Countries', description: 'Countries supported in the system' },
@@ -109,31 +109,27 @@ export default function AdminExportPage() {
           model:model_id(id, name),
           user:user_id(id, full_name, email),
           country:country_id(id, name, code),
-          city:city_id(id, name),
-          dealership:dealership_id(id, name)
+          city:city_id(id, name)
         `);
-      } else if (tableName === 'users') {
+      } else if (tableName === 'profiles') {
         // For users, we need to fetch profiles and related data
-        query = supabase.from('profiles').select(`
+        query = supabase.from(tableName).select(`
           id,
           full_name,
           email,
-          phone,
+          phone_number,
           role,
           created_at,
           updated_at,
-          avatar_url,
           country_id,
-          city_id,
-          country:country_id(id, name, code),
-          city:city_id(id, name)
+          password_plain
         `);
       } else if (tableName === 'models') {
         query = supabase.from(tableName).select('*, brand:brand_id(id, name)');
       } else if (tableName === 'cities') {
         query = supabase.from(tableName).select('*, country:country_id(id, name, code)');
       } else if (tableName === 'dealerships') {
-        query = supabase.from(tableName).select('*, country:country_id(id, name), city:city_id(id, name)');
+        query = supabase.from(tableName).select('*, country:country_id(id, name, code), city:city_id(id, name)');
       }
       
       const { data, error } = await query;

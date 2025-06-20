@@ -46,6 +46,10 @@ interface FormData {
   city_id: number | null;
   country_id: number | null; // Added country_id field
   images: File[];
+  doors: string;
+  drive_type: string;
+  warranty: string;
+  warranty_months_remaining: string;
 }
 
 const initialFormData: FormData = {
@@ -66,6 +70,11 @@ const initialFormData: FormData = {
   city_id: null,
   country_id: null, // Initialize country_id as null
   images: [],
+  // Initialize new fields
+  doors: '',
+  drive_type: '',
+  warranty: '',
+  warranty_months_remaining: '',
 };
 
 const currentYear = new Date().getFullYear();
@@ -77,6 +86,9 @@ const bodyTypes = ['Sedan', 'SUV', 'Hatchback', 'Coupe', 'Truck', 'Van', 'Wagon'
 const conditions = ['New', 'Excellent', 'Good', 'Not Working'];
 const colors =['White', 'Black', 'Silver', 'Gray', 'Red', 'Blue', 'Green', 'Yellow', 'Orange', 'Brown', 'Purple', 'Gold', 'Beige', 'Maroon', 'Navy', 'Bronze', 'Other'];
 const cylinderOptions = ['Electric', '3', '4', '5', '6', '8', '10', '12', '16'];
+const doorOptions = ['2', '3', '4', '5', '6', '7+'];
+const driveTypeOptions = ['FWD', 'RWD', 'AWD', '4WD'];
+const warrantyOptions = ['Yes', 'No'];
 
 export default function SellPage() {
   const { user } = useAuth();
@@ -733,6 +745,110 @@ useEffect(() => {
             </select>
           </div>
 
+          {/* Number of Doors */}
+          <div>
+            <label 
+              htmlFor="doors" 
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+            >
+              {t('sell.details.doors')} *
+            </label>
+            <select
+              id="doors"
+              name="doors"
+              value={formData.doors}
+              onChange={(e) => handleInputChange(e)}
+              required
+              className="w-full h-[42px] px-3 sm:px-4 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 
+                         text-gray-900 dark:text-white rounded-lg shadow-sm focus:ring-2 focus:ring-qatar-maroon/50 
+                         focus:border-qatar-maroon transition duration-200 ease-in-out text-sm sm:text-base appearance-none"
+            >
+              <option value="">{t('sell.details.doors.select')}</option>
+              {doorOptions.map(opt => (
+                <option key={opt} value={opt}>
+                  {t(`car.doors.${opt.replace('+', 'plus')}`)}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Drive Type */}
+          <div>
+            <label 
+              htmlFor="drive_type" 
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+            >
+              {t('sell.details.driveType')} *
+            </label>
+            <select
+              id="drive_type"
+              name="drive_type"
+              value={formData.drive_type}
+              onChange={(e) => handleInputChange(e)}
+              required
+              className="w-full h-[42px] px-3 sm:px-4 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 
+                         text-gray-900 dark:text-white rounded-lg shadow-sm focus:ring-2 focus:ring-qatar-maroon/50 
+                         focus:border-qatar-maroon transition duration-200 ease-in-out text-sm sm:text-base appearance-none"
+            >
+              <option value="">{t('sell.details.driveType.select')}</option>
+              {driveTypeOptions.map(type => (
+                <option key={type} value={type}>
+                  {t(`car.driveType.${type.toLowerCase()}`)}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Warranty */}
+          <div>
+            <label 
+              htmlFor="warranty" 
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+            >
+              {t('sell.details.warranty')}
+            </label>
+            <select
+              id="warranty"
+              name="warranty"
+              value={formData.warranty}
+              onChange={(e) => handleInputChange(e)}
+              className="w-full h-[42px] px-3 sm:px-4 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 
+                         text-gray-900 dark:text-white rounded-lg shadow-sm focus:ring-2 focus:ring-qatar-maroon/50 
+                         focus:border-qatar-maroon transition duration-200 ease-in-out text-sm sm:text-base appearance-none"
+            >
+              <option value="">{t('sell.details.warranty.select')}</option>
+              {warrantyOptions.map(type => (
+                <option key={type} value={type}>
+                  {t(`car.warranty.${type.toLowerCase()}`)}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Warranty Months Remaining (Conditional) */}
+          {formData.warranty && formData.warranty !== 'No' && (
+            <div>
+              <label 
+                htmlFor="warranty_months_remaining" 
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+              >
+                {t('sell.details.warrantyMonthsRemaining')}
+              </label>
+              <input
+                type="number"
+                id="warranty_months_remaining"
+                name="warranty_months_remaining"
+                value={formData.warranty_months_remaining}
+                onChange={(e) => handleInputChange(e)}
+                min="0"
+                placeholder={t('sell.details.warrantyMonthsRemaining.placeholder')}
+                className="w-full h-[42px] px-3 sm:px-4 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 
+                           text-gray-900 dark:text-white rounded-lg shadow-sm focus:ring-2 focus:ring-qatar-maroon/50 
+                           focus:border-qatar-maroon transition duration-200 ease-in-out text-sm sm:text-base appearance-none"
+              />
+            </div>
+          )}
+
           {/* Location */}
           <div>
             <label 
@@ -1354,7 +1470,13 @@ useEffect(() => {
         country_id: currentCountry.id,
         city_id: formData.city_id,
         status: 'Pending',
-        is_featured: selectedPlan === 'featured'
+        is_featured: selectedPlan === 'featured',
+        doors: formData.doors ? parseInt(formData.doors.replace('+', '')) : null,
+        drive_type: formData.drive_type || null,
+        warranty: formData.warranty || null,
+        warranty_months_remaining: formData.warranty && formData.warranty !== 'No' && formData.warranty_months_remaining 
+                                     ? parseInt(formData.warranty_months_remaining) 
+                                     : null
       };
 
       // Only add currency_code if it exists in the database schema

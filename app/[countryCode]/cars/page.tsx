@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,7 +9,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useCountry } from '@/contexts/CountryContext';
 import { supabase } from '@/lib/supabase';
 import { getCountryFromIP } from '@/utils/geoLocation';
-import { Database, Car, Brand, Profile, Country, City, CarImage } from '@/types/supabase';
+import { Car, Brand, Profile, Country, City, CarImage } from '@/types/supabase';
 import { HeartIcon as HeartIconSolid } from '@heroicons/react/24/solid';
 import { 
   HeartIcon, 
@@ -82,6 +82,8 @@ interface Filters {
 }
 
 export default function CarsPage() {
+  const pageSearchParams = useSearchParams(); // Renamed to avoid conflict with component's searchParams state/prop if any
+  const searchQueryFromUrl = pageSearchParams.get('query');
   const [cars, setCars] = useState<CarWithLocation[]>([]);
   const [featuredCars, setFeaturedCars] = useState<CarWithLocation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -106,6 +108,14 @@ export default function CarsPage() {
   const { currentCountry, formatPrice } = useCountry();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const pathname = usePathname();
+
+  const handleClearSearch = () => {
+    const newParams = new URLSearchParams(pageSearchParams.toString());
+    newParams.delete('query');
+    router.push(`${pathname}?${newParams.toString()}`);
+    setSearchInput(''); // Clear the search input field as well
+  };
 
   const sortOptions = [
     { value: 'newest', label: t('car.sort.newest') },
@@ -118,7 +128,7 @@ export default function CarsPage() {
 
   useEffect(() => {
     fetchBrands();
-    fetchCars();
+    fetchCars(filters, searchQueryFromUrl);
  
     if (user) {
       fetchUserFavorites();
@@ -143,10 +153,13 @@ export default function CarsPage() {
   }, []);
 
   useEffect(() => {
-    if (!countryLoading) {
-      fetchCars();
+    // This effect triggers when currentCountry, filters, user, or searchQueryFromUrl change.
+    // It's responsible for initiating the car fetch and managing countryLoading state.
+    if (currentCountry) {
+      setCountryLoading(true);
+      fetchCars(filters, searchQueryFromUrl).finally(() => setCountryLoading(false));
     }
-  }, [currentCountry, countryLoading, filters]);
+  }, [currentCountry, filters, user, searchQueryFromUrl]);
 
   useEffect(() => {
     if (currentCountry?.code) {
@@ -211,15 +224,40 @@ export default function CarsPage() {
     setBrands(data);
   };
 
-  const fetchCars = async () => {
+  async function fetchCars(currentFilters: Filters, searchQuery: string | null | undefined, attempt = 1) {
     try {
       setLoading(true);
       setError(null);
       
-      const { data: carsData, error } = await supabase
+      let queryBuilder = supabase
         .from('cars')
         .select(`*, brand:brands(*), model:models(*), user:profiles!user_id(*), city:cities(*), country:countries(*), images:car_images(url, is_main)`)
-        .eq('status', 'Approved')
+        .eq('status', 'Approved');
+
+      if (searchQuery && searchQuery.trim() !== '' && currentCountry?.id) {
+        const trimmedSearchQuery = searchQuery.trim();
+        if (trimmedSearchQuery.length > 0) { // Only call RPC if search term is non-empty
+          const { data: idObjects, error: rpcError } = await supabase
+            .rpc('get_car_ids_by_term', {
+              p_search_term: trimmedSearchQuery,
+              p_country_id: currentCountry.id,
+            });
+
+          if (rpcError) {
+            console.error('Error fetching car IDs by term via RPC:', rpcError);
+            // Consider how to handle this error - perhaps treat as no results
+            queryBuilder = queryBuilder.eq('id', -1); // Force no results on RPC error
+          } else if (idObjects && idObjects.length > 0) {
+            const carIds = idObjects.map((obj: { car_id: number }) => obj.car_id);
+            queryBuilder = queryBuilder.in('id', carIds);
+          } else {
+            // No cars found by search term, so force no results for the overall query
+            queryBuilder = queryBuilder.eq('id', -1);
+          }
+        }
+      }
+
+      const { data: carsData, error } = await queryBuilder
         .eq('country_id', currentCountry?.id || 0)
         .order('created_at', { ascending: false });
 
@@ -270,7 +308,7 @@ export default function CarsPage() {
       setError(error instanceof Error ? error.message : 'An error occurred while fetching cars');
     } finally {
       setLoading(false);
-      setCountryLoading(false);
+      // setCountryLoading(false); // This will be handled by the calling useEffect
     }
   };
 
@@ -757,6 +795,21 @@ export default function CarsPage() {
         <main className="px-4">
           {/* Top Bar */}
           <div className="top-0 z-30 bg-white/80 dark:bg-gray-900/80 p-4 mb-6 rounded-xl border border-gray-200/50 dark:border-gray-700/50 shadow-lg backdrop-blur-md">
+            {searchQueryFromUrl && (
+              <div className="mb-4 p-3 bg-blue-50 dark:bg-gray-800 border border-blue-200 dark:border-gray-700 rounded-lg flex justify-between items-center text-sm">
+                <div>
+                  <span className="font-medium text-gray-700 dark:text-gray-300">{language === 'ar' ? 'نتائج البحث عن:' : 'Showing results for:'}</span>
+                  <span className="ltr:ml-2 rtl:mr-2 italic font-semibold text-blue-600 dark:text-blue-400">"{searchQueryFromUrl}"</span>
+                </div>
+                <button
+                  onClick={handleClearSearch}
+                  className="px-3 py-1 text-xs font-medium text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-700 hover:bg-blue-200 dark:hover:bg-blue-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 dark:focus:ring-offset-gray-800"
+                  aria-label={language === 'ar' ? 'إلغاء البحث' : 'Clear search'}
+                >
+                  {language === 'ar' ? 'إلغاء' : 'Clear'} &times;
+                </button>
+              </div>
+            )}
             <div className="flex flex-col gap-4">
               {/* Search and Actions */}
               <div className="flex flex-col md:flex-row gap-4 items-center">

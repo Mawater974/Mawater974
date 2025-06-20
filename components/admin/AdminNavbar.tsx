@@ -26,6 +26,7 @@ export default function AdminNavbar() {
     { name: 'Currency Rates', href: '/admin/currency-rates' },
     { name: 'Settings', href: '/admin/settings' },
     { name: 'Contacts', href: '/admin/contact-messages' },
+    { name: 'Files', href: '/admin/files' },
     { name: 'Reports', href: '/admin/reports' },
     { name: 'Export', href: '/admin/export' },
   ];

@@ -19,7 +19,8 @@ import {
   XCircleIcon,
   ShoppingBagIcon,
   EyeIcon,
-  XMarkIcon
+  XMarkIcon,
+  ArrowDownTrayIcon
 } from '@heroicons/react/24/outline';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
@@ -118,6 +119,7 @@ export default function DealerDashboard() {
     expiredListings: 0
   });
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [isExporting, setIsExporting] = useState(false);
 
   function formatPrice(price: number, currencyCode?: string): string {
     const formatter = new Intl.NumberFormat('en-US', {
@@ -128,6 +130,120 @@ export default function DealerDashboard() {
     });
     return formatter.format(price);
   }
+
+  // Function to export car listings to CSV with bilingual support
+  const exportToCSV = () => {
+    if (!carListings.length) return;
+    
+    setIsExporting(true);
+    
+    try {
+      // Define CSV headers with proper order - including both English and Arabic versions
+      const headers = [
+        'ID',
+        'Brand (EN)',
+        'Brand (AR)',
+        'Model (EN)',
+        'Model (AR)',
+        'Year',
+        'Price',
+        'Currency',
+        'Status',
+        'Created At',
+        'Expiration Date',
+        'Views',
+        'Mileage (km)',
+        'Fuel Type',
+        'Gearbox',
+        'Body Type',
+        'Condition',
+        'Featured',
+        'Description (EN)',
+        'Description (AR)'
+      ];
+      
+      // Convert car listings to CSV rows with proper data mapping
+      const rows = carListings.map(car => {
+        // Format price without currency symbol for cleaner export
+        const priceValue = car.price ? car.price.toString() : '';
+        const currencyCode = car.currency || 'QAR';
+        
+        // Format dates
+        const createdAt = car.created_at ? new Date(car.created_at).toISOString().split('T')[0] : '';
+        const expiryDate = car.expiration_date ? new Date(car.expiration_date).toISOString().split('T')[0] : '';
+        
+        // Helper function to get translations with fallback
+        const getTranslation = (enValue: string | undefined, arValue: string | undefined) => ({
+          en: enValue || '',
+          ar: arValue || enValue || '' // Fallback to English if Arabic not available
+        });
+
+        // Get all fields with both English and Arabic versions
+        const brand = getTranslation(car.brand?.name, car.brand?.name_ar);
+        const model = getTranslation(car.model?.name, car.model?.name_ar);
+        
+        // Get translations for other fields (assuming these might have translations in the future)
+        const fuelType = getTranslation(car.fuel_type, '');
+        const gearbox = getTranslation(car.gearbox_type, '');
+        const bodyType = getTranslation(car.body_type, '');
+        const condition = getTranslation(car.condition, '');
+        
+        // Prepare the row with proper column mapping for both languages
+        const row = {
+          'ID': car.id,
+          'Brand (EN)': brand.en,
+          'Brand (AR)': brand.ar,
+          'Model (EN)': model.en,
+          'Model (AR)': model.ar,
+          'Year': car.year || '',
+          'Price': priceValue,
+          'Currency': currencyCode,
+          'Status': car.status || '',
+          'Created At': createdAt,
+          'Expiration Date': expiryDate,
+          'Views': car.views_count?.toString() || '0',
+          'Mileage (km)': car.mileage?.toString() || '',
+          'Fuel Type': fuelType.en,
+          'Gearbox': gearbox.en,
+          'Body Type': bodyType.en,
+          'Condition': condition.en,
+          'Featured': car.featured ? 'Yes' : 'No',
+          'Description (EN)': `"${(car.description || '').replace(/"/g, '""')}"`,
+          'Description (AR)': `"${(car.description_ar || '').replace(/"/g, '""')}"`
+        };
+        
+        // Return the row in the same order as headers
+        return headers.map(header => row[header as keyof typeof row]);
+      });
+      
+      // Convert to CSV string
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.join(','))
+      ].join('\n');
+      
+      // Create download link
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const timestamp = new Date().toISOString().split('T')[0];
+      
+      link.setAttribute('href', url);
+      link.setAttribute('download', `car-listings-${timestamp}.csv`);
+      link.style.visibility = 'hidden';
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast.success(t('dealer.exportSuccess') || 'Export completed successfully');
+    } catch (error) {
+      console.error('Error exporting data:', error);
+      toast.error(t('dealer.exportError') || 'Error exporting data');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
 
   useEffect(() => {
@@ -537,6 +653,14 @@ export default function DealerDashboard() {
                     ? dealership.business_name_ar
                     : dealership?.business_name}
                 </h1>
+                <button
+                  onClick={exportToCSV}
+                  disabled={isExporting || carListings.length === 0}
+                  className="ml-auto flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ArrowDownTrayIcon className="h-5 w-5 mr-2" />
+                  {isExporting ? (language === 'ar' ? 'جاري التصدير...' : 'Exporting...') : (language === 'ar' ? 'تصدير البيانات' : 'Export Data')}
+                </button>
                 <button
                   onClick={() => router.push(`/${currentCountry?.code.toLowerCase()}/sell`)}
                   className={getButtonClass('primary')}

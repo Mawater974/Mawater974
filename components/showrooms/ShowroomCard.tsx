@@ -3,7 +3,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Showroom } from '@/types/showroom';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { MapPinIcon } from '@heroicons/react/24/solid';
+import { ArrowRightIcon, MapPinIcon } from '@heroicons/react/24/solid';
 import { SparklesIcon } from '@heroicons/react/24/solid';
 import { useCountry } from '@/contexts/CountryContext';
 import { useSupabase } from '@/contexts/SupabaseContext';
@@ -66,9 +66,17 @@ export default function ShowroomCard({ showroom }: ShowroomCardProps) {
             </div>
           </div>
 
-          <p className="text-sm text-gray-600 dark:text-gray-300 truncate">
+          <p className="text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap overflow-hidden text-ellipsis mb-4">
             {language === 'ar' ? showroom.description_ar || showroom.description : showroom.description}
           </p>
+          
+          <Link 
+            href={`/${currentCountry?.code?.toLowerCase() || ''}/showrooms/${showroom.id}`}
+            className="inline-flex items-center justify-center w-full px-4 py-2 bg-qatar-maroon text-white rounded-lg hover:bg-qatar-maroon/90 transition-colors duration-200"
+          >
+            <span>{t('showroom.viewDetails')}</span>
+            <ArrowRightIcon className="h-4 w-4 ml-2" />
+          </Link>
         </div>
       </div>
     </Link>
