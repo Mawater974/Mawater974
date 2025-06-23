@@ -12,11 +12,21 @@ export interface ExtendedCar {
   images?: { url: string; is_main?: boolean }[];
   favorite?: boolean;
   is_featured?: boolean;
+  is_dealer?: boolean;
   color: string;
   country_id: number;
   user_id: string;
   created_at: string;
   updated_at: string;
+  status?: 'Approved' | 'Pending' | 'Rejected' | 'Sold' | 'Expired' | 'Hidden';
+  name?: string;
+  exact_model?: string | null;
+  description?: string;
+  cylinders?: number | null;
+  location?: string | null;
+  views_count?: number;
+  currency_code?: string;
+  
   // New fields from recent updates
   doors?: number | null;
   drive_type?: 'FWD' | 'RWD' | 'AWD' | '4WD' | null;
@@ -37,6 +47,7 @@ export interface ExtendedCar {
     id: number;
     name: string;
     name_ar?: string;
+    currency_code?: string;
   };
   user?: {
     id: string;
