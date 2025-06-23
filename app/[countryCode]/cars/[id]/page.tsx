@@ -40,7 +40,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
   const { t, currentLanguage } = useLanguage();
   const { trackCarView, trackContactSeller } = useAnalytics();
   const { formatPrice, countries, currentCountry } = useCountry();
-  const [car, setCar] = useState<ExtendedCar | null>(null);
+  const [car, setCar] = useState<ExtendedCar & { status?: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isFavorite, setIsFavorite] = useState(false);
@@ -86,7 +86,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
   }
 
   const handlePrevImage = () => {
-    if (!car?.images) return;
+    if (!car?.images?.length) return;
     if (showFullImage) {
       setFullImageIndex((prev) => 
         prev === 0 ? car.images.length - 1 : prev - 1
@@ -99,7 +99,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
   };
 
   const handleNextImage = () => {
-    if (!car?.images) return;
+    if (!car?.images?.length) return;
     if (showFullImage) {
       setFullImageIndex((prev) => 
         prev === car.images.length - 1 ? 0 : prev + 1
@@ -771,9 +771,12 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
           <ol className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
             <li><button onClick={() => router.push(`/${currentCountry?.code.toLowerCase()}/cars`)} className="hover:text-qatar-maroon">{t('car.details.cars')}</button></li>
             <li>/</li>
-            <li><button onClick={() => router.push(`/${currentCountry?.code.toLowerCase()}/cars?brand=${car?.brand.name}`)} className="hover:text-qatar-maroon">{car?.brand.name}</button></li>
+            <li><button
+              onClick={() => car?.brand?.name && router.push(`/${currentCountry?.code.toLowerCase()}/cars?brand=${car.brand.name}`)}
+              className="hover:text-qatar-maroon"
+            >{car?.brand?.name || ''}</button></li>
             <li>/</li>
-            <li className="text-gray-900 dark:text-white">{car?.model.name}{car?.exact_model ? ` - ${car?.exact_model}` : ''}</li>
+            <li className="text-gray-900 dark:text-white">{car?.model?.name || ''}{car?.exact_model ? ` - ${car.exact_model}` : ''}</li>
           </ol>
         </nav>
 
@@ -781,42 +784,51 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
           {/* Image Gallery */}
           <div className="space-y-4">
             {/* Main Image Section */}
-            <div className="relative w-full h-96 mb-4">
-              <img
-                src={car.images[currentImageIndex]?.url}
-                alt={`${car.brand?.name} ${car.model?.name}`}
-                className="w-full h-full object-cover rounded-lg cursor-pointer"
-                onClick={() => openFullImage(currentImageIndex)}
-              />
-              {car.is_featured && (
-                <div className="absolute top-2 left-2 z-20 px-2 py-1 bg-qatar-maroon/90 text-white text-xs font-medium rounded-lg shadow-lg">
-                  {t('car.featured.badge')}
-                </div>
-              )}
-              {(car?.images?.length || 0) > 1 && (
+            <div className="relative w-full h-44 md:h-96 lg:h-96  bg-gray-100 dark:bg-gray-800 rounded-xl overflow-hidden mb-4">
+              {car?.images && car.images.length > 0 && (
                 <>
-                  <button
-                    onClick={handlePrevImage}
-                    className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 transition-colors"
-                  >
-                    <ChevronLeftIcon className="h-6 w-6" />
-                  </button>
-                  <button
-                    onClick={handleNextImage}
-                    className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 transition-colors"
-                  >
-                    <ChevronRightIcon className="h-6 w-6" />
-                  </button>
+                  <img
+                    src={car.images[currentImageIndex]?.url}
+                    alt={`${car.brand?.name || ''} ${car.model?.name || ''}`}
+                    className={`w-full h-full object-cover ${car.status !== 'Approved' ? 'opacity-70' : ''}`}
+                    onClick={() => openFullImage(currentImageIndex)}
+                  />              {car.is_featured && (
+                    <div className="absolute top-2 left-2 z-20 px-2 py-1 bg-qatar-maroon/90 text-white text-xs font-medium rounded-lg shadow-lg">
+                      {t('car.featured.badge')}
+                    </div>
+                  )}
+                  {car.status && car.status !== 'Approved' && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <div className={`text-4xl font-bold transform rotate-[-15deg] px-6 py-3 rounded-lg ${
+                        car.status === 'Sold' ? 'bg-green-600/90 text-white' :
+                        car.status === 'Expired' ? 'bg-amber-600/90 text-white' :
+                        car.status === 'Hidden' ? 'bg-gray-800/90 text-white' :
+                        'text-qatar-maroon bg-white/80 dark:bg-black/70'
+                      }`}>
+                        {car.status.toUpperCase()}
+                      </div>
+                    </div>
+                  )}
+                  {car.images.length > 1 && (
+                    <>
+                      <button
+                        onClick={handlePrevImage}
+                        className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 transition-colors"
+                      >
+                        <ChevronLeftIcon className="h-6 w-6" />
+                      </button>
+                      <button
+                        onClick={handleNextImage}
+                        className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 transition-colors"
+                      >
+                        <ChevronRightIcon className="h-6 w-6" />
+                      </button>
+                    </>
+                  )}
                 </>
               )}
             </div>
-            {/* Description */}
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">{t('car.details.description')}</h2>
-              <p className="text-gray-600 dark:text-gray-300 whitespace-pre-wrap">
-                {car.description || t('car.details.noDescription')}
-              </p>
-            </div>
+            
 
             {/* Thumbnail Grid */}
             {car.images && car.images.length > 1 && (
@@ -825,7 +837,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
                   <img
                     key={index}
                     src={image.url}
-                    alt={`${car.brand?.name} ${car.model?.name} thumbnail ${index + 1}`}
+                    alt={`${car.brand?.name || ''} ${car.model?.name || ''} thumbnail ${index + 1}`}
                     className={`w-full aspect-[4/3] object-cover rounded-lg cursor-pointer ${
                       currentImageIndex === index ? 'ring-2 ring-qatar-maroon' : ''
                     }`}
@@ -834,6 +846,13 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
                 ))}
               </div>
             )}
+            {/* Description */}
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2 hidden sm:hidden md:hidden lg:block">{t('car.details.description')}</h2>
+              <p className="text-gray-600 dark:text-gray-300 whitespace-pre-wrap hidden sm:hidden md:hidden lg:block">
+                {car.description || t('car.details.noDescription')}
+              </p>
+            </div>
 
             {/* Full Screen Image Viewer */}
             {showFullImage && (
@@ -865,11 +884,29 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
                   </button>
 
                   {/* Main Image */}
-                  <img
-                    src={car.images[fullImageIndex]?.url}
-                    alt={`${car.brand?.name} ${car.model?.name}`}
-                    className="max-h-[90vh] max-w-[90vw] object-contain"
-                  />
+                  <div className="relative">
+                    {car.images && car.images[fullImageIndex]?.url && (
+                      <>
+                        <img
+                          src={car.images[fullImageIndex]?.url}
+                          alt={`${car.brand?.name || ''} ${car.model?.name || ''}`}
+                          className={`max-h-[90vh] max-w-[90vw] object-contain ${car.status !== 'Approved' ? 'opacity-70' : ''}`}
+                        />
+                        {car.status && car.status !== 'Approved' && (
+                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <div className={`text-6xl font-bold transform rotate-[-15deg] px-8 py-4 rounded-lg ${
+                              car.status === 'Sold' ? 'bg-green-600/90 text-white' :
+                              car.status === 'Expired' ? 'bg-amber-600/90 text-white' :
+                              car.status === 'Hidden' ? 'bg-gray-800/90 text-white' :
+                              'text-qatar-maroon bg-white/80 dark:bg-black/80'
+                            }`}>
+                              {car.status.toUpperCase()}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
 
                   {/* Image Counter */}
                   <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/50 text-white px-4 py-2 rounded-full">
@@ -1101,7 +1138,13 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
                 <p className="text-gray-900 dark:text-white font-semibold">{car.views_count || 0}</p>
               </div>
             </div>
-
+            {/* Description */}
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2 lg:hidden">{t('car.details.description')}</h2>
+              <p className="text-gray-600 dark:text-gray-300 whitespace-pre-wrap lg:hidden">
+                {car.description || t('car.details.noDescription')}
+              </p>
+            </div>
             {/* Comments */}
             <div className="mt-8 space-y-6">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">{t('car.details.comments')}</h2>

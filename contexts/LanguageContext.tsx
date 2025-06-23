@@ -153,7 +153,7 @@ const translations = {
     'car.noImage': 'No image',
     'car.mileage.label': 'Mileage',
     'car.fuelType.label': 'Fuel',
-    'car.gearboxType.label': 'Gearbox Type',
+    'car.gearboxType.label': 'Gearbox',
     'car.sellerType.private': 'Private',    
     'car.sellerType.dealer': 'Dealer',
     'car.filters.showMore': 'Show More',
@@ -522,7 +522,7 @@ const translations = {
     'sell.features.basic.support': 'Email support',
     
     'sell.features.featured.visibility': 'Premium visibility & placement',
-    'sell.features.featured.photos': 'Upload up to 15 photos and 1 videos',
+    'sell.features.featured.photos': 'Upload up to 15 high quality photos and 1 video',
     'sell.features.featured.details': 'Car details display',
     'sell.features.featured.search': 'Priority search placement',
     'sell.features.featured.social': 'Social media promotion',
@@ -1741,7 +1741,7 @@ const translations = {
     'sell.features.basic.support': 'دعم عبر البريد الإلكتروني',
     
     'sell.features.featured.visibility': 'ظهور وترتيب مميز',
-    'sell.features.featured.photos': 'رفع حتى 15 صورة وفيديو واحد',
+    'sell.features.featured.photos': 'رفع حتى 15 صورة جودة عالية وفيديو واحد',
     'sell.features.featured.details': 'عرض تفاصيل السيارة',
     'sell.features.featured.search': 'ترتيب متقدم في نتائج البحث',
     'sell.features.featured.social': 'ترويج على وسائل التواصل الاجتماعي',

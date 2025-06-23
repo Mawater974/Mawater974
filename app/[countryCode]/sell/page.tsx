@@ -12,7 +12,8 @@ import { getCountryFromIP } from '@/utils/geoLocation';
 import { CheckIcon } from '@heroicons/react/24/outline';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCarSide } from '@fortawesome/free-solid-svg-icons';
-import { faSearch, faCamera, faChartLine, faHeadset } from '@fortawesome/free-solid-svg-icons';
+import { faSearch, faCamera, faChartLine, faHeadset, faCompress } from '@fortawesome/free-solid-svg-icons';
+import imageCompression from 'browser-image-compression';
 import { useMemo } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCountry } from '@/contexts/CountryContext';
@@ -50,6 +51,7 @@ interface FormData {
   drive_type: string;
   warranty: string;
   warranty_months_remaining: string;
+  is_featured: boolean; // Whether this is a featured ad
 }
 
 const initialFormData: FormData = {
@@ -75,6 +77,7 @@ const initialFormData: FormData = {
   drive_type: '',
   warranty: '',
   warranty_months_remaining: '',
+  is_featured: false, // Default to non-featured
 };
 
 const currentYear = new Date().getFullYear();
@@ -1668,7 +1671,61 @@ useEffect(() => {
     });
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const compressImage = async (file: File): Promise<File> => {
+    // Check if this is a featured ad (you'll need to get this from your form state)
+    const isFeatured = formData.is_featured || false;
+    
+    // Use appropriate max size based on whether it's a featured ad
+    const MAX_SIZE_BYTES = isFeatured ? 2 * 1024 * 1024 : 800 * 1024; // 2MB for featured, 800KB for regular
+    
+    // Skip compression if file is already under the limit
+    if (file.size <= MAX_SIZE_BYTES) {
+      return file;
+    }
+
+    // Use different compression options based on whether it's a featured ad
+    const options = {
+      maxSizeMB: isFeatured ? 2 : 0.8,          // 2MB for featured, 800KB for regular
+      maxWidthOrHeight: isFeatured ? 2560 : 1920, // Higher resolution for featured
+      useWebWorker: true,
+      maxIteration: isFeatured ? 15 : 10,         // More iterations for better quality on featured
+      fileType: 'image/jpeg',
+      initialQuality: isFeatured ? 0.9 : 0.8,     // Higher quality for featured
+      alwaysKeepResolution: isFeatured             // Keep original resolution for featured if possible
+    };
+
+
+    try {
+      console.log(`Compressing image: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+      
+      // Show toast notification for compression
+      const toastId = toast.loading(`Compressing ${file.name}...`);
+      
+      const compressedFile = await imageCompression(file, options);
+      
+      // Update toast to show success
+      toast.success(`Compressed ${file.name} (${(compressedFile.size / 1024 / 1024).toFixed(2)}MB)`, {
+        id: toastId,
+        duration: 3000,
+      });
+      
+      console.log(`Image compressed: ${file.name} (${(compressedFile.size / 1024 / 1024).toFixed(2)}MB)`);
+      
+      // Create a new File object with the original name and type
+      return new File(
+        [compressedFile],
+        file.name.replace(/\.[^/.]+$/, '') + '.jpg', // Ensure .jpg extension
+        { type: 'image/jpeg' }
+      );
+    } catch (error) {
+      console.error('Error compressing image:', error);
+      toast.error(`Failed to compress ${file.name}. Using original.`);
+      // Return original file if compression fails
+      return file;
+    }
+  };
+
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     const totalImages = existingImages.length - imagesToDelete.length + newImages.length + files.length;
     
@@ -1678,20 +1735,48 @@ useEffect(() => {
     }
 
     // Validate file types and sizes
+    const validFiles: File[] = [];
+    
     for (const file of files) {
       if (!file.type.startsWith('image/')) {
         toast.error(t('sell.messages.invalidImage'));
-        return;
+        continue;
       }
 
       // Increased max size to 10MB per image
       if (file.size > 10 * 1024 * 1024) {
         toast.error(t('sell.messages.imageTooLarge'));
-        return;
+        continue;
       }
+      
+      validFiles.push(file);
     }
 
-    setNewImages(prev => [...prev, ...files]);
+    try {
+      // Show loading state
+      const toastId = toast.loading('Processing images...');
+      
+      // Process all images in parallel with featured status
+      const processedFiles = await Promise.all(
+        validFiles.map(file => compressImage(file))
+      );
+      
+      // Update the state with compressed images
+      setNewImages(prev => [...prev, ...processedFiles]);
+      
+      // Dismiss the loading toast
+      toast.dismiss(toastId);
+      
+      // Show success message if any images were processed
+      if (processedFiles.length > 0) {
+        toast.success(`Added ${processedFiles.length} image${processedFiles.length > 1 ? 's' : ''}`, {
+          duration: 2000,
+        });
+      }
+    } catch (error) {
+      console.error('Error processing images:', error);
+      toast.error('Error processing images');
+    }
   };
 
   const handleRemoveExistingImage = (imageId: number) => {
