@@ -180,7 +180,7 @@ export default function ShowroomsPage() {
     const matchesSearch = nameMatch || descriptionMatch;
     const matchesLocation = !selectedLocation || showroom.city_id?.toString() === selectedLocation;
     const matchesDealershipType = !selectedDealershipType || showroom.dealershipType === selectedDealershipType;
-    
+
     return matchesSearch && matchesLocation && matchesDealershipType;
   });
 
@@ -237,15 +237,15 @@ export default function ShowroomsPage() {
             </select>
           </div>
           <div className="relative">
-            <select
-              value={selectedDealershipType}
-              onChange={(e) => setSelectedDealershipType(e.target.value as DealershipType | '')}
-              className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-qatar-maroon focus:border-qatar-maroon dark:bg-gray-700 dark:text-white appearance-none"
-            >
-              <option value="">{t('showroom.allDealershipTypes')}</option>
-              <option value="Official">{t('showroom.dealershipTypes.official')}</option>
-              <option value="Private">{t('showroom.dealershipTypes.private')}</option>
-            </select>
+          <select
+            value={selectedDealershipType}
+            onChange={(e) => setSelectedDealershipType(e.target.value as DealershipType | '')}
+            className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-qatar-maroon focus:border-qatar-maroon dark:bg-gray-700 dark:text-white appearance-none"
+          >
+            <option value="">{t('showroom.allDealershipTypes')}</option>
+            <option value="official">{t('showroom.dealershipTypes.official')}</option>
+            <option value="private">{t('showroom.dealershipTypes.private')}</option>
+          </select>
           </div>
         </div>
       </div>

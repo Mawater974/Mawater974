@@ -32,6 +32,10 @@ type CarCondition = 'Good' | 'Excellent' | 'New' | 'Not Working';
 type BodyType = 'Sedan' | 'SUV' | 'Coupe' | 'Hatchback' | 'Wagon' | 'Van' | 'Truck' | 'Convertible' | 'Other';
 type FuelType = 'Petrol' | 'Diesel' | 'Electric' | 'Hybrid';
 type SellerType = 'dealer' | 'private';
+type Door = '2' | '3' | '4' | '5' | '6' | '7+';
+type DriveType = 'FWD' | 'RWD' | 'AWD' | '4WD';
+type Warranty = 'Yes' | 'No';
+type Cylinders = '3' | '4' | '5' | '6' | '8' | '10' | '12' | '16';
 
 interface ExtendedCar extends Omit<Car, 'brand_id' | 'model_id'> {
   brand: Brand;
@@ -78,6 +82,10 @@ interface Filters {
   fuel_type?: FuelType[];
   gearbox_type?: string[];
   seller_type?: SellerType[];
+  doors?: Door[];
+  drive_type?: DriveType[];
+  warranty?: Warranty[];
+  cylinders?: Cylinders[];
   sort?: 'newest' | 'oldest' | 'price_asc' | 'price_desc' | 'year_asc' | 'year_desc';
 }
 
@@ -347,10 +355,16 @@ export default function CarsPage() {
       
       const matchesMileage = (!filters.minMileage || car.mileage >= filters.minMileage) &&
         (!filters.maxMileage || car.mileage <= filters.maxMileage);
+      
+      const matchesDoors = !filters.doors?.length || (car.doors && filters.doors.includes(car.doors));
+      const matchesDriveType = !filters.drive_type?.length || (car.drive_type && filters.drive_type.includes(car.drive_type));
+      const matchesWarranty = !filters.warranty?.length || (car.warranty && filters.warranty.includes(car.warranty));
+      const matchesCylinders = !filters.cylinders?.length || (car.cylinders && filters.cylinders.includes(car.cylinders));
 
       return matchesCondition && matchesBodyType && matchesFuelType && matchesGearbox &&
         matchesSellerType && matchesBrand && matchesModel && matchesExactModel && matchesSearch &&
-        matchesPrice && matchesYear && matchesMileage;
+        matchesPrice && matchesYear && matchesMileage && matchesDoors && matchesDriveType && 
+        matchesWarranty && matchesCylinders;
     };
 
     // Filter both featured and non-featured cars
@@ -554,8 +568,97 @@ export default function CarsPage() {
     });
   };
 
+  const toggleGearboxType = (gearboxType: GearboxType) => {
+    setFilters(prev => {
+      const currentTypes = prev.gearbox_type || [];
+      const isSelected = currentTypes.includes(gearboxType);
+      const newTypes = isSelected 
+        ? currentTypes.filter(type => type !== gearboxType)
+        : [...currentTypes, gearboxType];
+      
+      return {
+        ...prev,
+        gearbox_type: newTypes.length > 0 ? newTypes : undefined
+      };
+    });
+  };
+
+  const toggleDriveType = (driveType: DriveType) => {
+    setFilters(prev => {
+      const currentTypes = prev.drive_type || [];
+      const isSelected = currentTypes.includes(driveType);
+      const newTypes = isSelected 
+        ? currentTypes.filter(type => type !== driveType)
+        : [...currentTypes, driveType];
+      
+      return {
+        ...prev,
+        drive_type: newTypes.length > 0 ? newTypes : undefined
+      };
+    });
+  };
+  const toggleDoors = (doorType: Door) => {
+    setFilters(prev => {
+      const currentTypes = prev.doors || [];
+      const isSelected = currentTypes.includes(doorType);
+      const newTypes = isSelected 
+        ? currentTypes.filter(type => type !== doorType)
+        : [...currentTypes, doorType];
+      
+      return {
+        ...prev,
+        doors: newTypes.length > 0 ? newTypes : undefined
+      };
+    });
+  };
+  const toggleWarranty = (warranty: Warranty) => {
+    setFilters(prev => {
+      const currentTypes = prev.warranty || [];
+      const isSelected = currentTypes.includes(warranty);
+      const newTypes = isSelected 
+        ? currentTypes.filter(type => type !== warranty)
+        : [...currentTypes, warranty];
+      
+      return {
+        ...prev,
+        warranty: newTypes.length > 0 ? newTypes : undefined
+      };
+    });
+  };
+
+  const toggleCylinders = (cylindersType: Cylinders) => {
+    setFilters(prev => {
+      const currentTypes = prev.cylinders || [];
+      const isSelected = currentTypes.includes(cylindersType);
+      const newTypes = isSelected 
+        ? currentTypes.filter(type => type !== cylindersType)
+        : [...currentTypes, cylindersType];
+      
+      return {
+        ...prev,
+        cylinders: newTypes.length > 0 ? newTypes : undefined
+      };
+    });
+  };
+
   const handleGearboxChange = (types: string[]) => {
     setFilters(prev => ({ ...prev, gearbox_type: types }));
+  };
+
+  const handleDoorsChange = (doors: Door[]) => {
+    setFilters(prev => ({ ...prev, doors }));
+  };
+
+  const handleDriveTypeChange = (types: DriveType[]) => {
+    setFilters(prev => ({ ...prev, drive_type: types }));
+  };
+
+  const handleWarranty = (types: Warranty[]) => {
+    setFilters(prev => ({ ...prev, warranty: types }));
+  };
+
+  const handleCylinders = (types: Cylinders[]) => {
+    setFilters(prev => ({ ...prev, cylinders: types }));
   };
 
   const handleSellerTypeChange = (type: SellerType) => {
@@ -599,6 +702,10 @@ export default function CarsPage() {
     gearbox_type: Array.from(new Set(cars.filter(car => car.gearbox_type).map(car => car.gearbox_type))).sort(),
     color: Array.from(new Set(cars.filter(car => car.color).map(car => car.color))).sort(),
     location: Array.from(new Set(cars.filter(car => car.location).map(car => car.location))).sort(),
+    doors: Array.from(new Set(cars.filter(car => car.doors).map(car => car.doors))).sort(),
+    drive_type: Array.from(new Set(cars.filter(car => car.drive_type).map(car => car.drive_type))).sort(),
+    warranty_type: Array.from(new Set(cars.filter(car => car.warranty_type).map(car => car.warranty_type))).sort(),
+    cylinders: Array.from(new Set(cars.filter(car => car.cylinders).map(car => car.cylinders))).sort(),
   };
 
   const filterConfigs = [
@@ -610,6 +717,10 @@ export default function CarsPage() {
     { name: 'gearbox_type', label: t('car.filters.gearboxType'), options: filterOptions.gearbox_type },
     { name: 'color', label: t('car.filters.color'), options: filterOptions.color },
     { name: 'location', label: t('car.filters.location'), options: filterOptions.location },
+    { name: 'doors', label: t('car.filters.doors'), options: filterOptions.doors },
+    { name: 'drive_type', label: t('car.filters.driveType'), options: filterOptions.drive_type },
+    { name: 'warranty_type', label: t('car.filters.warrantyType'), options: filterOptions.warranty_type },
+    { name: 'cylinders', label: t('car.filters.cylinders'), options: filterOptions.cylinders },
   ].filter(filter => filter.options.length > 0);
 
   const priceRanges = [
@@ -636,6 +747,10 @@ export default function CarsPage() {
     if (filters.body_type?.length) count++;
     if (filters.fuel_type?.length) count++;
     if (filters.condition?.length) count++;
+    if (filters.doors?.length) count++;
+    if (filters.drive_type?.length) count++;
+    if (filters.warranty_type?.length) count++;
+    if (filters.cylinders?.length) count++;
     if (filters.seller_type?.length) count++;
     if (filters.minYear !== undefined || filters.maxYear !== undefined) count++;
     if (filters.gearbox_type && filters.gearbox_type.length > 0) count++;
@@ -663,6 +778,10 @@ export default function CarsPage() {
     filters.body_type?.forEach(type => newActiveFilters.push(`${t('car.filters.bodyType')}: ${type}`));
     filters.fuel_type?.forEach(type => newActiveFilters.push(`${t('car.filters.fuelType')}: ${type}`));
     filters.condition?.forEach(condition => newActiveFilters.push(`${t('car.filters.condition')}: ${condition}`));
+    filters.doors?.forEach(doors => newActiveFilters.push(`${t('car.filters.doors')}: ${doors}`));
+    filters.drive_type?.forEach(drive_type => newActiveFilters.push(`${t('car.filters.driveType')}: ${drive_type}`));
+    filters.warranty?.forEach(warranty => newActiveFilters.push(`${t('car.filters.warranty')}: ${warranty}`));
+    filters.cylinders?.forEach(cylinders => newActiveFilters.push(`${t('car.filters.cylinders')}: ${cylinders}`));
     filters.seller_type?.forEach(type => newActiveFilters.push(`${t('car.filters.sellerType')}: ${type}`));
     if (filters.minYear !== undefined || filters.maxYear !== undefined) {
       newActiveFilters.push(t('car.filters.yearRange'));
@@ -1197,29 +1316,29 @@ export default function CarsPage() {
                         ))}
                       </div>
                     </div>
-
-                    {/* Fuel Type */}
+                    {/* Cylinders */}
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-900 dark:text-white">
-                        {t('car.filters.fuelType')}
+                        {t('car.filters.cylinders')}
                       </label>
                       <div className="grid grid-cols-2 gap-2">
-                        {(['Petrol', 'Diesel', 'Electric', 'Hybrid'] as FuelType[]).map((type) => (
+                        {(['3', '4', '5', '6', '8', '10', '12', '16', 'electric'] as CylindersType[]).map((type) => (
                           <button
                             key={type}
-                            onClick={() => toggleFuelType(type)}
+                            onClick={() => toggleCylinders(type)}
                             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border 
                               ${
-                              filters.fuel_type?.includes(type)
+                              filters.cylinders?.includes(type)
                                 ? 'bg-qatar-maroon text-white border-qatar-maroon font-bold hover:bg-qatar-maroon/90'
                                 : 'bg-white dark:bg-transparent border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-qatar-maroon/50'
                             }`}
                           >
-                            {t(`car.fuelType.${type.toLowerCase()}`)}
+                            {t(`car.cylinders.${type.toLowerCase()}`)}
                           </button>
                         ))}
                       </div>
                     </div>
+                    
 
                     {/* Expand/Collapse Button */}
                     <div className="flex justify-center">
@@ -1273,9 +1392,102 @@ export default function CarsPage() {
                             ))}
                           </div>
                         </div>
-                      </motion.div>
-                    )}
+                      
+                    {/* Doors */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-900 dark:text-white">
+                        {t('car.filters.doors')}
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {(['2', '3', '4', '5', '6+'] as Door[]).map((type) => (
+                          <button
+                            key={type}
+                            onClick={() => toggleDoors(type)}
+                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border 
+                              ${
+                              filters.doors?.includes(type)
+                                ? 'bg-qatar-maroon text-white border-qatar-maroon font-bold hover:bg-qatar-maroon/90'
+                                : 'bg-white dark:bg-transparent border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-qatar-maroon/50'
+                            }`}
+                          >
+                            {t(`car.doors.${type.toLowerCase()}`)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    {/* Fuel Type */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-900 dark:text-white">
+                        {t('car.filters.fuelType')}
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {(['Petrol', 'Diesel', 'Electric', 'Hybrid'] as FuelType[]).map((type) => (
+                          <button
+                            key={type}
+                            onClick={() => toggleFuelType(type)}
+                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border 
+                              ${
+                              filters.fuel_type?.includes(type)
+                                ? 'bg-qatar-maroon text-white border-qatar-maroon font-bold hover:bg-qatar-maroon/90'
+                                : 'bg-white dark:bg-transparent border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-qatar-maroon/50'
+                            }`}
+                          >
+                            {t(`car.fuelType.${type.toLowerCase()}`)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
 
+                    {/*drive type*/}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-900 dark:text-white">
+                        {t('car.filters.driveType')}
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {(['FWD', 'RWD', 'AWD', '4WD'] as DriveType[]).map((type) => (
+                          <button
+                            key={type}
+                            onClick={() => toggleDriveType(type)}
+                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border 
+                              ${
+                              filters.drive_type?.includes(type)
+                                ? 'bg-qatar-maroon text-white border-qatar-maroon font-bold hover:bg-qatar-maroon/90'
+                                : 'bg-white dark:bg-transparent border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-qatar-maroon/50'
+                            }`}
+                          >
+                            {t(`car.driveType.${type.toLowerCase()}`)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    {/*warranty*/}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-900 dark:text-white">
+                        {t('car.filters.warranty')}
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {(['Yes', 'No'] as Warranty[]).map((type) => (
+                          <button
+                            key={type}
+                            onClick={() => toggleWarranty(type)}
+                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border 
+                              ${
+                              filters.warranty?.includes(type)
+                                ? 'bg-qatar-maroon text-white border-qatar-maroon font-bold hover:bg-qatar-maroon/90'
+                                : 'bg-white dark:bg-transparent border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-qatar-maroon/50'
+                            }`}
+                          >
+                            {t(`car.warranty.${type.toLowerCase()}`)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    </motion.div>
+                    )}
+                    
                     {/* Clear Filters Button */}
                     <button
                       onClick={resetFilters}

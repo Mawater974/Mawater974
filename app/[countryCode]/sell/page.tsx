@@ -89,7 +89,7 @@ const bodyTypes = ['Sedan', 'SUV', 'Hatchback', 'Coupe', 'Truck', 'Van', 'Wagon'
 const conditions = ['New', 'Excellent', 'Good', 'Not Working'];
 const colors =['White', 'Black', 'Silver', 'Gray', 'Red', 'Blue', 'Green', 'Yellow', 'Orange', 'Brown', 'Purple', 'Gold', 'Beige', 'Maroon', 'Navy', 'Bronze', 'Other'];
 const cylinderOptions = ['Electric', '3', '4', '5', '6', '8', '10', '12', '16'];
-const doorOptions = ['2', '3', '4', '5', '6', '7+'];
+const doorOptions = ['2', '3', '4', '5', '6+'];
 const driveTypeOptions = ['FWD', 'RWD', 'AWD', '4WD'];
 const warrantyOptions = ['Yes', 'No'];
 
