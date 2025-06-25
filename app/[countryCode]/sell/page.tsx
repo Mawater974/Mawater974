@@ -769,7 +769,7 @@ useEffect(() => {
               <option value="">{t('sell.details.doors.select')}</option>
               {doorOptions.map(opt => (
                 <option key={opt} value={opt}>
-                  {t(`car.doors.${opt.replace('+', 'plus')}`)}
+                  {t(`car.doors.${opt}`)}
                 </option>
               ))}
             </select>

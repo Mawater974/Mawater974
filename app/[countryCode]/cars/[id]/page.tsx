@@ -28,6 +28,8 @@ import { BodyTypeIcon } from '@/components/icons/BodyTypeIcon';
 import { CylinderIcon } from '@/components/icons/CylinderIcon';
 import { ConditionIcon } from '@/components/icons/ConditionIcon';
 import { MileageIcon } from '@/components/icons/MileageIcon';
+import { DriveTypeIcon } from '@/components/icons/DriveTypeIcon';
+import { CardoorIcon } from '@/components/icons/CardoorIcon';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import LoginPopup from '@/components/LoginPopup';
 import { getCountryFromIP } from '@/utils/getCountryFromIP';
@@ -1068,9 +1070,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
               {car.doors && (
                 <div className="bg-gradient-to-br from-gray-100 to-gray-200/50 dark:from-gray-800 dark:to-gray-700 p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow">
                   <div className="flex items-center space-x-2 rtl:space-x-reverse mb-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-qatar-maroon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                    </svg>
+                    <CardoorIcon className="h-6 w-6 text-qatar-maroon" />
                     <span className="text-sm font-medium text-gray-600 dark:text-gray-300">{t('car.doors.label')}</span>
                   </div>
                   <p className="text-gray-900 dark:text-white font-semibold">
@@ -1085,9 +1085,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
               {car.drive_type && (
                 <div className="bg-gradient-to-br from-gray-100 to-gray-200/50 dark:from-gray-800 dark:to-gray-700 p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow">
                   <div className="flex items-center space-x-2 rtl:space-x-reverse mb-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-qatar-maroon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
+                    <DriveTypeIcon className="h-6 w-6 text-qatar-maroon" />
                     <span className="text-sm font-medium text-gray-600 dark:text-gray-300">{t('car.driveType.label')}</span>
                   </div>
                   <p className="text-gray-900 dark:text-white font-semibold">
@@ -1097,19 +1095,21 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
               )}
 
               {/* Warranty */}
-              {car.warranty_months_remaining && car.warranty_months_remaining > 0 && (
-                <div className="bg-gradient-to-br from-gray-100 to-gray-200/50 dark:from-gray-800 dark:to-gray-700 p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow">
-                  <div className="flex items-center space-x-2 rtl:space-x-reverse mb-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-qatar-maroon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                    </svg>
-                    <span className="text-sm font-medium text-gray-600 dark:text-gray-300">{t('car.warranty.label')}</span>
-                  </div>
-                  <p className="text-gray-900 dark:text-white font-semibold">
-                    {t('car.warranty.yesWithMonths', { months: car.warranty_months_remaining })}
-                  </p>
+              <div className="bg-gradient-to-br from-gray-100 to-gray-200/50 dark:from-gray-800 dark:to-gray-700 p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-center space-x-2 rtl:space-x-reverse mb-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-qatar-maroon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                  <span className="text-sm font-medium text-gray-600 dark:text-gray-300">{t('car.warranty.label')}</span>
                 </div>
-              )}
+                <p className="text-gray-900 dark:text-white font-semibold">
+                  {car.warranty === 'Yes' 
+                    ? (car.warranty_months_remaining && car.warranty_months_remaining > 0 
+                        ? t('car.warranty.yesWithMonths', { months: car.warranty_months_remaining })
+                        : t('car.warranty.yes'))
+                    : t('car.warranty.no')}
+                </p>
+              </div>
               {/* Location */}
               <div className="bg-gradient-to-br from-gray-100 to-gray-200/50 dark:from-gray-800 dark:to-gray-700 p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex items-center space-x-2 rtl:space-x-reverse mb-2">

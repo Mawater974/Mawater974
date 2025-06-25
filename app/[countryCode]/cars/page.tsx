@@ -1525,12 +1525,23 @@ export default function CarsPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
-                      <div className="h-2 w-16 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-qatar-maroon transition-all duration-300"
-                          style={{ width: `${(selectedCars.length / 2) * 100}%` }}
-                        />
-                      </div>
+                      <button
+                    onClick={handleCompareClick}
+                    className={`px-3 sm:px-6 py-2 rounded-xl font-medium transition-all duration-200 flex items-center gap-2 border border-gray-200 dark:border-gray-700/50 ${
+                      compareMode
+                        ? 'bg-qatar-maroon text-white hover:bg-qatar-maroon/90 transform '
+                        : 'bg-white dark:bg-gray-800/90 text-gray-900 dark:text-white hover:bg-gray-50 hover:border-qatar-maroon dark:hover:bg-gray-700/50'
+                    }`}
+                  >
+                    <AdjustmentsHorizontalIcon className="h-5 w-5" />
+                    {compareMode ? (
+                      selectedCars.length > 0 
+                        ? `${selectedCars.length}/2` 
+                        : '0/2'
+                    ) : (
+                      'Compare Cars'
+                    )}
+                  </button>
                       <button
                         onClick={() => setCompareMode(false)}
                         className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"

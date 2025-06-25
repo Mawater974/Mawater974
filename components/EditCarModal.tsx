@@ -34,6 +34,10 @@ interface FormData {
   body_type: string;
   condition: string;
   cylinders: string;
+  doors: string;
+  drive_type: string;
+  warranty: string;
+  warranty_months_remaining: string;
   exact_model: string;
   city_id: string;
   is_featured: boolean;
@@ -61,6 +65,10 @@ export default function EditCarModal({ isOpen, onClose, car, onUpdate, onEditCom
     body_type: '',
     condition: '',
     cylinders: '',
+    doors: '',
+    drive_type: '',
+    warranty: '',
+    warranty_months_remaining: '',
     exact_model: '',
     city_id: '',
     is_featured: false,
@@ -129,6 +137,10 @@ export default function EditCarModal({ isOpen, onClose, car, onUpdate, onEditCom
             body_type: car.body_type || '',
             condition: car.condition || '',
             cylinders: car.cylinders || '',
+            doors: car.doors || '',
+            drive_type: car.drive_type || '',
+            warranty: car.warranty || '',
+            warranty_months_remaining: car.warranty_months_remaining || '',
             exact_model: car.exact_model || '',
             city_id: car.city?.id || '',
             is_featured: car.is_featured || false
@@ -637,6 +649,24 @@ export default function EditCarModal({ isOpen, onClose, car, onUpdate, onEditCom
                     </div>
                     <div>
                       <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {t('car.city')}
+                      </label>
+                      <select
+                        value={formData.city_id}
+                        onChange={(e) => setFormData(prev => ({ ...prev, city_id: e.target.value }))}
+                        className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-qatar-maroon focus:border-qatar-maroon sm:text-sm bg-white dark:bg-gray-700 transition-colors duration-200"
+                        required
+                      >
+                        <option value="">{t('car.select')}</option>
+                        {cities.map(city => (
+                          <option key={city.id} value={city.id}>
+                            {language === 'ar' ? city.name_ar : city.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
                         {t('car.fuelType.label')}
                       </label>
                       <select
@@ -669,24 +699,7 @@ export default function EditCarModal({ isOpen, onClose, car, onUpdate, onEditCom
                       </select>
                     </div>
 
-                    <div>
-                      <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-                        {t('car.city')}
-                      </label>
-                      <select
-                        value={formData.city_id}
-                        onChange={(e) => setFormData(prev => ({ ...prev, city_id: e.target.value }))}
-                        className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-qatar-maroon focus:border-qatar-maroon sm:text-sm bg-white dark:bg-gray-700 transition-colors duration-200"
-                        required
-                      >
-                        <option value="">{t('car.select')}</option>
-                        {cities.map(city => (
-                          <option key={city.id} value={city.id}>
-                            {language === 'ar' ? city.name_ar : city.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                    
                     <div>
                       <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
                         {t('car.bodyType')}
@@ -728,7 +741,67 @@ export default function EditCarModal({ isOpen, onClose, car, onUpdate, onEditCom
                         <option value="Not Working">{t('car.condition.not_working')}</option>
                       </select>
                     </div>
-
+                    <div>
+                      <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {t('car.doors')}
+                      </label>
+                      <select
+                        value={formData.doors}
+                        onChange={(e) => setFormData(prev => ({ ...prev, doors: e.target.value }))}
+                        className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-qatar-maroon focus:border-qatar-maroon sm:text-sm bg-white dark:bg-gray-700 transition-colors duration-200"
+                        required
+                      >
+                        <option value="">{t('car.select')}</option>
+                        <option value="2">{t('car.doors.2')}</option>
+                        <option value="3">{t('car.doors.3')}</option>
+                        <option value="4">{t('car.doors.4')}</option>
+                        <option value="5">{t('car.doors.5')}</option>
+                        <option value="6+">{t('car.doors.6+')}</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {t('car.driveType')}
+                      </label>
+                      <select
+                        value={formData.drive_type}
+                        onChange={(e) => setFormData(prev => ({ ...prev, drive_type: e.target.value }))}
+                        className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-qatar-maroon focus:border-qatar-maroon sm:text-sm bg-white dark:bg-gray-700 transition-colors duration-200"
+                        required
+                      >
+                        <option value="">{t('car.select')}</option>
+                        <option value="FWD">{t('car.driveType.fwd')}</option>
+                        <option value="RWD">{t('car.driveType.rwd')}</option>
+                        <option value="AWD">{t('car.driveType.awd')}</option>
+                        <option value="4WD">{t('car.driveType.4wd')}</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {t('car.warranty')}
+                      </label>
+                      <select
+                        value={formData.warranty}
+                        onChange={(e) => setFormData(prev => ({ ...prev, warranty: e.target.value }))}
+                        className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-qatar-maroon focus:border-qatar-maroon sm:text-sm bg-white dark:bg-gray-700 transition-colors duration-200"
+                      >
+                        <option value="">{t('car.select')}</option>
+                        <option value="Yes">{t('car.warranty.yes')}</option>
+                        <option value="No">{t('car.warranty.no')}</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {t('car.warrantyMonthsRemaining')}
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.warranty_months_remaining}
+                        onChange={(e) => setFormData(prev => ({ ...prev, warranty_months_remaining: e.target.value }))}
+                        className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-qatar-maroon focus:border-qatar-maroon sm:text-sm bg-white dark:bg-gray-700 transition-colors duration-200"
+                        
+                      />
+                    </div>
                     <div>
                       <label className="w-full mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
                         {t('car.description')}
