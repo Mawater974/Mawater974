@@ -1324,6 +1324,12 @@ const translations = {
     'carSpecs.km': 'km',
     'compareCars.specifications': 'Specifications',
 
+    'car.driveType': 'Drive Type',
+    'car.doors': 'Doors',
+    'car.warranty': 'Warranty',
+    'car.warrantyMonthsRemaining': 'Warranty Months Remaining',
+
+
 
   },
   ar: {
@@ -2534,7 +2540,10 @@ const translations = {
     'carSpecs.warranty': 'الضمان',
     'carSpecs.km': 'كم',
     'compareCars.specifications': 'المواصفات',
-
+    'car.warrantyMonthsRemaining': 'الضمان المتبق',
+    'car.doors': 'الابواب',
+    'car.driveType': 'نوع الدفع',
+    'car.warranty': 'الضمان',
   },
 };
 
