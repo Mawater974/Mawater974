@@ -72,7 +72,6 @@ const initialFormData: FormData = {
   city_id: null,
   country_id: null, // Initialize country_id as null
   images: [],
-  // Initialize new fields
   doors: '',
   drive_type: '',
   warranty: '',
@@ -143,6 +142,10 @@ export default function SellPage() {
     gearbox_type: '',
     body_type: '',
     cylinders: '',
+    drive_type: '',
+    doors: '',
+    warranty: '',
+    warranty_months_remaining: '',
     location: '',
     condition: '',
     color: '',
@@ -300,6 +303,10 @@ export default function SellPage() {
         gearbox_type: data.gearbox_type,
         body_type: data.body_type,
         cylinders: data.cylinders,
+        drive_type: data.drive_type,
+        doors: data.doors,
+        warranty: data.warranty,
+        warranty_months_remaining: data.warranty_months_remaining,
         location: data.location,
         condition: data.condition,
         color: data.color,
@@ -1164,13 +1171,21 @@ useEffect(() => {
       { label: t('sell.details.bodyType'), value: formData.body_type ? t(`car.bodyType.${formData.body_type.toLowerCase()}`) : null },
       { label: t('sell.details.condition'), value: formData.condition ? t(`car.condition.${formData.condition?.toLowerCase().replace(' ', '_')}`) : null },
       { label: t('sell.details.color'), value: formData.color ? t(`car.color.${formData.color.toLowerCase()}`) : null },
+      { label: t('sell.details.doors'), value: formData.doors ? t(`car.doors.${formData.doors.toLowerCase()}`) : null },
+      { label: t('sell.details.driveType'), value: formData.drive_type ? t(`car.driveType.${formData.drive_type.toLowerCase()}`) : null },
+      { label: t('sell.details.warranty'), value: formData.warranty ? t(`car.warranty.${formData.warranty.toLowerCase()}`) : null },
+      { label: t('sell.details.warrantyMonthsRemaining'), value: formData.warranty_months_remaining ? t(`${formData.warranty_months_remaining} ${t('car.warrantyMonths')}`) : null },
       { 
         label: t('sell.details.cylinders'), 
         value: formData.cylinders ? (formData.cylinders === 'Electric' ? t('sell.details.cylinders.electric') : t('sell.details.cylinders.count', { count: Number(formData.cylinders) })) : null 
       },
       { 
         label: t('sell.details.location'), 
-        value: formData.location || null 
+        value: formData.city_id ? 
+          (currentLanguage === 'ar' ? 
+            cities.find(c => c.id === formData.city_id)?.name_ar : 
+            cities.find(c => c.id === formData.city_id)?.name) : 
+          null 
       },
       { label: t('sell.details.description'), value: formData.description },
     ];
@@ -1469,8 +1484,8 @@ useEffect(() => {
         cylinders: formData.cylinders === 'Electric' ? 'Electric' : formData.cylinders,
         location: formData.location,
         description: formData.description,
-        user_id: user.id,
-        country_id: currentCountry.id,
+        user_id: user?.id,
+        country_id: currentCountry?.id,
         city_id: formData.city_id,
         status: 'Pending',
         is_featured: selectedPlan === 'featured',
@@ -1568,7 +1583,27 @@ useEffect(() => {
         // Wait for all image uploads to complete
         await Promise.all(imagePromises);
       }
+      const { data: updatedCarImages, error: fetchError } = await supabase
+        .from('car_images')
+        .select('url, is_main')
+        .eq('car_id', carData.id)
+        .order('is_main', { ascending: false }) // Main image first
+        .order('created_at', { ascending: true });
 
+      if (fetchError) {
+        console.error('Error fetching car images:', fetchError);
+      } else if (updatedCarImages && updatedCarImages.length > 0) {
+        const imageUrls = updatedCarImages.map(img => img.url);
+        
+        const { error: updateError } = await supabase
+          .from('cars')
+          .update({ images: imageUrls })
+          .eq('id', carData.id);
+
+        if (updateError) {
+          console.error('Error updating car images array:', updateError);
+        }
+      }
       // Handle existing images to delete
       if (imagesToDelete.length > 0) {
         const { error: deleteError } = await supabase
@@ -1581,7 +1616,50 @@ useEffect(() => {
           throw deleteError;
         }
       }
-
+      if (imagesToDelete.length > 0) {
+        const { error: deleteError } = await supabase
+          .from('car_images')
+          .delete()
+          .in('id', imagesToDelete);
+      
+        if (deleteError) {
+          console.error('Error deleting images:', deleteError);
+          throw deleteError;
+        }
+      
+        // Update the cars.images array after deletion
+        const { data: remainingImages, error: fetchError } = await supabase
+          .from('car_images')
+          .select('url, is_main')
+          .eq('car_id', carData.id)
+          .order('is_main', { ascending: false })
+          .order('created_at', { ascending: true });
+      
+        if (fetchError) {
+          console.error('Error fetching remaining images:', fetchError);
+        } else if (remainingImages && remainingImages.length > 0) {
+          const imageUrls = remainingImages.map(img => img.url);
+          
+          const { error: updateError } = await supabase
+            .from('cars')
+            .update({ images: imageUrls })
+            .eq('id', carData.id);
+      
+          if (updateError) {
+            console.error('Error updating cars.images after deletion:', updateError);
+          }
+        } else {
+          // If no images left, set empty array
+          const { error: updateError } = await supabase
+            .from('cars')
+            .update({ images: [] })
+            .eq('id', carData.id);
+      
+          if (updateError) {
+            console.error('Error clearing cars.images array:', updateError);
+          }
+        }
+      }
       // Notification will be created below
 
       // Create notification for the user if logged in
@@ -1599,6 +1677,12 @@ useEffect(() => {
       }
 
       setIsSubmitted(true);
+      if (typeof window !== 'undefined') {
+        window.scrollTo({
+          top: 0,
+          behavior: 'smooth'
+        });
+      }
       toast.success(t('sell.messages.success'));
       } catch (error: any) {
       console.error('Error in form submission:', error);
