@@ -8,12 +8,14 @@ interface ImageCarouselProps {
   images: { url: string; is_main?: boolean }[];
   alt: string;
   aspectRatio?: string;
+  fallbackImage?: string;
 }
 
 export default function ImageCarousel({
   images = [],
   alt,
   aspectRatio = 'aspect-[16/9]',
+  fallbackImage = '/placeholder-car.jpg',
 }: ImageCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -24,8 +26,8 @@ export default function ImageCarousel({
     return 0;
   });
 
-  // Use placeholder if no images
-  const imageUrls = sortedImages.length > 0 ? sortedImages : [{ url: '/placeholder-car.jpg' }];
+  // Use fallback if no images
+  const imageUrls = sortedImages.length > 0 ? sortedImages : [{ url: fallbackImage }];
 
   const next = (e: React.MouseEvent) => {
     e.preventDefault();

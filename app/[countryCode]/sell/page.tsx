@@ -1583,27 +1583,7 @@ useEffect(() => {
         // Wait for all image uploads to complete
         await Promise.all(imagePromises);
       }
-      const { data: updatedCarImages, error: fetchError } = await supabase
-        .from('car_images')
-        .select('url, is_main')
-        .eq('car_id', carData.id)
-        .order('is_main', { ascending: false }) // Main image first
-        .order('created_at', { ascending: true });
-
-      if (fetchError) {
-        console.error('Error fetching car images:', fetchError);
-      } else if (updatedCarImages && updatedCarImages.length > 0) {
-        const imageUrls = updatedCarImages.map(img => img.url);
-        
-        const { error: updateError } = await supabase
-          .from('cars')
-          .update({ images: imageUrls })
-          .eq('id', carData.id);
-
-        if (updateError) {
-          console.error('Error updating car images array:', updateError);
-        }
-      }
+      // No need to update cars.images as we're using car_images table exclusively
       // Handle existing images to delete
       if (imagesToDelete.length > 0) {
         const { error: deleteError } = await supabase
@@ -1627,38 +1607,7 @@ useEffect(() => {
           throw deleteError;
         }
       
-        // Update the cars.images array after deletion
-        const { data: remainingImages, error: fetchError } = await supabase
-          .from('car_images')
-          .select('url, is_main')
-          .eq('car_id', carData.id)
-          .order('is_main', { ascending: false })
-          .order('created_at', { ascending: true });
-      
-        if (fetchError) {
-          console.error('Error fetching remaining images:', fetchError);
-        } else if (remainingImages && remainingImages.length > 0) {
-          const imageUrls = remainingImages.map(img => img.url);
-          
-          const { error: updateError } = await supabase
-            .from('cars')
-            .update({ images: imageUrls })
-            .eq('id', carData.id);
-      
-          if (updateError) {
-            console.error('Error updating cars.images after deletion:', updateError);
-          }
-        } else {
-          // If no images left, set empty array
-          const { error: updateError } = await supabase
-            .from('cars')
-            .update({ images: [] })
-            .eq('id', carData.id);
-      
-          if (updateError) {
-            console.error('Error clearing cars.images array:', updateError);
-          }
-        }
+        // No need to update cars.images as we're using car_images table exclusively
       }
       // Notification will be created below
 

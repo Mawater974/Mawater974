@@ -199,7 +199,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
             *,
             brand:brands(*),
             model:models(*),
-            images:car_images(*),
+            images:car_images!car_images_car_id_fkey(*),
             city:cities(*),
             country:countries(*),
             user:profiles(*)
@@ -245,7 +245,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
             brand:brands!inner(id, name, name_ar),
             model:models!inner(id, name, name_ar),
             user:profiles!inner(full_name, email, phone_number),
-            images:car_images(url)
+            images:car_images!car_images_car_id_fkey(url)
           `)
           .eq('brand_id', car.brand_id)
           .eq('country_id', car.country?.id) // Filter by the same country

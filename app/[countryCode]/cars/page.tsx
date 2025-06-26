@@ -237,9 +237,17 @@ export default function CarsPage() {
       setLoading(true);
       setError(null);
       
-      let queryBuilder = supabase
+      // In the query builder, we'll keep the join with car_images
+        let queryBuilder = supabase
         .from('cars')
-        .select(`*, brand:brands(*), model:models(*), user:profiles!user_id(*), city:cities(*), country:countries(*), images:car_images(url, is_main)`)
+        .select(`*, 
+          brand:brands(*), 
+          model:models(*), 
+          user:profiles!user_id(*), 
+          city:cities(*), 
+          country:countries(*), 
+          images:car_images!car_images_car_id_fkey(url, is_main)
+        `)
         .eq('status', 'Approved');
 
       if (searchQuery && searchQuery.trim() !== '' && currentCountry?.id) {
@@ -265,19 +273,24 @@ export default function CarsPage() {
         }
       }
 
-      const { data: carsData, error } = await queryBuilder
+      const { data: cars, error } = await queryBuilder
         .eq('country_id', currentCountry?.id || 0)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-
-      if (!carsData) {
-        setCars([]);
-        setFeaturedCars([]);
+      if (error) {
+        console.error('Error fetching cars:', error);
+        setError(t('car.errorLoadingCars'));
+        setLoading(false);
         return;
       }
 
-      const transformedCars: CarWithLocation[] = carsData.map(car => {
+      // Process the data to ensure images is always an array
+      const processedCars = cars?.map(car => ({
+        ...car,
+        images: Array.isArray(car.images) ? car.images : []
+      })) || [];
+
+      const transformedCars: CarWithLocation[] = processedCars.map(car => {
         // Handle potentially null relationships
         const cityName = car.city?.name || 'Unknown City';
         const countryName = car.country?.name || 'Unknown Country';

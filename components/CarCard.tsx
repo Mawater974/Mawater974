@@ -74,8 +74,9 @@ export default function CarCard({
         
         <div className="relative aspect-[16/9]">
           <ImageCarousel
-            images={car.images || [{ url: '/placeholder-car.jpg' }]}
+            images={Array.isArray(car.images) ? car.images : []}
             alt={`${language === 'ar' && car.brand?.name_ar ? car.brand.name_ar : car.brand?.name || 'Car'} ${language === 'ar' && car.model?.name_ar ? car.model.name_ar : car.model?.name || ''}`}
+            fallbackImage="/placeholder-car.jpg"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
         </div>
