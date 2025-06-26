@@ -1328,7 +1328,7 @@ const translations = {
     'car.doors': 'Doors',
     'car.warranty': 'Warranty',
     'car.warrantyMonthsRemaining': 'Warranty Months Remaining',
-
+    'car.warrantyMonths': 'Months',
 
 
   },
@@ -2544,6 +2544,8 @@ const translations = {
     'car.doors': 'الابواب',
     'car.driveType': 'نوع الدفع',
     'car.warranty': 'الضمان',
+    'car.warrantyMonths': 'شهر',
+
   },
 };
 
