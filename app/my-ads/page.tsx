@@ -1,11 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useCountry } from '@/contexts/CountryContext';
 import { supabase } from '@/lib/supabase';
-import Image from 'next/image';
-import Link from 'next/link';
 import { toast } from 'react-hot-toast';
+import Link from 'next/link';
+import Image from 'next/image';
 import {
   PlusCircleIcon,
   CheckCircleIcon,
@@ -16,13 +19,106 @@ import {
   TrashIcon,
   ShoppingBagIcon,
 } from '@heroicons/react/24/outline';
-import { useRouter } from 'next/navigation';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { useCountry } from '@/contexts/CountryContext';
+
+// Components
 import EditCarModal from '@/components/EditCarModal';
+import EditSparePartModal from '@/components/EditSparePartModal';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
-import type { ExtendedCar as Car, Country, City } from '../../types/supabase';
+// Types
+interface Brand {
+  id: number;
+  name: string;
+  name_ar?: string | null;
+  logo_url?: string | null;
+}
+
+interface Model {
+  id: number;
+  name: string;
+  name_ar?: string | null;
+}
+
+interface Country {
+  id: number;
+  name: string;
+  name_ar: string | null;
+  code: string;
+  currency_code: string;
+}
+
+interface City {
+  id: number;
+  name: string;
+  name_ar: string | null;
+  country_id: number;
+  country: Country;
+  [key: string]: any; // Allow additional properties
+}
+
+interface SparePartImage {
+  id: string;
+  url: string;
+  is_primary: boolean;
+}
+
+// Interface for the SparePart type used in this component
+interface SparePart {
+  id: string;
+  title: string;
+  name_ar?: string | null;
+  description: string | null;
+  description_ar?: string | null;
+  price: number;
+  currency: string;
+  status: 'Pending' | 'Approved' | 'Rejected' | 'Expired' | 'Sold' | 'Archived' ;
+  created_at: string;
+  is_featured: boolean;
+  brand: {
+    id: number;
+    name: string;
+    name_ar: string | null;
+  } | null;
+  brand_id?: number | null;
+  model: {
+    id: number;
+    name: string;
+    name_ar: string | null;
+  } | null;
+  model_id?: number | null;
+  category: {
+    id: number;
+    name_en: string;
+    name_ar: string;
+    [key: string]: any;
+  } | null;
+  category_id?: number | null;
+  city: City | null;
+  city_id?: number | null;
+  country: Country | null;
+  country_id?: number | null;
+  images: SparePartImage[];
+  is_favorite: boolean;
+  part_type: 'original' | 'aftermarket';
+  condition: 'new' | 'used' | 'refurbished';
+  user_id: string;
+}
+
+// Type for the form data in EditSparePartModal
+type SparePartFormData = {
+  id: string;
+  title: string;
+  description: string;
+  price: string;
+  currency: string;
+  part_type: 'original' | 'aftermarket';
+  condition: 'new' | 'used' | 'refurbished';
+  images: Array<{
+    id: string;
+    url: string;
+    is_primary: boolean;
+  }>;
+}
 
 interface Brand {
   id: number;
@@ -31,13 +127,7 @@ interface Brand {
   logo_url?: string | null;
 }
 
-interface Model {
-  id: number;
-  name: string;
-  name_ar?: string;
-}
-
-interface ExtendedCarWithStatus extends Car {
+interface ExtendedCarWithStatus {
   status: 'Pending' | 'Approved' | 'Rejected' | 'Expired' | 'Sold';
   expiration_date?: string;
   id: number;
@@ -47,58 +137,541 @@ interface ExtendedCarWithStatus extends Car {
   country?: Country;
   location?: string;
   images: { url: string; is_main: boolean }[];
+  url: string;
+  is_main: boolean;
   views_count?: number;
   exact_model?: string;
   price: number;
   mileage: number;
   created_at: string;
+  currency?: string;
 }
+
+// Cars Tab Component
+interface CarsTabProps {
+  loading: boolean;
+  cars: ExtendedCarWithStatus[];
+  t: any;
+  currentCountry: Country | null;
+  language: string;
+  isExpired: (item: ExtendedCarWithStatus | SparePart) => boolean;
+  handleRenew: (id: number) => void;
+  renewingCarId: number | null;
+  handleEditCar: (car: ExtendedCarWithStatus) => void;
+  handleDeleteClick: (car: ExtendedCarWithStatus) => void;
+  handleMarkAsSold: (car: ExtendedCarWithStatus) => void;
+  handleSetMainPhoto: (carId: number, imageUrl: string) => Promise<void>;
+  actionLoading: boolean;
+}
+
+const CarsTab = ({
+  loading,
+  cars,
+  t,
+  currentCountry,
+  language,
+  isExpired,
+  handleRenew,
+  renewingCarId,
+  handleEditCar,
+  handleDeleteClick,
+  handleMarkAsSold,
+  handleSetMainPhoto,
+  actionLoading,
+}: CarsTabProps) => {
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-qatar-maroon"></div>
+      </div>
+    );
+  }
+
+  if (cars.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-gray-500 dark:text-gray-400">
+          No cars found
+        </p>
+      </div>
+    );
+  }
+
+  const router = useRouter();
+
+  const handleCarClick = (car: ExtendedCarWithStatus, e: React.MouseEvent) => {
+    // Prevent navigation if clicking on buttons or links inside the card
+    const target = e.target as HTMLElement;
+    if (target.closest('button, a')) {
+      return;
+    }
+    router.push(`/${currentCountry?.code.toLowerCase()}/cars/${car.id}`);
+  };
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      {cars.map((car) => (
+        <div 
+          key={car.id} 
+          className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-200"
+          onClick={(e) => handleCarClick(car, e)}
+        >
+          <div className="relative h-48 bg-gray-200">
+            {car.images?.[0]?.url && (
+              <Image
+                src={car.images[0].url}
+                alt={`${car.brand?.name || ''} ${car.model?.name || ''}`}
+                fill
+                className="object-cover"
+              />
+            )}
+          </div>
+          <div className="p-4">
+            <div className="flex justify-between items-start">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                {car.brand?.name} {car.model?.name}
+              </h3>
+              <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                car.status === 'Approved' ? 'bg-green-100 text-green-800' :
+                car.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
+                car.status === 'Rejected' ? 'bg-red-100 text-red-800' :
+                car.status === 'Expired' ? 'bg-gray-100 text-gray-800' :
+                'bg-blue-100 text-blue-800'
+              }`}>
+                {car.status}
+              </span>
+            </div>
+            <p className="text-qatar-maroon font-bold text-lg mt-2">
+              {car.price.toLocaleString()} {car.currency || currentCountry?.currency_code || 'QAR'}
+            </p>
+            <div className="mt-4 flex justify-between items-center">
+              <button
+                onClick={() => handleEditCar(car)}
+                className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
+              >
+                {t('common.edit')}
+              </button>
+              <button
+                onClick={() => handleDeleteClick(car)}
+                className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
+                disabled={actionLoading}
+              >
+                {t('common.delete')}
+              </button>
+              <button
+                onClick={() => handleMarkAsSold(car)}
+                className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm"
+                disabled={actionLoading}
+              >
+                {t('common.markAsSold')}
+              </button>
+            </div>
+            {isExpired(car) && (
+              <button
+                onClick={() => handleRenew(car.id)}
+                className="w-full mt-3 px-3 py-1.5 bg-qatar-maroon text-white rounded hover:bg-qatar-maroon/90 text-sm flex items-center justify-center"
+                disabled={renewingCarId === car.id}
+              >
+                {renewingCarId === car.id ? (
+                  <>
+                    <LoadingSpinner className="h-4 w-4 mr-2" />
+                    {t('common.renewing')}
+                  </>
+                ) : (
+                  t('common.renewAd')
+                )}
+              </button>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// Spare Parts Tab Component
+interface SparePartsTabProps {
+  loading: boolean;
+  spareParts: SparePart[];
+  t: any;
+  currentCountry: Country | null;
+  language: string;
+  isExpired: (item: SparePart) => boolean;
+  onEditSparePart: (sparePart: SparePart) => void;
+  onDeleteSparePart: (sparePart: SparePart) => void;
+  onMarkAsSold: (sparePart: SparePart) => void;
+  actionLoading: boolean;
+  renewingSparePartId: string | null;
+  onRenewSparePart: (id: string) => void;
+}
+
+const SparePartsTab = ({
+  loading,
+  spareParts,
+  t,
+  currentCountry,
+  language,
+  isExpired,
+  onEditSparePart,
+  onDeleteSparePart,
+  onMarkAsSold,
+  actionLoading,
+  renewingSparePartId,
+  onRenewSparePart
+}: SparePartsTabProps) => {
+  const router = useRouter();
+
+  const handleSparePartClick = (sparePart: SparePart, e: React.MouseEvent) => {
+    // Prevent navigation if clicking on buttons or links inside the card
+    const target = e.target as HTMLElement;
+    if (target.closest('button, a')) {
+      return;
+    }
+    router.push(`/${currentCountry?.code.toLowerCase()}/spare-parts/${sparePart.id}`);
+  };
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (spareParts.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-gray-500 dark:text-gray-400">
+          No spare parts found
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      {spareParts.map((part) => (
+        <div 
+          key={part.id} 
+          className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-200"
+          onClick={(e) => handleSparePartClick(part, e)}
+        >
+          <div className="relative h-48 bg-gray-200">
+            {part.images?.[0]?.url && (
+              <Image
+                src={part.images[0].url}
+                alt={part.title}
+                fill
+                className="object-cover"
+              />
+            )}
+          </div>
+          <div className="p-4">
+            <div className="flex justify-between items-start">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                {part.title}
+              </h3>
+              <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                part.status === 'Approved' ? 'bg-green-100 text-green-800' :
+                part.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
+                part.status === 'Rejected' ? 'bg-red-100 text-red-800' :
+                part.status === 'Expired' ? 'bg-gray-100 text-gray-800' :
+                'bg-blue-100 text-blue-800'
+              }`}>
+                {part.status}
+              </span>
+            </div>
+            <p className="text-qatar-maroon font-bold text-lg mt-2">
+              {part.price.toLocaleString()} {part.currency || currentCountry?.currency_code || 'QAR'}
+            </p>
+            <div className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+              <p>{part.brand?.name} {part.model?.name}</p>
+              <p>{part.category?.[`name_${language}` as keyof typeof part.category] || part.category?.name_en}</p>
+            </div>
+            <div className="mt-4 flex justify-between items-center">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEditSparePart(part);
+                }}
+                className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
+                disabled={actionLoading}
+              >
+                {t('common.edit')}
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteSparePart(part);
+                }}
+                className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
+                disabled={actionLoading}
+              >
+                {t('common.delete')}
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onMarkAsSold(part);
+                }}
+                className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm"
+                disabled={actionLoading}
+              >
+                {t('common.markAsSold')}
+              </button>
+            </div>
+            {isExpired(part) && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRenewSparePart(part.id);
+                }}
+                className="w-full mt-3 px-3 py-1.5 bg-qatar-maroon text-white rounded hover:bg-qatar-maroon/90 text-sm flex items-center justify-center"
+                disabled={renewingSparePartId === part.id}
+              >
+                {renewingSparePartId === part.id ? (
+                  <>
+                    <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></span>
+                    {t('common.renewing')}
+                  </>
+                ) : (
+                  t('common.renewAd')
+                )}
+              </button>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
 
 export default function MyAdsPage() {
   const { user } = useAuth();
   const router = useRouter();
   const { t, language } = useLanguage();
   const { currentCountry } = useCountry();
+  
   const [cars, setCars] = useState<ExtendedCarWithStatus[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'expired' | 'sold'>('all');
-  const [selectedCar, setSelectedCar] = useState<ExtendedCarWithStatus | null>(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showSoldModal, setShowSoldModal] = useState(false);
-  const [actionLoading, setActionLoading] = useState(false);
-  const [renewingCarId, setRenewingCarId] = useState<number | null>(null);
-  const [notifications, setNotifications] = useState<Array<{
+  const [spareParts, setSpareParts] = useState<SparePart[]>([]);
+  interface Notification {
     id: string;
     title: string;
     message: string;
+    read: boolean;
     created_at: string;
-    is_read: boolean;
-  }>>([]);
-  const [totalCount, setTotalCount] = useState(0);
+  }
+
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [renewingCarId, setRenewingCarId] = useState<number | null>(null);
+  const [renewingSparePartId, setRenewingSparePartId] = useState<string | null>(null);
+  const [selectedCar, setSelectedCar] = useState<ExtendedCarWithStatus | null>(null);
+  const [selectedSparePart, setSelectedSparePart] = useState<SparePart | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isEditSparePartModalOpen, setIsEditSparePartModalOpen] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showSoldModal, setShowSoldModal] = useState(false);
+  const [deleteItemType, setDeleteItemType] = useState<'car' | 'sparePart'>('car');
+  const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'expired' | 'sold'>('all');
+  
+  const handleDeleteClick = (car: ExtendedCarWithStatus) => {
+    setSelectedCar(car);
+    setShowDeleteModal(true);
+  };
+
+  const handleMarkAsSold = (car: ExtendedCarWithStatus) => {
+    setSelectedCar(car);
+    setShowSoldModal(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if ((!selectedCar && !selectedSparePart) || !deleteItemType) return;
+    
+    setActionLoading(true);
+    try {
+      if (deleteItemType === 'car' && selectedCar) {
+        const { error } = await supabase
+          .from('cars')
+          .delete()
+          .eq('id', selectedCar.id);
+        
+        if (error) throw error;
+        
+        setCars(cars.filter(car => car.id !== selectedCar.id));
+      } else if (deleteItemType === 'sparePart' && selectedSparePart) {
+        const { error } = await supabase
+          .from('spare_parts')
+          .delete()
+          .eq('id', selectedSparePart.id);
+          
+        if (error) throw error;
+        
+        setSpareParts(prev => prev.filter(part => part.id !== selectedSparePart.id));
+      }
+
+      setShowDeleteModal(false);
+      toast.success(t('myAds.adDeleted'));
+    } catch (error) {
+      console.error('Error deleting item:', error);
+      toast.error(t('myAds.error.delete'));
+    } finally {
+      setActionLoading(false);
+      setSelectedCar(null);
+      setSelectedSparePart(null);
+    }
+  };
+
+  // Mark as Sold handler
+const handleSoldConfirm = async () => {
+  if (!selectedCar && !selectedSparePart) return;
+  
+  setActionLoading(true);
+  try {
+    if (selectedCar) {
+      const { error } = await supabase
+        .from('cars')
+        .update({ status: 'Sold' })
+        .eq('id', selectedCar.id);
+
+      if (error) throw error;
+
+      setCars(cars.map(car => 
+        car.id === selectedCar.id ? { ...car, status: 'Sold' } : car
+      ));
+    } else if (selectedSparePart) {
+      const { error } = await supabase
+        .from('spare_parts')
+        .update({ status: 'Sold' })
+        .eq('id', selectedSparePart.id);
+
+      if (error) throw error;
+
+      setSpareParts(prev => prev.map(part => 
+        part.id === selectedSparePart.id ? { ...part, status: 'Sold' } : part
+      ));
+    }
+    
+    setShowSoldModal(false);
+    toast.success(t('myAds.markedAsSold'));
+  } catch (error) {
+    console.error('Error marking as sold:', error);
+    toast.error(t('myAds.error.markAsSold'));
+  } finally {
+    setActionLoading(false);
+    setSelectedCar(null);
+    setSelectedSparePart(null);
+  }
+};
+
+const handleMarkSparePartAsSold = (sparePart: SparePart) => {
+  setSelectedSparePart(sparePart);
+  setShowSoldModal(true);
+};
+
+// Edit car handler
+const handleEditCar = (car: ExtendedCarWithStatus) => {
+  setSelectedCar(car);
+  setIsEditModalOpen(true);
+};
+
+const handleEditSparePart = (sparePart: SparePart) => {
+  setSelectedSparePart(sparePart);
+  setIsEditSparePartModalOpen(true);
+};
+
+const handleDeleteSparePart = (sparePart: SparePart) => {
+  setSelectedSparePart(sparePart);
+  setDeleteItemType('sparePart');
+  setShowDeleteModal(true);
+};
+
+const handleEditComplete = async (updatedCar: ExtendedCarWithStatus) => {
+  try {
+    setCars(cars.map(car => 
+      car.id === updatedCar.id ? updatedCar : car
+    ));
+    setIsEditModalOpen(false);
+    toast.success(t('myAds.updateSuccess'));
+    return true;
+  } catch (error) {
+    console.error('Error updating car:', error);
+    toast.error(t('myAds.updateError'));
+    return false;
+  }
+};
+
+const handleRenew = async (carId: number) => {
+  if (!user) return;
+  
+  setRenewingCarId(carId);
+  try {
+    const { error } = await supabase.rpc('renew_car_listing', {
+      car_id: carId,
+      days_to_add: 30 // Renew for 30 days
+    });
+
+    if (error) throw error;
+
+    // Refresh the car data
+    await fetchCars();
+    toast.success(t('car.renewedSuccessfully'));
+  } catch (error) {
+    console.error('Error renewing car:', error);
+    toast.error(t('common.errorOccurred'));
+  } finally {
+    setRenewingCarId(null);
+  }
+};
+
+const handleRenewSparePart = async (sparePartId: string) => {
+  if (!user) return;
+  
+  setRenewingSparePartId(sparePartId);
+  try {
+    const { error } = await supabase.rpc('renew_spare_part_listing', {
+      part_id: sparePartId,
+      days_to_add: 30 // Renew for 30 days
+    });
+
+    if (error) throw error;
+
+    // Refresh the spare parts data
+    await fetchSpareParts();
+    toast.success(t('spareParts.renewedSuccessfully'));
+  } catch (error) {
+    console.error('Error renewing spare part:', error);
+    toast.error(t('common.errorOccurred'));
+  } finally {
+    setRenewingSparePartId(null);
+  }
+};
 
   useEffect(() => {
     if (user) {
       fetchCars();
+      fetchSpareParts();
       fetchNotifications();
+      
+      // Set up real-time subscription for view count updates
       const viewCountSubscription = supabase
-        .channel('view-counts')
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
+        .channel('car_views_updates')
+        .on('postgres_changes', 
+          { 
+            event: 'UPDATE', 
+            schema: 'public', 
             table: 'cars',
             filter: `user_id=eq.${user.id}`
-          },
-          (payload: any) => {
-            if (payload.new && payload.new.id) {
-              setCars(prevCars => prevCars.map(car => 
-                car.id === payload.new.id 
-                  ? { ...car, views_count: payload.new.views_count || 0 }
-                  : car
-              ));
-            }
+          }, 
+          (payload) => {
+            setCars(currentCars => {
+              return currentCars.map(car => {
+                if (car.id === payload.new.id) {
+                  return { ...car, views_count: payload.new.views_count };
+                }
+                return car;
+              });
+            });
           }
         )
         .subscribe();
@@ -108,6 +681,34 @@ export default function MyAdsPage() {
       };
     }
   }, [user, filter]);
+
+  const fetchSpareParts = async () => {
+    try {
+      setLoading(true);
+      const { data: spareParts, error } = await supabase
+        .from('spare_parts')
+        .select(`
+          *,
+          brand:brands(id, name, name_ar),
+          model:models(id, name, name_ar),
+          category:spare_part_categories(id, name_en, name_ar),
+          city:cities(id, name, name_ar, country_id),
+          country:countries(id, name, name_ar, currency_code),
+          images:spare_part_images(*)
+        `)
+        .eq('user_id', user?.id)
+        .eq(filter !== 'all' ? 'status' : '', filter !== 'all' ? filter.charAt(0).toUpperCase() + filter.slice(1) : '')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setSpareParts(spareParts || []);
+    } catch (error) {
+      console.error('Error fetching spare parts:', error);
+      toast.error(t('myAds.error.fetch'));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchCars = async () => {
     try {
@@ -151,7 +752,6 @@ export default function MyAdsPage() {
     }
   };
 
-
   const fetchNotifications = async () => {
     try {
       const { data: notifications, error: notificationsError } = await supabase
@@ -187,218 +787,28 @@ export default function MyAdsPage() {
     }
   };
 
-  const isExpired = (car: ExtendedCarWithStatus) => {
-    if (!car.expiration_date) return false;
-    return new Date(car.expiration_date) < new Date();
+  const isExpired = (item: any) => {
+    if (!item) return false;
+    const expirationDate = 'expiration_date' in item ? item.expiration_date : null;
+    return expirationDate ? new Date(expirationDate) < new Date() : false;
   };
 
-  const handleRenew = async (carId: number) => {
-    try {
-      setRenewingCarId(carId);
-      const newExpirationDate = new Date();
-      newExpirationDate.setDate(newExpirationDate.getDate() + 30); // Add 30 days
+  // Filter cars based on status
+  const filteredCars = cars.filter(car => {
+    if (filter === 'all') return true;
+    return car.status.toLowerCase() === filter.toLowerCase();
+  });
 
-      const { error } = await supabase
-        .from('cars')
-        .update({ expiration_date: newExpirationDate.toISOString() })
-        .eq('id', carId);
+  // Filter spare parts based on status
+  const filteredSpareParts = spareParts.filter(part => {
+    if (filter === 'all') return true;
+    return part.status.toLowerCase() === filter.toLowerCase();
+  });
 
-      if (error) throw error;
-
-      toast.success(t('myAds.renew.success'));
-      fetchCars();
-    } catch (error) {
-      console.error('Error renewing ad:', error);
-      toast.error(t('myAds.renew.error'));
-    } finally {
-      setRenewingCarId(null);
-    }
-  };
-
-  const handleRenewAd = async (carId: number) => {
-    try {
-      // Update the car's expiration date and status
-      const { data, error } = await supabase
-        .from('cars')
-        .update({ 
-          status: 'Approved', 
-          expiration_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days from now
-        })
-        .eq('id', carId)
-        .select();
-
-      if (error) throw error;
-
-      // Show success toast
-      toast.success(t('myAds.renew.success'));
-
-      // Refresh the cars list
-      await fetchCars();
-    } catch (error) {
-      console.error('Error renewing ad:', error);
-      toast.error(t('myAds.renew.error'));
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!selectedCar) return;
-    
-    setActionLoading(true);
-    try {
-      const { error: imagesError } = await supabase
-        .from('car_images')
-        .delete()
-        .eq('car_id', selectedCar.id);
-
-      if (imagesError) throw imagesError;
-
-      const { error: carError } = await supabase
-        .from('cars')
-        .delete()
-        .eq('id', selectedCar.id);
-
-      if (carError) throw carError;
-
-      toast.success(t('myAds.success.deleted'));
-      setShowDeleteModal(false);
-    } catch (error) {
-      console.error('Error deleting car:', error);
-      toast.error(t('myAds.error.delete'));
-    } finally {
-      setActionLoading(false);
-      setSelectedCar(null);
-    }
-  };
-
-  const handleMarkAsSold = async () => {
-    if (!selectedCar) return;
-    
-    setActionLoading(true);
-    try {
-      const { error: carError } = await supabase
-        .from('cars')
-        .update({ status: 'Sold' })
-        .eq('id', selectedCar.id);
-
-      if (carError) throw carError;
-
-      const { error: notificationError } = await supabase
-        .from('notifications')
-        .insert({
-          user_id: user?.id,
-          title: t('myAds.success.soldNotification'),
-          message: t('myAds.success.soldMessage', { 
-            brand: selectedCar?.brand?.name || 'Unknown Brand', 
-            model: selectedCar?.model?.name || 'Unknown Model' 
-          }),
-          type: 'sold',
-          is_read: false,
-        });
-
-      if (notificationError) throw notificationError;
-
-      toast.success(t('myAds.success.markedSold'));
-      setShowSoldModal(false);
-      await Promise.all([
-        fetchCars(), 
-        fetchNotifications(), 
-      ]);
-    } catch (error) {
-      console.error('Error marking car as sold:', error);
-      toast.error(t('myAds.error.markSold'));
-    } finally {
-      setActionLoading(false);
-      setSelectedCar(null);
-    }
-  };
-
-  const handleEditCar = (car: ExtendedCarWithStatus) => {
-    setSelectedCar(car);
-    setIsEditModalOpen(true);
-  };
-
-  const handleEditComplete = () => {
-    fetchCars();
-  };
-
-  const handleSetMainPhoto = async (carId: number, imageUrl: string) => {
-    setActionLoading(true);
-    try {
-      const { error: resetError } = await supabase
-        .from('car_images')
-        .update({ is_main: false })
-        .eq('car_id', carId);
-
-      if (resetError) throw resetError;
-
-      const { error: updateError } = await supabase
-        .from('car_images')
-        .update({ is_main: true })
-        .eq('car_id', carId)
-        .eq('url', imageUrl);
-
-      if (updateError) throw updateError;
-
-      toast.success(t('myAds.success.mainPhoto'));
-      fetchCars(); 
-    } catch (error) {
-      console.error('Error setting main photo:', error);
-      toast.error(t('myAds.error.mainPhoto'));
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const markNotificationAsRead = async (notificationId: string) => {
-    try {
-      const { error } = await supabase
-        .from('notifications')
-        .update({ is_read: true })
-        .eq('id', notificationId);
-
-      if (error) throw error;
-
-      setNotifications(prev =>
-        prev.map(notification =>
-          notification.id === notificationId
-            ? { ...notification, is_read: true }
-            : notification
-        )
-      );
-    } catch (error) {
-      console.error('Error marking notification as read:', error);
-    }
-  };
-// Track page view
-useEffect(() => {
-  const trackPageView = async () => {
-    try {
-      const response = await fetch('/api/analytics/page-view', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          countryCode: '--', // Default to Qatar since this is a global page
-          userId: user?.id,
-          pageType: 'my-ads'
-        })
-      });
-
-      if (!response.ok) {
-        console.error('Failed to track page view:', await response.json());
-      }
-    } catch (error) {
-      console.error('Failed to track page view:', error);
-    }
-  };
-
-  trackPageView();
-}, [user?.id]);
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
-        <LoadingSpinner />
+      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-qatar-maroon"></div>
       </div>
     );
   }
@@ -406,374 +816,273 @@ useEffect(() => {
   return (
     <div className="min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
         <div className="py-4 flex items-center justify-between">
           <h1 className="text-2xl font-bold">
             {t('myAds.title')}
           </h1>
-          <Link
-            href={`/${currentCountry?.code.toLowerCase()}/sell`}
-            className="inline-flex items-center px-4 py-2 bg-qatar-maroon text-white rounded-lg hover:bg-qatar-maroon/90 transition-colors"
-          >
-            <PlusCircleIcon className="h-5 w-5 mr-2" />
-            {t('myAds.createListing')}
-          </Link>
-        </div>
-
-        {/* Status Filters */}
-        <div className="flex flex-wrap gap-2 sm:gap-4 bg-white dark:bg-gray-800 p-4 mb-4 rounded-xl shadow-sm">
-          <button
-            onClick={() => setFilter('all')}
-            className={`flex items-center px-4 py-2 rounded-lg transition-colors ${
-              filter === 'all'
-                ? 'bg-qatar-maroon text-white'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-            }`}
-          >
-            {t('myAds.filters.all')}
-          </button>
-          <button
-            onClick={() => setFilter('pending')}
-            className={`flex items-center px-4 py-2 rounded-lg transition-colors ${
-              filter === 'pending'
-                ? 'bg-qatar-maroon text-white'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-            }`}
-          >
-            <ClockIcon className="h-5 w-5 mr-2" />
-            {t('myAds.filters.pending')}
-          </button>
-          <button
-            onClick={() => setFilter('approved')}
-            className={`flex items-center px-4 py-2 rounded-lg transition-colors ${
-              filter === 'approved'
-                ? 'bg-qatar-maroon text-white'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-            }`}
-          >
-            <CheckCircleIcon className="h-5 w-5 mr-2" />
-            {t('myAds.filters.approved')}
-          </button>
-          <button
-            onClick={() => setFilter('rejected')}
-            className={`flex items-center px-4 py-2 rounded-lg transition-colors ${
-              filter === 'rejected'
-                ? 'bg-qatar-maroon text-white'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-            }`}
-          >
-            <XCircleIcon className="h-5 w-5 mr-2" />
-            {t('myAds.filters.rejected')}
-          </button>
-          <button
-            onClick={() => setFilter('expired')}
-            className={`flex items-center px-4 py-2 rounded-lg transition-colors ${
-              filter === 'expired'
-                ? 'bg-qatar-maroon text-white'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-            }`}
-          >
-            <TagIcon className="h-5 w-5 mr-2" />
-            {t('myAds.filters.expired')}
-          </button>
-          <button
-            onClick={() => setFilter('sold')}
-            className={`flex items-center px-4 py-2 rounded-lg transition-colors ${
-              filter === 'sold'
-                ? 'bg-qatar-maroon text-white'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-            }`}
+          <div className="flex gap-2">
+            <Link
+              href={`/${currentCountry?.code.toLowerCase()}/spare-parts/add`}
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-qatar-maroon hover:bg-qatar-maroon/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon"
             >
-            <TagIcon className="h-5 w-5 mr-2" />
-            {t('myAds.filters.sold')}
-          </button>
+              <PlusCircleIcon className="-ml-1 mr-2 h-5 w-5" />
+              {t('spareParts.addSparePart')}
+            </Link>
+            <Link
+              href={`/${currentCountry?.code.toLowerCase()}/sell`}
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-qatar-maroon hover:bg-qatar-maroon/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon"
+            >
+              <PlusCircleIcon className="-ml-1 mr-2 h-5 w-5" />
+              {t('myAds.addNewCarAd')}
+            </Link>
+          </div>
         </div>
 
-        {/* Car Listings */}
-        {cars.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6 mb-8">
-            {cars.map((car) => (
-              <div
-                key={car.id}
-                className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden"
-              >
-                  {/* Car Image and Status */}
-                  <div className="aspect-w-16 aspect-h-9 relative h-48">
-                  <Link
-                    href={`/${currentCountry?.code.toLowerCase()}/cars/${car.id}`}
-                    className="block"
-                  > 
-                  {car.images && car.images.length > 0 ? (
-                    <Image
-                      src={car.images.find(img => img.is_main)?.url || car.images[0].url}
-                      alt={`${car.brand?.name} ${car.model?.name}`}
-                      fill
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                      priority={false}
-                      className="object-cover"
-                      unoptimized={true}
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-700">
-                      <Image 
-                        src="/placeholder-car copy.svg" 
-                        alt="Car placeholder" 
-                        width={48} 
-                        height={48} 
-                        className="h-16 w-16 text-gray-400" 
-                      />
-                    </div>
-                  )}
-                  </Link>
-                  <div className="absolute top-2 right-2 flex gap-2">
-                    {isExpired(car) && (
-                      <div className="px-3 py-1 rounded-full text-sm font-medium shadow-lg" style={{
-                        backgroundColor: 'rgba(239, 68, 68, 0.9)',
-                        color: 'white'
-                      }}>
-                        {t('myAds.expired')}
-                      </div>
-                    )}
-                    <div className="px-3 py-1 rounded-full text-sm font-medium shadow-lg" style={{
-                      backgroundColor: car.status === 'Approved' ? 'rgba(34, 197, 94, 0.9)' : 
-                                     car.status === 'Pending' ? 'rgba(234, 179, 8, 0.9)' :
-                                     car.status === 'Rejected' ? 'rgba(239, 68, 68, 0.9)' :
-                                     car.status === 'Expired' ? 'rgba(239, 68, 68, 0.9)' :
-                                     car.status === 'Sold' ? 'rgba(59, 130, 246, 0.9)' :
-                                     'rgba(239, 68, 68, 0.9)',
-                      color: 'white'
-                    }}>
-                      {t(`myAds.status.${car.status}`)}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Car Details */}
-                <div className="p-4">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    {car.brand?.name || 'Unknown Brand'} {' '}
-                    {car.model?.name || 'Unknown Model'} 
-                    {car.exact_model && `(${car.exact_model})`}
-                  </h3>
-                  <div className="mt-2 text-sm text-gray-500 dark:text-gray-400 space-y-1">
-                    <p>
-                      <span className="font-medium">{t('myAds.car.price')}:</span>{' '}
-                      {car.price.toLocaleString('en-US')} {t(`common.currency.${car.country?.currency || 'QAR'}`)}
-                    </p>
-                    <p>
-                      <span className="font-medium">{t('myAds.car.mileage')}:</span>{' '}
-                      {car.mileage.toLocaleString()}  {t('car.mileage.unit')}
-                    </p>
-                    <p>
-                      <span className="font-medium">{t('myAds.car.location')}:</span>{' '}
-                      {car.city 
-                        ? (language === 'ar' ? car.city.name_ar : car.city.name)
-                        : car.location || t('myAds.car.locationNotSpecified')}
-                    </p>
-                    <p>
-                      <span className="font-medium">{t('myAds.car.posted')}:</span>{' '}
-                      {new Date(car.created_at).toLocaleDateString()}
-                    </p>
-                    <p>
-                      <span className="font-medium">{t('myAds.car.views')}:</span>{' '}
-                      {car.views_count || 0}
-                    </p>
-                  </div>
-                  <div className="flex space-x-2 rtl:space-x-reverse py-2">
-                      {car.status === 'Approved' && isExpired(car) && (
-                        <button
-                          onClick={() => handleRenew(car.id)}
-                          disabled={renewingCarId === car.id}
-                          className="inline-flex items-center px-2.5 py-1.5 border border-qatar-maroon shadow-sm text-xs font-medium rounded text-white bg-qatar-maroon hover:bg-qatar-maroon-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon disabled:opacity-50"
-                        >
-                          {renewingCarId === car.id ? (
-                            <div className="h-4 w-4 mr-1 rtl:ml-1 rtl:mr-0"><LoadingSpinner /></div>
-                          ) : (
-                            <ClockIcon className="h-4 w-4 mr-1 rtl:ml-1 rtl:mr-0" />
-                          )}
-                          {t('myAds.renew')}
-                        </button>
-                      )}
-                      {car.status === 'Expired' && (
-                        <button 
-                          onClick={() => handleRenewAd(car.id)}
-                          className="text-white bg-green-500 hover:bg-green-600 rounded-md px-3 py-1 text-sm"
-                        >
-                          {t('myAds.renew')}
-                        </button>
-                      )}
-                      <button
-                        onClick={() => handleEditCar(car)}
-                        className="inline-flex items-center px-2.5 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon"
-                      >
-                        <PencilIcon className="h-4 w-4 mr-1 rtl:ml-1 rtl:mr-0" />
-                        {t('myAds.edit')}
-                      </button>
-                    <button
-                      onClick={() => {
-                        setSelectedCar(car);
-                        setShowSoldModal(true);
-                      }}
-                      className="inline-flex items-center px-2.5 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon"
-                    >
-                      <ShoppingBagIcon className="h-4 w-4 mr-1 rtl:ml-1 rtl:mr-0" />
-                      {t('myAds.actions.markSold')}
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSelectedCar(car);
-                        setShowDeleteModal(true);
-                      }}
-                      className="inline-flex items-center px-2.5 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon"
-                    >
-                      <TrashIcon className="h-4 w-4 mr-1 rtl:ml-1 rtl:mr-0" />
-                      {t('myAds.actions.delete')}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* No listings state */}
-        {cars.length === 0 && (
-          <div className="text-center py-12">
-            <Image 
-              src="/placeholder-car copy.svg" 
-              alt="Car placeholder" 
-              width={48} 
-              height={48} 
-              className="mx-auto h-16 w-16 text-gray-400" 
-            />
-            <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
-              {t('myAds.noListings')}
-            </h3>
-            <div className="mt-6">
-              <Link
-                href={`/${currentCountry?.code.toLowerCase()}/sell`}
-                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-qatar-maroon hover:bg-qatar-maroon/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon"
-              >
-                <PlusCircleIcon className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
-                {t('myAds.createListing')}
-              </Link>
+        {/* Combined Content */}
+        <div className="mb-8">
+          {/* Cars Section */}
+          {cars.length > 0 && (
+            <div className="mb-12">
+              <h2 className="text-xl font-semibold mb-4">{t('cars')}</h2>
+              <CarsTab 
+                loading={loading} 
+                cars={cars} 
+                t={t} 
+                currentCountry={currentCountry} 
+                language={language}
+                isExpired={isExpired}
+                handleRenew={handleRenew}
+                renewingCarId={renewingCarId}
+                handleEditCar={handleEditCar}
+                handleDeleteClick={handleDeleteClick}
+                handleMarkAsSold={handleMarkAsSold}
+                handleSetMainPhoto={() => Promise.resolve()}
+                actionLoading={actionLoading}
+              />
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Delete Confirmation Modal */}
-        {showDeleteModal && (
-          <div className="fixed z-10 inset-0 overflow-y-auto">
-            <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-              <div
-                className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
-                aria-hidden="true"
-              ></div>
-              <span
-                className="hidden sm:inline-block sm:align-middle sm:h-screen"
-                aria-hidden="true"
-              >
-                &#8203;
-              </span>
-              <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
-                <div>
-                  <div className="mt-3 text-center sm:mt-5">
-                    <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">
-                      {t('myAds.delete.title')}
-                    </h3>
-                    <div className="mt-2">
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {t('myAds.delete.message')}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
-                  <button
-                    type="button"
-                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:col-start-2 sm:text-sm"
-                    onClick={handleDelete}
-                    disabled={actionLoading}
-                  >
-                    {t('myAds.delete.confirm')}
-                  </button>
-                  <button
-                    type="button"
-                    className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white dark:bg-gray-700 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon sm:mt-0 sm:col-start-1 sm:text-sm"
-                    onClick={() => setShowDeleteModal(false)}
-                  >
-                    {t('myAds.delete.cancel')}
-                  </button>
-                </div>
-              </div>
+          {/* Spare Parts Section */}
+          {spareParts.length > 0 && (
+            <div>
+              <h2 className="text-xl font-semibold mb-4">{t('spareParts.title')}</h2>
+              <SparePartsTab 
+                loading={loading} 
+                spareParts={filteredSpareParts}
+                t={t}
+                currentCountry={currentCountry}
+                language={language}
+                isExpired={isExpired}
+                onEditSparePart={handleEditSparePart}
+                onDeleteSparePart={handleDeleteSparePart}
+                onMarkAsSold={handleMarkSparePartAsSold}
+                actionLoading={actionLoading}
+                renewingSparePartId={renewingSparePartId}
+                onRenewSparePart={handleRenewSparePart}
+              />
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Mark as Sold Modal */}
-        {showSoldModal && (
-          <div className="fixed z-10 inset-0 overflow-y-auto">
-            <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-              <div
-                className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
-                aria-hidden="true"
-              ></div>
-              <span
-                className="hidden sm:inline-block sm:align-middle sm:h-screen"
-                aria-hidden="true"
-              >
-                &#8203;
-              </span>
-              <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
-                <div>
-                  <div className="mt-3 text-center sm:mt-5">
-                    <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">
-                      {t('myAds.sold.title')}
-                    </h3>
-                    <div className="mt-2">
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {t('myAds.sold.message')}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
-                  <button
-                    type="button"
-                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:col-start-2 sm:text-sm"
-                    onClick={handleMarkAsSold}
-                    disabled={actionLoading}
-                  >
-                    {t('myAds.sold.confirm')}
-                  </button>
-                  <button
-                    type="button"
-                    className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white dark:bg-gray-700 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon sm:mt-0 sm:col-start-1 sm:text-sm"
-                    onClick={() => setShowSoldModal(false)}
-                  >
-                    {t('myAds.sold.cancel')}
-                  </button>
-                </div>
-              </div>
+          {/* No items message */}
+          {!loading && cars.length === 0 && spareParts.length === 0 && (
+            <div className="text-center py-12">
+              <p className="text-gray-500 dark:text-gray-400">
+                {t('noItemsFound')}
+              </p>
             </div>
-          </div>
-        )}
-
-        {/* Edit Modal */}
-        {selectedCar && (
-          <EditCarModal
-            isOpen={isEditModalOpen}
-            onClose={() => {
-              setIsEditModalOpen(false);
-              setSelectedCar(null);
-            }}
-            car={selectedCar}
-            onUpdate={() => {
-              fetchCars();
-            }}
-            onEditComplete={handleEditComplete}
-          />
-        )}
+          )}
+        </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed z-10 inset-0 overflow-y-auto">
+          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">
+              &#8203;
+            </span>
+            <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
+              <div>
+                <div className="mt-3 text-center sm:mt-5">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">
+                    {t('myAds.delete.title')}
+                  </h3>
+                  <div className="mt-2">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      {t('myAds.delete.message')}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
+                <button
+                  type="button"
+                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:col-start-2 sm:text-sm"
+                  onClick={handleDeleteConfirm}
+                  disabled={actionLoading}
+                >
+                  {t('myAds.delete.confirm')}
+                </button>
+                <button
+                  type="button"
+                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white dark:bg-gray-700 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon sm:mt-0 sm:col-start-1 sm:text-sm"
+                  onClick={() => setShowDeleteModal(false)}
+                >
+                  {t('myAds.delete.cancel')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mark as Sold Confirmation Modal */}
+      {showSoldModal && selectedCar && (
+        <div className="fixed z-10 inset-0 overflow-y-auto">
+          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">
+              &#8203;
+            </span>
+            <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
+              <div>
+                <div className="mt-3 text-center sm:mt-5">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">
+                    {t('myAds.markAsSold.title')}
+                  </h3>
+                  <div className="mt-2">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      {t('myAds.markAsSold.message')}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
+                <button
+                  type="button"
+                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:col-start-2 sm:text-sm"
+                  onClick={handleSoldConfirm}
+                  disabled={actionLoading}
+                >
+                  {t('myAds.markAsSold.confirm')}
+                </button>
+                <button
+                  type="button"
+                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white dark:bg-gray-700 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon sm:mt-0 sm:col-start-1 sm:text-sm"
+                  onClick={() => setShowSoldModal(false)}
+                >
+                  {t('myAds.markAsSold.cancel')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Car Modal */}
+      <EditCarModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        car={selectedCar || undefined}
+        onUpdate={() => {
+          // Refresh the cars list after update
+          fetchCars();
+        }}
+        onEditComplete={handleEditComplete}
+      />
+
+      {/* Edit Spare Part Modal */}
+      {selectedSparePart && (
+        <EditSparePartModal
+          isOpen={isEditSparePartModalOpen}
+          onClose={() => {
+            setIsEditSparePartModalOpen(false);
+            setSelectedSparePart(null);
+          }}
+          sparePart={{
+            id: selectedSparePart.id,
+            title: selectedSparePart.title,
+            name_ar: selectedSparePart.name_ar || '',
+            description: selectedSparePart.description || '',
+            description_ar: selectedSparePart.description_ar || '',
+            price: selectedSparePart.price.toString(),
+            currency: selectedSparePart.currency,
+            part_type: selectedSparePart.part_type,
+            condition: selectedSparePart.condition,
+            brand_id: selectedSparePart.brand?.id?.toString() || '',
+            model_id: selectedSparePart.model?.id?.toString() || '',
+            category_id: selectedSparePart.category?.id?.toString() || '',
+            city_id: selectedSparePart.city?.id?.toString() || '',
+            country_id: selectedSparePart.country?.id?.toString() || '',
+            brand: selectedSparePart.brand ? {
+              id: selectedSparePart.brand.id,
+              name: selectedSparePart.brand.name,
+              name_ar: selectedSparePart.brand.name_ar || null
+            } : undefined,
+            model: selectedSparePart.model ? {
+              id: selectedSparePart.model.id,
+              name: selectedSparePart.model.name,
+              name_ar: selectedSparePart.model.name_ar || null
+            } : undefined,
+            category: selectedSparePart.category ? {
+              id: selectedSparePart.category.id,
+              name_en: selectedSparePart.category.name_en,
+              name_ar: selectedSparePart.category.name_ar
+            } : undefined,
+            city: selectedSparePart.city ? {
+              id: selectedSparePart.city.id,
+              name: selectedSparePart.city.name,
+              name_ar: selectedSparePart.city.name_ar
+            } : undefined,
+            country: selectedSparePart.country ? {
+              id: selectedSparePart.country.id,
+              name: selectedSparePart.country.name,
+              name_ar: selectedSparePart.country.name_ar,
+              currency_code: selectedSparePart.country.currency_code
+            } : undefined,
+            images: selectedSparePart.images.map(img => ({
+              id: img.id,
+              url: img.url,
+              is_primary: img.is_primary
+            }))
+          }}
+          onUpdate={() => {
+            // Refresh the spare parts list after update
+            fetchSpareParts();
+          }}
+          onEditComplete={(formData: SparePartFormData) => {
+            // Update the spare part in the local state
+            setSpareParts(prev => 
+              prev.map(sp => {
+                if (sp.id === formData.id) {
+                  // Create a new spare part with updated fields
+                  const updatedSparePart: SparePart = {
+                    ...sp,
+                    title: formData.title,
+                    description: formData.description,
+                    price: parseFloat(formData.price) || 0,
+                    currency: formData.currency,
+                    part_type: formData.part_type,
+                    condition: formData.condition,
+                    // Ensure we have valid image objects
+                    images: formData.images.map(img => ({
+                      id: img.id,
+                      url: img.url,
+                      is_primary: img.is_primary
+                    }))
+                  };
+                  return updatedSparePart;
+                }
+                return sp;
+              })
+            );
+            setIsEditSparePartModalOpen(false);
+            setSelectedSparePart(null);
+          }}
+        />
+      )}
     </div>
   );
 }

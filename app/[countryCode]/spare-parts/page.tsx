@@ -1,15 +1,76 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import LoginPopup from '@/components/LoginPopup';
 import { useAuth } from '@/contexts/AuthContext';
-import { useEffect } from 'react';
+import { useCountry } from '@/contexts/CountryContext';
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
+import Image from 'next/image';
+import Link from 'next/link';
+import SparePartCard from '@/components/spare-parts/SparePartCard';
+import toast from 'react-hot-toast';
+
+type SparePart = {
+  id: string;
+  title: string;
+  name_ar: string | null;
+  description: string | null;
+  description_ar: string | null;
+  price: number;
+  currency: string;
+  is_negotiable: boolean;
+  condition: 'new' | 'used' | 'refurbished';
+  status: string;
+  created_at: string;
+  brand: {
+    id: number;
+    name: string;
+    name_ar: string | null;
+  } | null;
+  model: {
+    id: number;
+    name: string;
+    name_ar: string | null;
+  } | null;
+  category: {
+    id: number;
+    name_en: string;
+    name_ar: string;
+  } | null;
+  city: {
+    id: number;
+    name: string;
+    name_ar: string | null;
+  } | null;
+  images: Array<{
+    id: string;
+    url: string;
+    is_primary: boolean;
+  }>;
+  is_favorite?: boolean;
+};
 
 export default function SpareParts() {
-  const { t } = useLanguage();
+  const { t, currentLanguage } = useLanguage();
   const { user } = useAuth();
-
+  const { currentCountry, formatPrice } = useCountry();
+  const router = useRouter();
+  
+  const [loading, setLoading] = useState(true);
+  const [spareParts, setSpareParts] = useState<SparePart[]>([]);
+  const [categories, setCategories] = useState<Array<{id: number, name_en: string, name_ar: string}>>([]);
+  const [brands, setBrands] = useState<Array<{id: number, name: string, name_ar: string | null}>>([]);
+  const [filters, setFilters] = useState({
+    search: '',
+    category: '',
+    brand: '',
+    condition: '' as '' | 'new' | 'used' | 'refurbished',
+    minPrice: '',
+    maxPrice: '',
+    sortBy: 'newest' as 'newest' | 'price_low' | 'price_high'
+  });
+  
   // Track page view
   useEffect(() => {
     const trackPageView = async () => {
@@ -20,7 +81,7 @@ export default function SpareParts() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            countryCode: '--', // Default to Qatar since this is a global page
+            countryCode: currentCountry?.code || '--',
             userId: user?.id,
             pageType: 'spareParts'
           })
@@ -33,94 +94,503 @@ export default function SpareParts() {
         console.error('Failed to track page view:', error);
       }
     };
-  
+    
     trackPageView();
-  }, [user?.id]);
+    fetchSpareParts();
+    fetchCategories();
+    fetchBrands();
+  }, [user?.id, currentCountry?.code]);
+  
+  const fetchSpareParts = async () => {
+    try {
+      setLoading(true);
+      
+      let query = supabase
+        .from('spare_parts')
+        .select(`
+          *,
+          is_featured,
+          brand:brands(id, name, name_ar),
+          model:models(id, name, name_ar),
+          category:spare_part_categories(id, name_en, name_ar),
+          city:cities(id, name, name_ar),
+          images:spare_part_images(id, url, is_primary),
+          country_code
+        `)
+        .eq('status', 'approved');
+      
+      // Apply filters
+      if (filters.search) {
+        query = query.ilike('title', `%${filters.search}%`);
+      }
+      
+      if (filters.category) {
+        query = query.eq('category_id', filters.category);
+      }
+      
+      if (filters.brand) {
+        query = query.eq('brand_id', filters.brand);
+      }
+      
+      if (filters.condition) {
+        query = query.eq('condition', filters.condition);
+      }
+      
+      if (filters.minPrice) {
+        query = query.gte('price', filters.minPrice);
+      }
+      
+      if (filters.maxPrice) {
+        query = query.lte('price', filters.maxPrice);
+      }
+      
+      // Apply sorting - Featured first, then by selected sort option
+      if (filters.sortBy === 'price_low') {
+        query = query
+          .order('is_featured', { ascending: false })
+          .order('price', { ascending: true });
+      } else if (filters.sortBy === 'price_high') {
+        query = query
+          .order('is_featured', { ascending: false })
+          .order('price', { ascending: false });
+      } else {
+        // Default sort: featured first, then by newest
+        query = query
+          .order('is_featured', { ascending: false })
+          .order('created_at', { ascending: false });
+      }
+      
+      // Filter by country
+      if (currentCountry?.code) {
+        query = query.eq('country_code', currentCountry.code);
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) throw error;
+      
+      // Check favorites if user is logged in
+      if (user && data && data.length > 0) {
+        try {
+          // First, filter out any invalid UUIDs
+          const validSparePartIds = data
+            .map(item => item.id)
+            .filter((id): id is string => typeof id === 'string' && id.length > 0);
+
+          let favoriteIds = new Set<string>();
+          
+          // Only make the favorites query if we have valid IDs
+          if (validSparePartIds.length > 0) {
+            const { data: favorites, error: favoritesError } = await supabase
+              .from('favorites')
+              .select('spare_part_id')
+              .eq('user_id', user.id)
+              .in('spare_part_id', validSparePartIds);
+              
+            if (favoritesError) throw favoritesError;
+            
+            // Create a Set of favorite spare part IDs
+            favoriteIds = new Set(favorites?.map(fav => fav.spare_part_id) || []);
+          }
+          
+          // Map the data and set favorites
+          const sparePartsWithFavorites = data.map(part => ({
+            ...part,
+            is_favorite: favoriteIds.has(part.id)
+          }));
+          
+          setSpareParts(sparePartsWithFavorites);
+        } catch (error) {
+          console.error('Error fetching favorites:', error);
+          // If there's an error fetching favorites, still show the parts but without favorites
+          setSpareParts(data || []);
+        }
+      } else {
+        // Set is_favorite to false for all parts if user is not logged in
+        setSpareParts((data || []).map(part => ({
+          ...part,
+          is_favorite: false
+        })));
+      }
+      
+    } catch (error) {
+      console.error('Error fetching spare parts:', error);
+      toast.error(t('common.errorFetchingData'));
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const fetchCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('spare_part_categories')
+        .select('*')
+        .order('name_en');
+        
+      if (error) throw error;
+      
+      setCategories(data || []);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    }
+  };
+  
+  const fetchBrands = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('brands')
+        .select('*')
+        .order('name');
+        
+      if (error) throw error;
+      setBrands(data || []);
+    } catch (error) {
+      console.error('Error fetching brands:', error);
+      toast.error(t('common.errorFetchingData'));
+    }
+  };
+
+  const toggleFavorite = async (partId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!user) {
+      toast.error(t('common.signInToSaveFavorites'));
+      return;
+    }
+    
+    try {
+      const part = spareParts.find(p => p.id === partId);
+      if (!part) return;
+      
+      const isFavorite = part.is_favorite;
+      
+      if (isFavorite) {
+        // Remove from favorites
+        const { error } = await supabase
+          .from('favorites')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('spare_part_id', partId);
+          
+        if (error) throw error;
+        toast.success(t('common.removedFromFavorites'));
+      } else {
+        // Add to favorites
+        const { error } = await supabase
+          .from('favorites')
+          .insert([{
+            user_id: user.id,
+            spare_part_id: partId,
+            car_id: null,  // Explicitly set car_id to null
+            created_at: new Date().toISOString()
+          }]);
+          
+        if (error) throw error;
+        toast.success(t('common.addedToFavorites'));
+      }
+      
+      // Update local state
+      setSpareParts(prev => 
+        prev.map(p => 
+          p.id === partId 
+            ? { ...p, is_favorite: !isFavorite } 
+            : p
+        )
+      );
+      
+    } catch (error) {
+      console.error('Error updating favorite:', error);
+      toast.error(t('common.errorUpdatingFavorite'));
+    }
+  };
+  
+  const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    
+    setFilters(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+  
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    fetchSpareParts();
+  };
+  
+  const handleResetFilters = () => {
+    setFilters({
+      search: '',
+      category: '',
+      brand: '',
+      condition: '',
+      minPrice: '',
+      maxPrice: '',
+      sortBy: 'newest'
+    });
+  };
+  
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat(currentLanguage, { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    }).format(date);
+  };
+  
+  const getConditionText = (condition: string) => {
+    switch (condition) {
+      case 'new': return t('spareParts.condition.new');
+      case 'used': return t('spareParts.condition.used');
+      case 'refurbished': return t('spareParts.condition.refurbished');
+      default: return condition;
+    }
+  };
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-4xl font-bold mb-8">{t('spareParts.title')}</h1>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4 md:mb-0">
+            {t('spareParts.title')}
+          </h1>
+          
+          <Link 
+            href={`/${currentCountry?.code?.toLowerCase()}/spare-parts/add`}
+            className="bg-qatar-maroon text-white px-6 py-3 rounded-lg hover:bg-qatar-maroon/90 transition-colors flex items-center gap-2"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+            </svg>
+            {t('spareParts.addSparePart')}
+          </Link>
+        </div>
         
-        {/* Search Section */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-12">
-          <div className="flex flex-col md:flex-row gap-4">
-            <input
-              type="text"
-              placeholder={t('spareParts.search.placeholder')}
-              className="flex-1 p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 
-                          placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 
-                          focus:ring-qatar-maroon focus:border-transparent"
-            />
-            <select className="p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 
-                          focus:ring-2 focus:ring-qatar-maroon focus:border-transparent">
-              <option value="">{t('spareParts.search.carMake')}</option>
-            </select>
-            <button className="bg-qatar-maroon text-white px-8 py-3 rounded-lg hover:bg-qatar-maroon/90 transition-colors">
-              {t('spareParts.search.button')}
-            </button>
-          </div>
-        </div>
-
-        {/* Categories Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-12">
-          {[
-            {
-              icon: (
-                <svg className="w-8 h-8 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              ),
-              title: 'spareParts.categories.engineParts',
-              desc: 'spareParts.categories.engineParts.desc'
-            },
-            {
-              icon: (
-                <svg className="w-8 h-8 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              ),
-              title: 'spareParts.categories.brakeSystem',
-              desc: 'spareParts.categories.brakeSystem.desc'
-            },
-            {
-              icon: (
-                <svg className="w-8 h-8 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-              ),
-              title: 'spareParts.categories.suspension',
-              desc: 'spareParts.categories.suspension.desc'
-            },
-            {
-              icon: (
-                <svg className="w-8 h-8 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              ),
-              title: 'spareParts.categories.bodyParts',
-              desc: 'spareParts.categories.bodyParts.desc'
-            }
-          ].map((category, index) => (
-            <div key={index} className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 text-center transform hover:scale-105 transition-all duration-300">
-              <div className="text-qatar-maroon mb-4">
-                {category.icon}
+        {/* Search and Filters Section */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-8">
+          <form onSubmit={handleSearch}>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div>
+                <label htmlFor="search" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('common.search')}
+                </label>
+                <input
+                  type="text"
+                  id="search"
+                  name="search"
+                  value={filters.search}
+                  onChange={handleFilterChange}
+                  placeholder={t('spareParts.search.placeholder')}
+                  className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 
+                            placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 
+                            focus:ring-qatar-maroon focus:border-transparent"
+                />
               </div>
-              <h3 className="text-xl font-semibold mb-2">{t(category.title)}</h3>
-              <p className="text-gray-600 dark:text-gray-300">{t(category.desc)}</p>
+              
+              <div>
+                <label htmlFor="category" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('spareParts.filters.category')}
+                </label>
+                <select 
+                  id="category"
+                  name="category"
+                  value={filters.category}
+                  onChange={handleFilterChange}
+                  className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 
+                            focus:ring-2 focus:ring-qatar-maroon focus:border-transparent"
+                >
+                  <option value="">{t('spareParts.filters.allCategories')}</option>
+                  {categories.map(category => (
+                    <option key={category.id} value={category.id}>
+                      {currentLanguage === 'ar' && category.name_ar ? category.name_ar : category.name_en}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label htmlFor="brand" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('spareParts.filters.brand')}
+                </label>
+                <select 
+                  id="brand"
+                  name="brand"
+                  value={filters.brand}
+                  onChange={handleFilterChange}
+                  className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 
+                            focus:ring-2 focus:ring-qatar-maroon focus:border-transparent"
+                >
+                  <option value="">{t('spareParts.filters.allBrands')}</option>
+                  {brands.map(brand => (
+                    <option key={brand.id} value={brand.id}>
+                      {currentLanguage === 'ar' && brand.name_ar ? brand.name_ar : brand.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-          ))}
+            
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+              <div>
+                <label htmlFor="condition" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('spareParts.filters.condition')}
+                </label>
+                <select 
+                  id="condition"
+                  name="condition"
+                  value={filters.condition}
+                  onChange={handleFilterChange}
+                  className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 
+                            focus:ring-2 focus:ring-qatar-maroon focus:border-transparent"
+                >
+                  <option value="">{t('spareParts.filters.allConditions')}</option>
+                  <option value="new">{t('spareParts.condition.new')}</option>
+                  <option value="used">{t('spareParts.condition.used')}</option>
+                  <option value="refurbished">{t('spareParts.condition.refurbished')}</option>
+                </select>
+              </div>
+              
+              <div>
+                <label htmlFor="minPrice" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('spareParts.filters.minPrice')}
+                </label>
+                <div className="relative rounded-md shadow-sm">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <span className="text-gray-500 sm:text-sm">{t(`common.currency.${currentCountry?.currency_code}`)}</span>
+                  </div>
+                  <input
+                    type="number"
+                    id="minPrice"
+                    name="minPrice"
+                    min="0"
+                    value={filters.minPrice}
+                    onChange={handleFilterChange}
+                    placeholder={t('spareParts.filters.price')}
+                    className="w-full pl-12 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 
+                              focus:ring-2 focus:ring-qatar-maroon focus:border-transparent"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label htmlFor="maxPrice" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('spareParts.filters.maxPrice')}
+                </label>
+                <div className="relative rounded-md shadow-sm">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <span className="text-gray-500 sm:text-sm">{t(`common.currency.${currentCountry?.currency_code}`)}</span>
+                  </div>
+                  <input
+                    type="number"
+                    id="maxPrice"
+                    name="maxPrice"
+                    min={filters.minPrice || '0'}
+                    value={filters.maxPrice}
+                    onChange={handleFilterChange}
+                    placeholder={t('spareParts.filters.price')}
+                    className="w-full pl-12 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 
+                              focus:ring-2 focus:ring-qatar-maroon focus:border-transparent"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label htmlFor="sortBy" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('spareParts.filters.sortBy')}
+                </label>
+                <select 
+                  id="sortBy"
+                  name="sortBy"
+                  value={filters.sortBy}
+                  onChange={handleFilterChange}
+                  className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 
+                            focus:ring-2 focus:ring-qatar-maroon focus:border-transparent"
+                >
+                  <option value="newest">{t('spareParts.filters.newest')}</option>
+                  <option value="price_low">{t('spareParts.filters.priceLowToHigh')}</option>
+                  <option value="price_high">{t('spareParts.filters.priceHighToLow')}</option>
+                </select>
+              </div>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6">
+              <button
+                type="submit"
+                className="w-full sm:w-auto bg-qatar-maroon text-white px-6 py-2.5 rounded-lg hover:bg-qatar-maroon/90 
+                          transition-colors flex items-center justify-center gap-2"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+                </svg>
+                {t('common.search')}
+              </button>
+              
+              <button
+                type="button"
+                onClick={handleResetFilters}
+                className="w-full sm:w-auto text-gray-700 dark:text-gray-300 px-4 py-2.5 border border-gray-300 dark:border-gray-600 
+                          rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                {t('common.resetFilters')}
+              </button>
+            </div>
+          </form>
         </div>
 
-        {/* Coming Soon Section */}
-        <section className="mt-12">
-          <div className="col-span-full bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 text-center">
-            <h2 className="text-3xl font-bold mb-4">{t('spareParts.comingSoon.title')}</h2>
-            <p className="text-gray-600 dark:text-gray-300 mb-6">{t('spareParts.comingSoon.desc')}</p>
+        {/* Spare Parts Grid */}
+        {loading ? (
+          <div className="flex justify-center items-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-qatar-maroon"></div>
           </div>
-        </section>
+        ) : spareParts.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {spareParts.map((part) => (
+              <SparePartCard 
+                key={part.id}
+                part={part}
+                countryCode={currentCountry?.code?.toLowerCase() || 'qa'}
+                onToggleFavorite={toggleFavorite}
+                isFavorite={part.is_favorite || false}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl shadow">
+            <svg
+              className="mx-auto h-12 w-12 text-gray-400"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <h3 className="mt-2 text-lg font-medium text-gray-900 dark:text-white">
+              {t('spareParts.noResults.title')}
+            </h3>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              {t('spareParts.noResults.description')}
+            </p>
+            <div className="mt-6">
+              <button
+                type="button"
+                onClick={handleResetFilters}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-qatar-maroon hover:bg-qatar-maroon/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon"
+              >
+                {t('spareParts.noResults.resetFilters')}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
-      <LoginPopup delay={5000} />
     </div>
   );
 }

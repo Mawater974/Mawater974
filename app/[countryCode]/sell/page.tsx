@@ -533,16 +533,15 @@ useEffect(() => {
             </label>
             <div className="relative">
               <input
-                type="text"
+                type="number"
                 id="price"
                 name="price"
+                min="0"
                 value={formData.price}
                 onChange={(e) => handleInputChange(e)}
                 required
-                min="0"
-                max="999999999"
                 placeholder={t('sell.basic.price.placeholder')}
-                className={`w-full ${currentLanguage === 'en' ? 'pr-16' : 'pl-16'} px-4 py-2.5 border border-gray-300 dark:border-gray-600 
+                className={`w-full ${currentLanguage === 'en' ? 'pr-2' : 'pl-2'} px-4 py-2.5 border border-gray-300 dark:border-gray-600 
                            bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg 
                            shadow-sm focus:ring-2 focus:ring-qatar-maroon/50 focus:border-qatar-maroon 
                            transition duration-200 ease-in-out`}
@@ -559,7 +558,7 @@ useEffect(() => {
               {t('sell.details.mileage')} *
             </label>
             <input
-              type="text"
+              type="number"
               id="mileage"
               name="mileage"
               value={formData.mileage}
@@ -568,7 +567,7 @@ useEffect(() => {
               min="0"
               max="9999999"
               placeholder={t('sell.details.mileage.placeholder')}
-              className="w-full h-[42px] px-3 sm:px-4 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 
+              className="w-full h-[42px] px-4 sm:px-4 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 
                          text-gray-900 dark:text-white rounded-lg shadow-sm focus:ring-2 focus:ring-qatar-maroon/50 
                          focus:border-qatar-maroon transition duration-200 ease-in-out text-sm sm:text-base appearance-none"
             />
@@ -1677,28 +1676,13 @@ useEffect(() => {
       
       // If changing location, also update city_id and ensure location matches city name
       if (name === 'location' && value) {
-        const selectedCity = cities.find(city => city.value === value);
+        const selectedCity = cities.find(city => city.name === value);
         if (selectedCity) {
           updatedData.city_id = selectedCity.id;
-          updatedData.location = selectedCity.label; // Use city name as location
+          updatedData.location = selectedCity.name; // Use city name as location
         }
       }
       
-      // Format price with commas
-      if (name === 'price') {
-        const numericValue = value.replace(/[^0-9]/g, '');
-        if (numericValue) {
-          updatedData.price = new Intl.NumberFormat().format(parseInt(numericValue));
-        }
-      }
-
-      // Format mileage with commas
-      if (name === 'mileage') {
-        const numericValue = value.replace(/[^0-9]/g, '');
-        if (numericValue) {
-          updatedData.mileage = new Intl.NumberFormat().format(parseInt(numericValue));
-        }
-      }
         
       return updatedData;
     });

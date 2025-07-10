@@ -799,6 +799,27 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
                       {t('car.featured.badge')}
                     </div>
                   )}
+                  {car.images && car.images.length > 1 && (
+                      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+                        {car.images.map((_, index) => (
+                          <button
+                            key={index}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setCurrentImageIndex(index);
+                            }}
+                            className={`h-1.5 rounded-full transition-all duration-200 ${
+                              index === currentImageIndex 
+                                ? 'w-4 bg-qatar-maroon' 
+                                : 'w-1.5 bg-white/60 hover:bg-white'
+                            }`}
+                            aria-label={`Go to image ${index + 1}`}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  )}
                   {car.status && car.status !== 'Approved' && (
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                       <div className={`text-4xl font-bold transform rotate-[-15deg] px-6 py-3 rounded-lg ${
@@ -1045,7 +1066,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
                   <CylinderIcon className="h-6 w-6 text-qatar-maroon" />
                   <span className="text-sm font-medium text-gray-600 dark:text-gray-300">{t('car.details.cylinders')}</span>
                 </div>
-                <p className="text-gray-900 dark:text-white font-semibold">{car.cylinders} {t('car.cylinders.label')}</p>
+                <p className="text-gray-900 dark:text-white font-semibold">{car.cylinders}</p>
               </div>
 
 

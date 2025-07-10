@@ -1283,7 +1283,7 @@ export default function CarsPage() {
                         {t('car.filters.condition')}
                       </label>
                       <div className="grid grid-cols-2 gap-2">
-                        {(['New', 'Good', 'Excellent', 'Not Working'] as CarCondition[]).map((condition) => (
+                        {(['New', 'Excellent', 'Good', 'Not Working'] as CarCondition[]).map((condition) => (
                           
                           <button
                             key={condition}

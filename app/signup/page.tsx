@@ -64,6 +64,12 @@ export default function SignUp() {
       setError(t('signup.phoneRequired'));
       return false;
     }
+    // Validate phone number length (8-10 digits)
+    const phoneDigits = phoneNumber.replace(/\D/g, '');
+    if (phoneDigits.length < 8 || phoneDigits.length > 10) {
+      setError(t('signup.validation.phoneLength', { min: 8, max: 10 }));
+      return false;
+    }
     if (!selectedCountryId) {
       setError(t('signup.countryRequired'));
       return false;

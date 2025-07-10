@@ -5,11 +5,20 @@ import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCountry } from '@/contexts/CountryContext';
 import { supabase } from '@/lib/supabase';
+import { ExtendedCar, ExtendedSparePart } from '@/types/supabase';
 import CarCard from '@/components/CarCard';
+import SparePartCard from '@/components/spare-parts/SparePartCard';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
+
+type FavoriteItem = {
+  id: string;
+  type: 'car' | 'spare_part';
+  created_at: string;
+  [key: string]: any;
+};
 
 
 export default function FavoritesPage() {
@@ -17,7 +26,7 @@ export default function FavoritesPage() {
   const router = useRouter();
   const params = useParams();
   const { currentCountry } = useCountry();
-  const [favorites, setFavorites] = useState<any[]>([]);
+  const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
   const [loading, setLoading] = useState(true);
   const { t } = useLanguage();
   const countryCode = params.countryCode as string;
@@ -41,43 +50,95 @@ export default function FavoritesPage() {
   }, [user, isAuthLoading, currentCountry?.id, countryCode]);
 
   const fetchFavorites = async () => {
+    if (!user) return;
+    
     try {
       setLoading(true);
       
-      // First get the favorite car IDs
+      // First get both car and spare part favorites
       const { data: favData, error: favError } = await supabase
         .from('favorites')
-        .select('car_id')
+        .select('car_id, spare_part_id, created_at')
         .eq('user_id', user.id);
 
       if (favError) throw favError;
 
-      if (favData.length === 0) {
+      if (!favData || favData.length === 0) {
         setFavorites([]);
-        setLoading(false); // Fix: Set loading to false when there are no favorites
         return;
       }
 
-      // Then fetch the car details including brand and model
-      const carIds = favData.map(fav => fav.car_id);
-      const { data: cars, error: carsError } = await supabase
-        .from('cars')
-        .select(`
-          *,
-          brand:brands(id, name, name_ar),
-          model:models(id, name, name_ar),
-          user:profiles(id, full_name),
-          city:cities(id, name, name_ar),
-          country:countries(id, name, name_ar, code, currency_code),
-          images:car_images(url, is_main)
-        `)
-        .in('id', carIds)
-        .order('created_at', { ascending: false }); // Add sorting by creation date
+      // Separate car and spare part favorites
+      const carFavorites = favData.filter(fav => fav.car_id !== null);
+      const sparePartFavorites = favData.filter(fav => fav.spare_part_id !== null);
 
-      if (carsError) throw carsError;
+      // Fetch car favorites
+      let cars: any[] = [];
+      if (carFavorites.length > 0) {
+        const carIds = carFavorites.map(fav => fav.car_id).filter(Boolean) as number[];
+        if (carIds.length > 0) {
+          const { data: carsData, error: carsError } = await supabase
+            .from('cars')
+            .select(`
+              *,
+              brand:brands(id, name, name_ar),
+              model:models(id, name, name_ar),
+              user:profiles(id, full_name),
+              city:cities(id, name, name_ar),
+              country:countries(id, name, name_ar, code, currency_code),
+              images:car_images(url, is_main)
+            `)
+            .in('id', carIds);
 
-      // Show all favorited cars regardless of country
-      setFavorites(cars);
+          if (carsError) throw carsError;
+          if (carsData) cars = carsData;
+        }
+      }
+
+      // Fetch spare part favorites
+      let spareParts: any[] = [];
+      if (sparePartFavorites.length > 0) {
+        const sparePartIds = sparePartFavorites.map(fav => fav.spare_part_id).filter(Boolean) as string[];
+        if (sparePartIds.length > 0) {
+          const { data: partsData, error: partsError } = await supabase
+            .from('spare_parts')
+            .select(`
+              *,
+              brand:brands(id, name, name_ar),
+              model:models(id, name, name_ar),
+              category:spare_part_categories(id, name_en, name_ar),
+              city:cities(id, name, name_ar),
+              images:spare_part_images(url, is_primary)
+            `)
+            .in('id', sparePartIds);
+
+          if (partsError) throw partsError;
+          if (partsData) spareParts = partsData;
+        }
+      }
+
+      // Combine and format the results with their favorite creation date
+      const allFavorites: FavoriteItem[] = [
+        ...cars.map(car => ({
+          ...car,
+          type: 'car' as const,
+          id: car.id.toString(),
+          created_at: favData.find(f => f.car_id === car.id)?.created_at || car.created_at
+        })),
+        ...spareParts.map(part => ({
+          ...part,
+          type: 'spare_part' as const,
+          id: part.id,
+          created_at: favData.find(f => f.spare_part_id === part.id)?.created_at || part.created_at
+        }))
+      ];
+
+      // Sort by favorite creation date, newest first
+      allFavorites.sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+
+      setFavorites(allFavorites);
     } catch (error) {
       console.error('Error fetching favorites:', error);
       toast.error(t('favorites.error.load'));
@@ -86,21 +147,28 @@ export default function FavoritesPage() {
     }
   };
 
-  const handleFavoriteToggle = async (carId: number) => {
+  const handleFavoriteToggle = async (itemId: string, type: 'car' | 'spare_part') => {
     if (!user) return;
 
     try {
       // Remove from favorites in database
-      const { error } = await supabase
+      const query = supabase
         .from('favorites')
         .delete()
-        .eq('user_id', user.id)
-        .eq('car_id', carId);
+        .eq('user_id', user.id);
 
+      // Use the appropriate column based on the item type
+      if (type === 'car') {
+        await query.eq('car_id', itemId);
+      } else {
+        await query.eq('spare_part_id', itemId);
+      }
+
+      const { error } = await query;
       if (error) throw error;
 
       // Update local state with animation
-      setFavorites(prev => prev.filter(car => car.id !== carId));
+      setFavorites(prev => prev.filter(item => item.id !== itemId));
       
       toast.success(t('favorites.success.removed'), {
         icon: '💔',
@@ -146,6 +214,7 @@ export default function FavoritesPage() {
       </div>
     );
   }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 py-12">
       <div className="container mx-auto px-4">
@@ -182,30 +251,52 @@ export default function FavoritesPage() {
             <p className="text-gray-600 dark:text-gray-400 mb-6">
               {t('favorites.empty.description')}
             </p>
-            <button
-              onClick={() => router.push(`/${currentCountry?.code.toLowerCase()}/cars`)}
-              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-qatar-maroon hover:bg-qatar-maroon/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon"
-            >
-              {t('favorites.empty.browse')}
-            </button>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <button
+                onClick={() => router.push(`/${countryCode}/cars`)}
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-qatar-maroon hover:bg-qatar-maroon/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon"
+              >
+                {t('favorites.empty.browseCars')}
+              </button>
+              <button
+                onClick={() => router.push(`/${currentCountry?.code.toLowerCase()}/spare-parts`)}
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-qatar-teal hover:bg-qatar-teal/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-teal"
+              >
+                {t('favorites.empty.browseSpareParts')}
+              </button>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <AnimatePresence mode="popLayout">
-              {favorites.map((car) => (
+              {favorites.map((item) => (
                 <motion.div
-                  key={car.id}
+                  key={`${item.type}-${item.id}`}
                   layout
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.8, y: 20 }}
                   transition={{ duration: 0.2 }}
+                  className="h-full"
                 >
-                  <CarCard
-                    car={car}
-                    onFavoriteToggle={handleFavoriteToggle}
-                    isFavorite={true}
-                  />
+                  {item.type === 'car' ? (
+                    <CarCard
+                      car={item as unknown as ExtendedCar}
+                      onFavoriteToggle={() => {
+                        handleFavoriteToggle(item.id, 'car');
+                      }}
+                      isFavorite={true}
+                    />
+                  ) : (
+                    <SparePartCard
+                      part={item as unknown as ExtendedSparePart}
+                      onToggleFavorite={(e: React.MouseEvent) => {
+                        e.stopPropagation();
+                        handleFavoriteToggle(item.id, 'spare_part');
+                      }}
+                      isFavorite={true}
+                    />
+                  )}
                 </motion.div>
               ))}
             </AnimatePresence>
