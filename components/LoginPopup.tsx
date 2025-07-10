@@ -85,13 +85,13 @@ export default function LoginPopup({ delay = 5000 }: LoginPopupProps) {
           </p>
           <div className="flex flex-col space-y-4 mb-6">
             <Link
-              href={`${countryPrefix}/login`}
+              href={`/login`}
               className="bg-qatar-maroon text-white px-6 py-3 rounded-lg font-semibold hover:bg-qatar-maroon-dark transition-colors"
             >
               {t('auth.login')}
             </Link>
             <Link
-              href={`${countryPrefix}/signup`}
+              href={`/signup`}
               className="bg-white text-qatar-maroon border-2 border-qatar-maroon px-6 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
             >
               {t('auth.signup')}

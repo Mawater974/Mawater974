@@ -23,11 +23,14 @@ interface PhoneInputProps {
 
 // Phone number validation patterns for different countries
 const PHONE_PATTERNS = {
+  // Default pattern allows 8-10 digits
+  'DEFAULT': { pattern: /^\d{8,10}$/, placeholder: '12345678', maxLength: 10 },
   'QA': { pattern: /^\d{8}$/, placeholder: '12345678', maxLength: 8 },
   'SA': { pattern: /^\d{9}$/, placeholder: '512345678', maxLength: 9 },
   'AE': { pattern: /^\d{9}$/, placeholder: '512345678', maxLength: 9 },
   'KW': { pattern: /^\d{8}$/, placeholder: '12345678', maxLength: 8 },
   'SY': { pattern: /^\d{9}$/, placeholder: '912345678', maxLength: 9 },
+  'EG': { pattern: /^\d{10}$/, placeholder: '1234567890', maxLength: 10 },
 };
 
 export default function PhoneInput({
@@ -84,8 +87,8 @@ export default function PhoneInput({
   };
 
   const getPhonePattern = () => {
-    if (!selectedCountry) return PHONE_PATTERNS['QA'];
-    return PHONE_PATTERNS[selectedCountry.code] || PHONE_PATTERNS['QA'];
+    if (!selectedCountry) return PHONE_PATTERNS['DEFAULT'];
+    return PHONE_PATTERNS[selectedCountry.code] || PHONE_PATTERNS['DEFAULT'];
   };
 
   const validatePhoneNumber = (value: string) => {

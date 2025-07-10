@@ -1,6 +1,6 @@
 import { Dialog, Transition } from '@headlessui/react';
-import { Fragment, useContext } from 'react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { Fragment, useState, useEffect } from 'react';
+import { XMarkIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Car, Brand } from '../types/supabase';
@@ -8,16 +8,19 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useCountry } from '../contexts/CountryContext';
 import { useLanguage } from '../contexts/LanguageContext';
 
+interface CarImage {
+  id: number;
+  url: string;
+  is_main?: boolean;
+}
+
 interface ExtendedCar extends Omit<Car, 'brand_id' | 'model_id'> {
   brand: Brand;
   model: {
     id: number;
     name: string;
   };
-  images: {
-    id: number;
-    url: string;
-  }[];
+  images: CarImage[];
 }
 
 interface CarCompareModalProps {
@@ -58,6 +61,58 @@ const getHighlightClass = (values: any[], currentValue: any, type: string) => {
 export default function CarCompareModal({ isOpen, onClose, cars }: CarCompareModalProps) {
   const { t, language, currentLanguage } = useLanguage();
   const { formatPrice } = useCountry();
+  const [currentImageIndices, setCurrentImageIndices] = useState<Record<number, number>>({});
+  const [sortedCars, setSortedCars] = useState<ExtendedCar[]>([]);
+
+  // Sort images to ensure main photo is first
+  const sortImages = (carsToSort: ExtendedCar[]) => {
+    return carsToSort.map(car => ({
+      ...car,
+      images: [...car.images].sort((a, b) => {
+        // Sort by is_main (true first) then by id as fallback
+        if (a.is_main === b.is_main) return 0;
+        if (a.is_main) return -1;
+        if (b.is_main) return 1;
+        return (a.id || 0) - (b.id || 0);
+      })
+    }));
+  };
+
+  // Initialize current image indices and sort cars
+  const initializeIndices = () => {
+    const indices: {[key: number]: number} = {};
+    cars.forEach((car) => {
+      indices[car.id] = 0; // Start with the first (main) image for each car
+    });
+    return indices;
+  };
+
+  // Update current image index for a specific car
+  const goToNextImage = (carId: number) => {
+    const car = cars.find(c => c.id === carId);
+    if (!car) return;
+    
+    setCurrentImageIndices(prev => ({
+      ...prev,
+      [carId]: (prev[carId] || 0) < car.images.length - 1 ? (prev[carId] || 0) + 1 : 0
+    }));
+  };
+
+  const goToPrevImage = (carId: number) => {
+    const car = cars.find(c => c.id === carId);
+    if (!car) return;
+    
+    setCurrentImageIndices(prev => ({
+      ...prev,
+      [carId]: (prev[carId] || 0) > 0 ? (prev[carId] || 0) - 1 : car.images.length - 1
+    }));
+  };
+
+  // Initialize indices and sort cars when the modal opens or cars change
+  useEffect(() => {
+    setCurrentImageIndices(initializeIndices());
+    setSortedCars(sortImages(cars));
+  }, [cars]);
 
   const specs = [
   { 
@@ -127,8 +182,8 @@ export default function CarCompareModal({ isOpen, onClose, cars }: CarCompareMod
     key: 'condition',
     format: (value: any) => {
       if (!value) return '-';
-      const translation = t(`car.condition.${value.toLowerCase()}`, { defaultValue: value });
-      return translation === value.toLowerCase() ? value : translation;
+      const translation = t(`car.condition.${value.toLowerCase().replace(' ', '_')}`, { defaultValue: value });
+      return translation === value.toLowerCase().replace(' ', '_') ? value : translation;
     }
   },
   { 
@@ -214,15 +269,47 @@ export default function CarCompareModal({ isOpen, onClose, cars }: CarCompareMod
                 {/* Mobile View */}
                 <div className="block sm:hidden">
                   <div className="grid grid-cols-2 gap-3 mb-4">
-                    {cars.map((car, index) => (
+                    {sortedCars.map((car, index) => (
                       <div key={car.id}>
                         <div className="relative aspect-[3/2] rounded-lg overflow-hidden shadow-lg mb-2">
-                          <Image
-                            src={car.images?.[0]?.url || '/placeholder-car.jpg'}
-                            alt={`${car.brand.name} ${car.model.name}`}
-                            fill
-                            className="object-cover"
-                          />
+                          {car.images?.length > 0 ? (
+                            <div className="relative w-full h-full">
+                              <Image
+                                src={car.images[currentImageIndices[car.id] || 0]?.url || '/placeholder-car.jpg'}
+                                alt={`${car.brand.name} ${car.model.name}`}
+                                fill
+                                className="object-cover"
+                              />
+                              {car.images.length > 1 && (
+                                <>
+                                  <button 
+                                    onClick={(e) => { e.stopPropagation(); goToPrevImage(car.id); }}
+                                    className="absolute left-1 top-1/2 transform -translate-y-1/2 bg-black/50 text-white p-1 rounded-full"
+                                  >
+                                    <ChevronLeftIcon className="h-5 w-5" />
+                                  </button>
+                                  <button 
+                                    onClick={(e) => { e.stopPropagation(); goToNextImage(car.id); }}
+                                    className="absolute right-1 top-1/2 transform -translate-y-1/2 bg-black/50 text-white p-1 rounded-full"
+                                  >
+                                    <ChevronRightIcon className="h-5 w-5" />
+                                  </button>
+                                  <div className="absolute bottom-2 left-0 right-0 flex justify-center space-x-1">
+                                    {car.images.map((_, idx) => (
+                                      <div 
+                                        key={idx} 
+                                        className={`h-1.5 w-1.5 rounded-full ${(currentImageIndices[car.id] || 0) === idx ? 'bg-white' : 'bg-white/50'}`}
+                                      />
+                                    ))}
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                              <span className="text-gray-500">No image</span>
+                            </div>
+                          )}
                         </div>
                         <div className="text-center">
                           <h3 className="font-bold text-sm text-gray-900 dark:text-white truncate">{car.brand.name} {car.model.name}</h3>
@@ -238,7 +325,7 @@ export default function CarCompareModal({ isOpen, onClose, cars }: CarCompareMod
                         {spec.label}
                       </div>
                       <div className="grid grid-cols-2 gap-3">
-                        {cars.map((car) => (
+                        {sortedCars.map((car) => (
                           <div
                             key={`${car.id}-${spec.key}`}
                             className="p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-sm text-gray-900 dark:text-white"
@@ -257,15 +344,49 @@ export default function CarCompareModal({ isOpen, onClose, cars }: CarCompareMod
                   <div className="pt-4">
                     <div className="font-medium text-gray-900 dark:text-white mb-4">{t('compareCars.specifications')}</div>
                   </div>
-                  {cars.map((car, index) => (
+                  {sortedCars.map((car, index) => (
                     <div key={car.id} className="space-y-4">
                       <div className="relative aspect-[4/3] rounded-xl overflow-hidden shadow-lg">
-                        <Image
-                          src={car.images?.[0]?.url || '/placeholder-car.jpg'}
-                          alt={`${car.brand.name} ${car.model.name}`}
-                          fill
-                          className="object-cover"
-                        />
+                        {car.images?.length > 0 ? (
+                          <div className="relative w-full h-full group">
+                            <Image
+                              src={car.images[currentImageIndices[car.id] || 0]?.url || '/placeholder-car.jpg'}
+                              alt={`${car.brand.name} ${car.model.name}`}
+                              fill
+                              className="object-cover"
+                            />
+                            {car.images.length > 1 && (
+                              <>
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); goToPrevImage(car.id); }}
+                                  className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/50 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                  aria-label="Previous image"
+                                >
+                                  <ChevronLeftIcon className="h-5 w-5" />
+                                </button>
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); goToNextImage(car.id); }}
+                                  className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/50 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                  aria-label="Next image"
+                                >
+                                  <ChevronRightIcon className="h-5 w-5" />
+                                </button>
+                                <div className="absolute bottom-2 left-0 right-0 flex justify-center space-x-1">
+                                  {car.images.map((_, idx) => (
+                                    <div 
+                                      key={idx} 
+                                      className={`h-2 w-2 rounded-full transition-colors ${(currentImageIndices[car.id] || 0) === idx ? 'bg-white' : 'bg-white/50'}`}
+                                    />
+                                  ))}
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="w-full h-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                            <span className="text-gray-500 dark:text-gray-400">No image</span>
+                          </div>
+                        )}
                       </div>
                       <div className="text-center">
                         <h3 className="font-bold text-gray-900 dark:text-white">{car.brand.name} {car.model.name}</h3>
@@ -280,7 +401,7 @@ export default function CarCompareModal({ isOpen, onClose, cars }: CarCompareMod
                       <div className="py-3 font-medium text-gray-700 dark:text-gray-300 border-t border-gray-200 dark:border-gray-700">
                         {spec.label}
                       </div>
-                      {cars.map((car) => (
+                      {sortedCars.map((car) => (
                         <div
                           key={`${car.id}-${spec.key}`}
                           className="py-3 text-gray-900 dark:text-white border-t border-gray-200 dark:border-gray-700"

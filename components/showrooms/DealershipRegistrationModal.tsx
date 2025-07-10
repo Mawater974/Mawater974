@@ -15,7 +15,7 @@ interface DealershipRegistrationModalProps {
   onClose: () => void;
 }
 
-type DealershipType = 'Private' | 'Official' | '';
+type DealershipType = 'private' | 'official' | '';
 type BusinessType = 'showroom' | 'service_center' | 'spare_parts_dealership' | '';
 
 interface FormData {
@@ -574,8 +574,8 @@ export default function DealershipRegistrationModal({
                   required
                 >
                   <option value="">{t('dealership.selectDealershipType')}</option>
-                  <option value="Private">{t('showroom.dealershipTypes.private')}</option>
-                  <option value="Official">{t('showroom.dealershipTypes.official')}</option>
+                  <option value="private">{t('showroom.dealershipTypes.private')}</option>
+                  <option value="official">{t('showroom.dealershipTypes.official')}</option>
                 </select>
               </div>
               <div>

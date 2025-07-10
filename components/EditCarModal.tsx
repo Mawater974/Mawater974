@@ -13,12 +13,55 @@ interface CarImage {
   is_main?: boolean;
 }
 
+interface Car {
+  id: number;
+  brand_id?: string | number;
+  model_id?: string | number;
+  year?: number;
+  mileage?: string | number;
+  price?: string | number;
+  color?: string;
+  description?: string;
+  fuel_type?: string;
+  gearbox_type?: string;
+  body_type?: string;
+  condition?: string;
+  cylinders?: string;
+  doors?: string;
+  drive_type?: string;
+  warranty?: string;
+  warranty_months_remaining?: string;
+  exact_model?: string;
+  city_id?: string | number;
+  is_featured?: boolean;
+  images?: Array<{ url: string; is_main?: boolean } | string>;
+  country?: {
+    currency_code?: string;
+  };
+  city?: {
+    id: number;
+    name: string;
+    name_ar: string | null;
+    country_id: number;
+  };
+  brand?: {
+    id: number;
+    name: string;
+    name_ar?: string | null;
+  };
+  model?: {
+    id: number;
+    name: string;
+    name_ar?: string | null;
+  };
+}
+
 interface EditCarModalProps {
   isOpen: boolean;
   onClose: () => void;
-  car: any;
+  car?: Car | null;
   onUpdate: () => void;
-  onEditComplete: () => void;
+  onEditComplete: (updatedCar: any) => void;
 }
 
 interface FormData {
@@ -43,15 +86,20 @@ interface FormData {
   is_featured: boolean;
 }
 
-export default function EditCarModal({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCarModalProps) {
+const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCarModalProps): JSX.Element | null => {
+  // Don't render anything if car is not provided
+  if (!car) return null;
   const { t, language } = useLanguage();
   const { supabase } = useSupabase();
-  const [loading, setLoading] = useState(false);
-  const [brands, setBrands] = useState<any[]>([]);
-  const [models, setModels] = useState<any[]>([]);
-  const [cities, setCities] = useState<any[]>([]);
-  const [countries, setCountries] = useState<any[]>([]);
-  const [selectedCountry, setSelectedCountry] = useState<string>('');
+  // State for form data and UI
+  const [selectedCountry, setSelectedCountry] = useState<string | number | null>(null);
+  const [cities, setCities] = useState<Array<{ id: number; name: string; name_ar: string | null; country_id: number }>>([]);
+  const [brands, setBrands] = useState<Array<{ id: number; name: string; name_ar: string | null }>>([]);
+  const [models, setModels] = useState<Array<{ id: number; name: string; name_ar: string | null; brand_id: number }>>([]);
+  const [countries, setCountries] = useState<Array<{ id: number; name: string; name_ar: string | null; code: string; currency_code: string }>>([]);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [images, setImages] = useState<CarImage[]>([]);
   const [formData, setFormData] = useState<FormData>({
     brand_id: '',
     model_id: '',
@@ -74,16 +122,88 @@ export default function EditCarModal({ isOpen, onClose, car, onUpdate, onEditCom
     is_featured: false,
   });
 
-  const [images, setImages] = useState<CarImage[]>(
-    (car.images || []).map((img: any) => ({
-      url: typeof img === 'string' ? img : img.url,
-      is_main: typeof img === 'string' ? false : img.is_main
-    }))
-  );
+  // Helper function to safely convert values to strings for form fields
+  const safeString = (value: string | number | undefined | null): string => {
+    if (value === undefined || value === null) return '';
+    return String(value);
+  };
+
+  // Initialize form data and images when car changes
+  useEffect(() => {
+    if (!car) return;
+    
+    // Reset form when car is null/undefined
+    setFormData({
+      brand_id: safeString(car.brand_id),
+      model_id: safeString(car.model_id),
+      year: car.year || new Date().getFullYear(),
+      mileage: safeString(car.mileage),
+      price: safeString(car.price),
+      color: car.color || '',
+      description: car.description || '',
+      fuel_type: car.fuel_type || '',
+      gearbox_type: car.gearbox_type || '',
+      body_type: car.body_type || '',
+      condition: car.condition || '',
+      cylinders: car.cylinders || '',
+      doors: car.doors || '',
+      drive_type: car.drive_type || '',
+      warranty: car.warranty || '',
+      warranty_months_remaining: car.warranty_months_remaining || '',
+      exact_model: car.exact_model || '',
+      city_id: safeString(car.city_id),
+      is_featured: car.is_featured || false,
+    });
+    
+    // Set initial images
+    if (Array.isArray(car.images)) {
+      setImages(car.images.map(img => ({
+        url: typeof img === 'string' ? img : img?.url || '',
+        is_main: typeof img === 'string' ? false : Boolean(img?.is_main)
+      })));
+    } else {
+      setImages([]);
+    }
+
+    // Initialize form data
+    setFormData({
+      brand_id: safeString(car.brand_id),
+      model_id: safeString(car.model_id),
+      year: car.year || new Date().getFullYear(),
+      mileage: safeString(car.mileage),
+      price: safeString(car.price),
+      color: car.color || '',
+      description: car.description || '',
+      fuel_type: car.fuel_type || '',
+      gearbox_type: car.gearbox_type || '',
+      body_type: car.body_type || '',
+      condition: car.condition || '',
+      cylinders: car.cylinders || '',
+      doors: car.doors || '',
+      drive_type: car.drive_type || '',
+      warranty: car.warranty || '',
+      warranty_months_remaining: car.warranty_months_remaining || '',
+      exact_model: car.exact_model || '',
+      city_id: safeString(car.city_id),
+      is_featured: car.is_featured || false,
+    });
+
+    // Initialize images
+    const initialImages = Array.isArray(car.images) 
+      ? car.images.map((img) => ({
+          url: typeof img === 'string' ? img : img?.url || '',
+          is_main: typeof img === 'string' ? false : Boolean(img?.is_main)
+        }))
+      : [];
+    setImages(initialImages);
+  }, [car]);
 
   // Fetch initial data
   useEffect(() => {
     const fetchData = async () => {
+      if (!car) return;
+      
+      setLoading(true);
       try {
         // Fetch brands
         const { data: brandsData } = await supabase
@@ -100,7 +220,7 @@ export default function EditCarModal({ isOpen, onClose, car, onUpdate, onEditCom
         setCountries(countriesData || []);
 
         // Set initial selected country from car data
-        if (car?.city?.country_id) {
+        if (car.city?.country_id) {
           setSelectedCountry(car.city.country_id);
           
           // Fetch cities for the car's country
@@ -113,7 +233,7 @@ export default function EditCarModal({ isOpen, onClose, car, onUpdate, onEditCom
         }
 
         // If we have a brand_id, fetch models
-        if (car?.brand?.id) {
+        if (car.brand?.id) {
           const { data: modelsData } = await supabase
             .from('models')
             .select('*')
@@ -121,79 +241,30 @@ export default function EditCarModal({ isOpen, onClose, car, onUpdate, onEditCom
             .order('name');
           setModels(modelsData || []);
         }
-
-        // Set initial form data
-        if (car) {
-          setFormData({
-            brand_id: car.brand?.id || '',
-            model_id: car.model?.id || '',
-            year: car.year || new Date().getFullYear(),
-            mileage: car.mileage || '',
-            price: car.price || '',
-            color: car.color || '',
-            description: car.description || '',
-            fuel_type: car.fuel_type || '',
-            gearbox_type: car.gearbox_type || '',
-            body_type: car.body_type || '',
-            condition: car.condition || '',
-            cylinders: car.cylinders || '',
-            doors: car.doors || '',
-            drive_type: car.drive_type || '',
-            warranty: car.warranty || '',
-            warranty_months_remaining: car.warranty_months_remaining || '',
-            exact_model: car.exact_model || '',
-            city_id: car.city?.id || '',
-            is_featured: car.is_featured || false
-          });
-        }
-
-        // Fetch images
-        if (car?.id) {
-          const { data: imagesData } = await supabase
-            .from('car_images')
-            .select('*')
-            .eq('car_id', car.id)
-            .order('is_main', { ascending: false });
-          
-          if (imagesData) {
-            setImages(imagesData.map((img: any) => ({
-              url: img.url,
-              is_main: img.is_main
-            })));
-          }
-        }
       } catch (error) {
         console.error('Error fetching data:', error);
         toast.error(t('common.fetchError'));
+      } finally {
+        setLoading(false);
       }
     };
 
-    if (isOpen) {
-      fetchData();
-    }
-  }, [isOpen, car, supabase, t]);
+    fetchData();
+  }, [car, supabase, t]);
 
   // Handle country change
   const handleCountryChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const countryId = e.target.value;
     setSelectedCountry(countryId);
-    
-    // Reset city selection
     setFormData(prev => ({ ...prev, city_id: '' }));
-    
-    // Fetch cities for selected country
+
     if (countryId) {
-      try {
-        const { data: citiesData } = await supabase
-          .from('cities')
-          .select('*')
-          .eq('country_id', countryId)
-          .order('name');
-        setCities(citiesData || []);
-      } catch (error) {
-        console.error('Error fetching cities:', error);
-        toast.error(t('common.fetchError'));
-      }
+      const { data } = await supabase
+        .from('cities')
+        .select('*')
+        .eq('country_id', Number(countryId))
+        .order('name');
+      setCities(data || []);
     } else {
       setCities([]);
     }
@@ -220,224 +291,218 @@ export default function EditCarModal({ isOpen, onClose, car, onUpdate, onEditCom
     }
   };
 
-  const handleImageUpload = async (files: File[]) => {
-    setLoading(true);
+  // Handle brand change
+  const handleBrandChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const brandId = e.target.value;
+    setFormData(prev => ({ ...prev, brand_id: brandId, model_id: '' }));
+
+    if (brandId) {
+      const { data } = await supabase
+        .from('models')
+        .select('*')
+        .eq('brand_id', Number(brandId))
+        .order('name');
+      setModels(data || []);
+    } else {
+      setModels([]);
+    }
+  };
+
+  // Handle image upload
+  const handleImageUpload = async (files: File[]): Promise<void> => {
+    if (!car) return;
+    
+    setUploading(true);
     try {
-      const newImages = [];
-      const { data: { user } } = await supabase.auth.getUser();
+      const uploadedImages: CarImage[] = [];
       
-      if (!user?.id) {
-        throw new Error('User must be logged in to upload images');
-      }
-      
-      if (!car.id) {
-        throw new Error('Car ID is required for image upload');
-      }
-
       for (const file of files) {
-        // Create a unique filename
         const fileExt = file.name.split('.').pop();
-        const uniqueId = Date.now() + '-' + Math.random().toString(36).substring(2);
-        const fileName = `car-images/${user.id}/${car.id}/${uniqueId}.${fileExt}`;
-
-        // Upload file
+        const fileName = `${Math.random()}.${fileExt}`;
+        const filePath = `cars/${car.id}/${fileName}`;
+        
         const { error: uploadError } = await supabase.storage
           .from('car-images')
-          .upload(fileName, file, {
-            cacheControl: '3600',
-            upsert: false
-          });
-
-        if (uploadError) {
-          console.error('Upload error:', uploadError);
-          throw new Error(uploadError.message);
-        }
-
-        // Get public URL
+          .upload(filePath, file);
+        
+        if (uploadError) throw uploadError;
+        
         const { data: { publicUrl } } = supabase.storage
           .from('car-images')
-          .getPublicUrl(fileName);
-
-        // Create database record
-        const { error: dbError } = await supabase
-          .from('car_images')
-          .insert({
-            car_id: car.id,
-            url: publicUrl,
-            is_main: images.length === 0
-          });
-
-        if (dbError) {
-          // If database insert fails, clean up the uploaded file
-          await supabase.storage
-            .from('car-images')
-            .remove([fileName]);
-          throw new Error(dbError.message);
-        }
-
-        newImages.push({
+          .getPublicUrl(filePath);
+        
+        uploadedImages.push({
           url: publicUrl,
-          is_main: images.length === 0
+          is_main: images.length === 0 // Set as main if no other images
         });
       }
-
-      // Update local state with new images
-      setImages(prev => [...prev, ...newImages]);
       
-      // Update the car's featured image if this is the first image
-      if (images.length === 0 && newImages.length > 0) {
-        await handleSetMainImage(newImages[0].url);
-      }
-      
-      toast.success(t('common.imageUploadSuccess'));
-    } catch (error: any) {
+      setImages(prev => [...prev, ...uploadedImages]);
+      toast.success(t('car.images.uploadSuccess'));
+    } catch (error) {
       console.error('Error uploading images:', error);
-      toast.error(error.message || t('common.imageUploadError'));
+      toast.error(t('car.images.uploadError'));
     } finally {
-      setLoading(false);
+      setUploading(false);
     }
   };
 
   const handleSetMainImage = async (imageUrl: string) => {
+    if (!car?.id) return;
+    
+    setLoading(true);
     try {
-      // Update all images to not be main
+      // Update all images to set is_main = false
       await supabase
         .from('car_images')
         .update({ is_main: false })
         .eq('car_id', car.id);
-
+      
       // Set the selected image as main
       await supabase
         .from('car_images')
         .update({ is_main: true })
         .eq('car_id', car.id)
         .eq('url', imageUrl);
-
+      
       // Update local state
-      setImages(images.map(img => ({
-        ...img,
-        is_main: img.url === imageUrl
-      })));
-
-      toast.success(t('common.mainImageUpdated'));
+      setImages(prev => 
+        prev.map(img => ({
+          ...img,
+          is_main: img.url === imageUrl
+        }))
+      );
+      
+      toast.success(t('car.images.setMainSuccess'));
     } catch (error) {
-      console.error('Error updating main image:', error);
-      toast.error(t('common.updateError'));
+      console.error('Error setting main image:', error);
+      toast.error(t('car.images.setMainError'));
+    } finally {
+      setLoading(false);
     }
   };
 
+  // Handle delete image
   const handleDeleteImage = async (imageUrl: string) => {
+    if (!car?.id) return;
+    
+    setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user?.id) {
-        throw new Error('User must be logged in to delete images');
-      }
-
-      // Extract filename from URL
-      const urlParts = imageUrl.split('/');
-      const fileName = `car-images/${user.id}/${car.id}/${urlParts[urlParts.length - 1]}`;
-
       // Delete from storage
+      const urlParts = imageUrl.split('/');
+      const fileName = urlParts[urlParts.length - 1];
+      
       const { error: storageError } = await supabase.storage
         .from('car-images')
-        .remove([fileName]);
-
-      if (storageError) throw new Error(storageError.message);
-
+        .remove([`cars/${car.id}/${fileName}`]);
+      
+      if (storageError) throw storageError;
+      
       // Delete from database
       const { error: dbError } = await supabase
         .from('car_images')
         .delete()
         .eq('car_id', car.id)
         .eq('url', imageUrl);
-
-      if (dbError) throw new Error(dbError.message);
-
+      
+      if (dbError) throw dbError;
+      
       // Update local state
-      const newImages = images.filter(img => img.url !== imageUrl);
-      setImages(newImages);
-
-      // If the deleted image was the main image, set a new main image
-      if (images.find(img => img.url === imageUrl)?.is_main && newImages.length > 0) {
-        await handleSetMainImage(newImages[0].url);
-      }
-
-      toast.success(t('common.imageDeleted'));
-    } catch (error: any) {
+      setImages(prev => prev.filter(img => img.url !== imageUrl));
+      
+      toast.success(t('car.images.deleteSuccess'));
+    } catch (error) {
       console.error('Error deleting image:', error);
-      toast.error(error.message || t('common.deleteError'));
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      const { data: carData, error: updateError } = await supabase
-        .from('cars')
-        .update({
-          ...formData,
-          status: 'Pending',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', car.id)
-        .select()
-        .single();
-
-      if (updateError) throw updateError;
-
-      // Handle image updates
-      if (images.length > 0) {
-        // First, delete old images that are not in the new list
-        const oldImages = car.images || [];
-        const newImageUrls = images.map((img) => img.url);
-        
-        const imagesToDelete = oldImages.filter((oldImg: any) => 
-          !newImageUrls.includes(oldImg.url)
-        );
-
-        if (imagesToDelete.length > 0) {
-          await supabase
-            .from('car_images')
-            .delete()
-            .in('url', imagesToDelete.map((img: any) => img.url));
-        }
-
-        // Then, update all images for this car
-        await supabase
-          .from('car_images')
-          .update(images.map(img => ({
-            is_main: img.is_main ? true : false,
-            url: img.url
-          })))
-          .eq('car_id', car.id);
-
-        // If there's a main image, ensure only one is marked as main
-        const mainImage = images.find(img => img.is_main);
-        if (mainImage) {
-          // Update all other images to not be main
-          await supabase
-            .from('car_images')
-            .update({ is_main: false })
-            .eq('car_id', car.id)
-            .neq('url', mainImage.url);
-        }
-      }
-
-      toast.success(t('cars.updateSuccess'));
-      onUpdate();
-      onEditComplete();
-      onClose();
-    } catch (error: any) {
-      console.error('Error updating car:', error);
-      toast.error(error.message || t('cars.updateError'));
+      toast.error(t('car.images.deleteError'));
     } finally {
       setLoading(false);
     }
   };
 
+  // Handle form submission
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!car?.id) return;
+    
+    setLoading(true);
+    try {
+      // Update car data
+      const { error } = await supabase
+        .from('cars')
+        .update({
+          brand_id: formData.brand_id,
+          model_id: formData.model_id,
+          year: formData.year,
+          mileage: formData.mileage,
+          price: formData.price,
+          color: formData.color,
+          description: formData.description,
+          fuel_type: formData.fuel_type,
+          gearbox_type: formData.gearbox_type,
+          body_type: formData.body_type,
+          condition: formData.condition,
+          cylinders: formData.cylinders,
+          doors: formData.doors,
+          drive_type: formData.drive_type,
+          warranty: formData.warranty,
+          warranty_months_remaining: formData.warranty_months_remaining,
+          exact_model: formData.exact_model,
+          city_id: formData.city_id,
+          is_featured: formData.is_featured,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', car.id);
+      
+      if (error) throw error;
+      
+      // Update images if any
+      if (images.length > 0) {
+        // First, delete all existing images for this car
+        await supabase
+          .from('car_images')
+          .delete()
+          .eq('car_id', car.id);
+        
+        // Then insert the new ones
+        const imagesToInsert = images.map(img => ({
+          car_id: car.id,
+          url: img.url,
+          is_main: img.is_main || false
+        }));
+        
+        const { error: imagesError } = await supabase
+          .from('car_images')
+          .insert(imagesToInsert);
+        
+        if (imagesError) throw imagesError;
+      }
+      
+      // Call the onUpdate callback to refresh the parent component
+      if (onUpdate) {
+        onUpdate();
+      }
+      
+      // Call the onEditComplete callback with the updated car data
+      if (onEditComplete) {
+        onEditComplete({
+          ...car,
+          ...formData,
+          images: images
+        });
+      }
+      
+      toast.success(t('car.updateSuccess'));
+      onClose();
+    } catch (error) {
+      console.error('Error updating car:', error);
+      toast.error(t('car.updateError'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+// ...
   return (
     <Transition appear show={isOpen} as={Fragment}>
       <Dialog as="div" className="relative z-50" onClose={onClose}>
@@ -566,7 +631,7 @@ export default function EditCarModal({ isOpen, onClose, car, onUpdate, onEditCom
 
                     <div>
                       <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-                        {t('car.price')} {t(`common.currency.${car.country?.currency_code || 'QAR'}`)}
+                        {t('car.price')} {t(`common.currency.${car?.country?.currency_code || 'QAR'}`)}
                       </label>
                       <input
                         type="number"
@@ -898,3 +963,5 @@ export default function EditCarModal({ isOpen, onClose, car, onUpdate, onEditCom
     </Transition>
   );
 }
+
+export default EditCarModal;
