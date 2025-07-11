@@ -646,7 +646,7 @@ const EditSparePartModal = ({
                         {/* Price */}
                         <div>
                   <label htmlFor="price" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {t('spareParts.add.priceLabel')} ({currentCountry?.currency_code || 'QAR'}) *
+                    {t('spareParts.add.priceLabel')} ({sparePart?.country?.currency_code}) *
                   </label>
                   <div className="relative rounded-md shadow-sm"> 
                             <input

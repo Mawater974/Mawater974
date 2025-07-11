@@ -173,8 +173,8 @@ export default function Navbar() {
     { name: t('nav.browseCars'), href: `/${currentCountry?.code.toLowerCase()}/cars` },
     { name: t('nav.sellYourCar'), href: `/${currentCountry?.code.toLowerCase()}/sell` },
     { name: t('nav.showrooms'), href: `/${currentCountry?.code.toLowerCase()}/showrooms` },
-    { name: t('nav.carRental'), href: `/${currentCountry?.code.toLowerCase()}/car-rental` },
     { name: t('nav.spareParts'), href: `/${currentCountry?.code.toLowerCase()}/spare-parts` },
+    { name: t('nav.carRental'), href: `/${currentCountry?.code.toLowerCase()}/car-rental` },
     { name: t('nav.carPhotography'), href: `/${currentCountry?.code.toLowerCase()}/car-photography` },
   ];
 

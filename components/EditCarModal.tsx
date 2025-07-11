@@ -631,7 +631,7 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
 
                     <div>
                       <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-                        {t('car.price')} {t(`common.currency.${car?.country?.currency_code || 'QAR'}`)}
+                        {t('car.price')} ({car?.country?.currency_code}) *
                       </label>
                       <input
                         type="number"

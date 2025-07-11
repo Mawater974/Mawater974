@@ -233,7 +233,7 @@ const SparePartCard: React.FC<SparePartCardProps> = ({
           <div className="flex flex-col gap-2">
             <div>
               <span className="text-2xl font-semibold text-qatar-maroon">
-                {formatPrice(part.price, part.currency || part.country?.currency_code || 'QAR')}
+                {formatPrice(part.price, part.currency || part.country?.currency_code)}
               </span>
             </div>
 
@@ -251,9 +251,9 @@ const SparePartCard: React.FC<SparePartCardProps> = ({
             {(part.city || part.country) && (
               <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 truncate">
                 <MapPinIcon className="h-4 w-4 mr-1 flex-shrink-0" />
-                {part.country && currentCountry && part.country.id !== currentCountry.id && (
+                {part.country && currentCountry && part.country.id !== currentCountry.id && part.country.name && (
                   <span className="font-medium text-gray-500 dark:text-gray-400 mr-1">
-                    {language === 'ar' ? part.country.name_ar : part.country.name} •
+                    {currentLanguage === 'ar' && part.country.name_ar ? part.country.name_ar : part.country.name} •
                   </span>
                 )}
                 <span className="truncate">
