@@ -242,7 +242,7 @@ const CarsTab = ({
               </span>
             </div>
             <p className="text-qatar-maroon font-bold text-lg mt-2">
-              {car.price.toLocaleString()} {car.currency || currentCountry?.currency_code || 'QAR'}
+              {car.price.toLocaleString()} {car.currency || car.country?.currency_code}
             </p>
             <div className="mt-4 flex justify-between items-center">
               <button
@@ -381,7 +381,7 @@ const SparePartsTab = ({
               </span>
             </div>
             <p className="text-qatar-maroon font-bold text-lg mt-2">
-              {part.price.toLocaleString()} {part.currency || currentCountry?.currency_code || 'QAR'}
+              {part.price.toLocaleString()} {part.currency || part.country?.currency_code}
             </p>
             <div className="mt-2 text-sm text-gray-600 dark:text-gray-300">
               <p>{part.brand?.name} {part.model?.name}</p>

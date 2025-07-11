@@ -529,7 +529,7 @@ useEffect(() => {
               htmlFor="price" 
               className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
             >
-              {t('sell.basic.price')} ({currentCountry?.currency_code || 'QAR'}) *
+              {t('sell.basic.price')} ({currentCountry?.currency_code}) *
             </label>
             <div className="relative">
               <input
@@ -1163,7 +1163,7 @@ useEffect(() => {
       { label: t('sell.basic.model'), value: selectedModel?.name },
       { label: t('sell.basic.exactModel') || 'Exact Model', value: formData.exact_model || null },
       { label: t('sell.basic.year'), value: formData.year },
-      { label: t('sell.basic.price'), value: formData.price ? `${formData.price} ${t(`common.currency.${currentCountry?.currency_code || 'QAR'}`)}` : null },
+      { label: t('sell.basic.price'), value: formData.price ? `${formData.price} ${t(`common.currency.${currentCountry?.currency_code}`)}` : null },
       { label: t('sell.details.mileage'), value: formData.mileage ? `${formData.mileage} ${t('car.km')}` : null },
       { label: t('sell.details.fuelType'), value: formData.fuel_type ? t(`car.fuelType.${formData.fuel_type.toLowerCase()}`) : null },
       { label: t('sell.details.gearboxType'), value: formData.gearbox_type ? t(`car.gearboxType.${formData.gearbox_type.toLowerCase()}`) : null },
@@ -2064,7 +2064,7 @@ useEffect(() => {
                   </p>
                   <p className="mt-8">
                     <span className="text-4xl font-extrabold text-gray-900 dark:text-white">
-                      {t(`sell.plan.featured.price.${currentCountry?.code?.toLowerCase() || '00'}`)} {t(`common.currency.${currentCountry?.currency_code || 'QAR'}`)}
+                      {t(`sell.plan.featured.price.${currentCountry?.code?.toLowerCase() || '00'}`)} {t(`common.currency.${currentCountry?.currency_code}`)}
                     </span>
                     <span className="text-base font-medium text-gray-500 dark:text-gray-400">
                       {t('sell.plan.featured.period')}

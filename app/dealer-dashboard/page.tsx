@@ -124,7 +124,7 @@ export default function DealerDashboard() {
   function formatPrice(price: number, currencyCode?: string): string {
     const formatter = new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: currencyCode || country?.currency_code || 'QAR',
+      currency: currencyCode || country?.currency_code,
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     });
@@ -166,7 +166,7 @@ export default function DealerDashboard() {
       const rows = carListings.map(car => {
         // Format price without currency symbol for cleaner export
         const priceValue = car.price ? car.price.toString() : '';
-        const currencyCode = car.currency || 'QAR';
+        const currencyCode = car.currency || country?.currency_code;
         
         // Format dates
         const createdAt = car.created_at ? new Date(car.created_at).toISOString().split('T')[0] : '';
@@ -718,7 +718,7 @@ export default function DealerDashboard() {
                       </td>
                       <td className="px-6 py-4 text-gray-900 dark:text-white">{car.year}</td>
                       <td className="px-6 py-4 text-gray-900 dark:text-white font-medium" dir="ltr">
-                      {car.price.toLocaleString('en-US')} {t(`common.currency.${car.country?.currency_code || 'QAR'}`)}
+                      {car.price.toLocaleString('en-US')} {t(`common.currency.${car.country?.currency_code}`)}
                       </td>
                       <td className="px-6 py-4">
                         <span className={`px-3 py-1.5 rounded-full text-xs font-medium ${getStatusColor(car.status)}`}>
@@ -815,7 +815,7 @@ export default function DealerDashboard() {
                     </h3>
                     <dl className="space-y-3">
                       {[
-                        { label: 'car.price', value: `${selectedCar.price.toLocaleString('en-US')} ${t(`common.currency.${selectedCar.country?.currency_code || 'QAR'}`)}` },
+                        { label: 'car.price', value: `${selectedCar.price.toLocaleString('en-US')} ${t(`common.currency.${selectedCar.country?.currency_code}`)}` },
                         { label: 'car.mileage', value: `${selectedCar.mileage} km` },
                         { label: 'car.fuelType', value: selectedCar.fuel_type },
                         { label: 'car.gearboxType', value: selectedCar.gearbox_type },

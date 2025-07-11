@@ -410,10 +410,10 @@ export default function AddSparePart() {
           description_ar: formData.description_ar || null,
           part_type: formData.part_type,
           price: parseFloat(formData.price) || 0,
-          currency: currentCountry?.currency_code || 'QAR',
+          currency: currentCountry?.currency_code || '',
           is_negotiable: formData.isNegotiable,
           condition: formData.condition,
-          country_code: currentCountry?.code || 'QA',
+          country_code: currentCountry?.code || '',
           city_id: formData.cityId ? parseInt(formData.cityId) : null,
           contact_phone: user?.phone || user?.email || '',
           contact_email: user?.email || '',
@@ -593,7 +593,7 @@ export default function AddSparePart() {
                 
                 <div>
                   <label htmlFor="price" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('spareParts.add.priceLabel')} ({currentCountry?.currency_code || 'QAR'}) *
+                    {t('spareParts.add.priceLabel')} ({currentCountry?.currency_code || ''}) *
                   </label>
                   <div className="relative rounded-md shadow-sm">
                     

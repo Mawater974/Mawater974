@@ -102,7 +102,7 @@ interface SparePart {
   part_type: string;
   is_negotiable: boolean;
   condition: 'new' | 'used' | 'refurbished';
-  status: 'active' | 'sold' | 'pending' | 'expired';
+  status: 'approved' | 'sold' | 'pending' | 'expired' | 'hidden';
   created_at: string;
   updated_at: string;
   
@@ -248,7 +248,7 @@ export default function SparePartDetails() {
             part_type: string;
             is_negotiable: boolean;
             condition: 'new' | 'used' | 'refurbished';
-            status: 'active' | 'sold' | 'pending' | 'expired';
+            status: 'approved' | 'sold' | 'pending' | 'expired' | 'hidden';
             created_at: string;
             updated_at: string;
             brand_id: string | null;
@@ -546,9 +546,21 @@ export default function SparePartDetails() {
                 <img
                   src={sparePart.images[currentImageIndex]?.url}
                   alt={sparePart.title}
-                  className="w-full h-full object-contain cursor-zoom-in"
+                  className={`w-full h-full object-contain cursor-zoom-in ${sparePart.status !== 'approved' ? 'opacity-70' : ''}`}
                   onClick={() => openFullImage(currentImageIndex)}
                 />
+                {sparePart.status && sparePart.status !== 'approved' && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className={`text-4xl font-bold transform rotate-[-15deg] px-6 py-3 rounded-lg ${
+                      sparePart.status === 'sold' ? 'bg-green-600/90 text-white' :
+                      sparePart.status === 'expired' ? 'bg-amber-600/90 text-white' :
+                      sparePart.status === 'hidden' ? 'bg-gray-800/90 text-white' :
+                      'text-qatar-maroon bg-white/80 dark:bg-black/70'
+                    }`}>
+                      {sparePart.status.toUpperCase()}
+                    </div>
+                  </div>
+                )}
                 {(sparePart.featured || sparePart.is_featured) && (
                   <div className="absolute top-2 left-2 z-20 px-2 py-1 bg-qatar-maroon/90 text-white text-xs font-medium rounded-lg shadow-lg">
                     Featured
@@ -654,10 +666,22 @@ export default function SparePartDetails() {
                   onClick={handleNextImage}
                 >
                   <img
-                    src={sparePart?.images?.[fullImageIndex]?.url}
-                    alt={sparePart.title}
-                    className="max-w-full max-h-full object-contain"
+                    src={sparePart.images[fullImageIndex]?.url}
+                    alt={`${sparePart.title} - Full View`}
+                    className={`max-h-[90vh] max-w-[90vw] object-contain ${sparePart.status !== 'approved' ? 'opacity-70' : ''}`}
                   />
+                  {sparePart.status && sparePart.status !== 'approved' && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <div className={`text-5xl font-bold transform rotate-[-15deg] px-8 py-4 rounded-lg ${
+                        sparePart.status === 'sold' ? 'bg-green-600/90 text-white' :
+                        sparePart.status === 'expired' ? 'bg-amber-600/90 text-white' :
+                        sparePart.status === 'hidden' ? 'bg-gray-800/90 text-white' :
+                        'text-qatar-maroon bg-white/80 dark:bg-black/70'
+                      }`}>
+                        {sparePart.status.toUpperCase()}
+                      </div>
+                    </div>
+                  )}
                 </div>
                 
                 <button
@@ -771,7 +795,7 @@ export default function SparePartDetails() {
             
             <div className="text-right">
               <div className="text-3xl font-bold text-primary">
-                {sparePart.price.toLocaleString()} {t(`common.currency.${currentCountry?.currency_code}`)}
+                {sparePart.price.toLocaleString()} {t(`${sparePart.currency}`)}
               </div>
               {sparePart.is_negotiable && (
                 <div className="text-sm text-muted-foreground">{t('spareParts.isNegotiable')}</div>

@@ -951,7 +951,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
                 <div className="mt-2 flex items-center space-x-4 rtl:space-x-reverse mb-2">
                   <p className="text-2xl font-bold text-qatar-maroon" 
                   dir={currentLanguage === 'ar' ? 'rtl' : 'ltr'}>
-                    {car.price.toLocaleString('en-US')} {t(`common.currency.${car.country?.currency_code || 'QAR'}`)}
+                    {car.price.toLocaleString('en-US')} {t(`common.currency.${car.country?.currency_code}`)}
 
                   </p>
                 </div>
@@ -1461,7 +1461,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
                           {currentLanguage === 'ar' && similarCar.brand?.name_ar ? similarCar.brand.name_ar : similarCar.brand.name} {currentLanguage === 'ar' && similarCar.model?.name_ar ? similarCar.model.name_ar : similarCar.model.name} {similarCar.year}
                         </h3>
                         <p className="text-qatar-maroon font-bold mt-1">
-                          {similarCar.price.toLocaleString('en-US')} {t(`common.currency.${similarCar.country?.currency_code || 'QAR'}`)}
+                          {similarCar.price.toLocaleString('en-US')} {t(`common.currency.${similarCar.country?.currency_code}`)}
                         </p>
                         <button
                           onClick={() => router.push(`/${currentCountry?.code.toLowerCase()}/cars/${similarCar.id}`)}
@@ -1501,7 +1501,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
                           {currentLanguage === 'ar' && similarCar.brand?.name_ar ? similarCar.brand.name_ar : similarCar.brand.name} {currentLanguage === 'ar' && similarCar.model?.name_ar ? similarCar.model.name_ar : similarCar.model.name} {similarCar.year}
                         </h3>
                         <p className="text-qatar-maroon font-bold mt-1">
-                          {similarCar.price.toLocaleString('en-US')} {t(`common.currency.${similarCar.country?.currency_code || 'QAR'}`)}
+                          {similarCar.price.toLocaleString('en-US')} {t(`common.currency.${similarCar.country?.currency_code}`)}
                         </p>
                         <button
                           onClick={() => router.push(`/${currentCountry?.code.toLowerCase()}/cars/${similarCar.id}`)}
