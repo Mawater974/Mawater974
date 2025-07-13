@@ -77,9 +77,9 @@ export default function CountryAnalytics({ countryCode, countryName }: CountryAn
 
         // Calculate other statistics
         const totalCars = carsData.length;
-        const pendingCars = carsData.filter(car => car.status === 'Pending').length;
-        const activeCars = carsData.filter(car => car.status === 'Approved').length;
-        const soldCars = carsData.filter(car => car.status === 'Sold').length;
+        const pendingCars = carsData.filter(car => car.status === 'pending').length;
+        const activeCars = carsData.filter(car => car.status === 'approved').length;
+        const soldCars = carsData.filter(car => car.status === 'sold').length;
         const featuredCars = carsData.filter(car => car.is_featured).length;
         const totalRevenue = carsData.reduce((sum, car) => sum + (car.price || 0), 0);
         const averagePrice = totalCars > 0 ? totalRevenue / totalCars : 0;

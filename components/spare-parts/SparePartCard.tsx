@@ -238,15 +238,15 @@ const SparePartCard: React.FC<SparePartCardProps> = ({
             </div>
 
             {part.category && part.category.name_en && (
-  <div className="text-sm text-gray-500 dark:text-gray-400">
-    {language === 'ar' ? part.category.name_ar : part.category.name_en}
-    {part.part_type && (
-      <span className="ml-2">
-    • {part.part_type === 'original' ? t('spareParts.partType.original') : t('spareParts.partType.aftermarket')}
-      </span>
-    )}
-  </div>
-)}
+              <div className="text-sm text-gray-500 dark:text-gray-400">
+                {language === 'ar' ? part.category.name_ar : part.category.name_en}
+                {part.part_type && (
+                  <span className="ml-2">
+                • {part.part_type === 'original' ? t('spareParts.partType.original') : t('spareParts.partType.aftermarket')}
+                  </span>
+                )}
+              </div>
+            )}
 
             {(part.city || part.country) && (
               <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 truncate">

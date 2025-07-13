@@ -572,7 +572,7 @@ const EditSparePartModal = ({
                     </Dialog.Title>
                     
                     <form onSubmit={handleSubmit} className="mt-5 space-y-6">
-                      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         {/* Title - English & Arabic Side by Side */}
                         <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
                           {/* English Title */}
@@ -587,7 +587,7 @@ const EditSparePartModal = ({
                               required
                               value={formData.title}
                               onChange={handleInputChange}
-                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-qatar-maroon focus:border-qatar-maroon dark:bg-gray-700 dark:text-white"
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-qatar-maroon focus:border-qatar-maroon dark:bg-gray-700 dark:text-white mt-1"
                             />
                           </div>
                           
@@ -604,7 +604,7 @@ const EditSparePartModal = ({
                               dir="rtl"
                               value={formData.name_ar}
                               onChange={handleInputChange}
-                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-qatar-maroon focus:border-qatar-maroon dark:bg-gray-700 dark:text-white text-right"
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-qatar-maroon focus:border-qatar-maroon dark:bg-gray-700 dark:text-white mt-1 text-right"
                             />
                           </div>
                         </div>
@@ -622,7 +622,7 @@ const EditSparePartModal = ({
                               rows={3}
                               value={formData.description}
                               onChange={handleInputChange}
-                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-qatar-maroon focus:border-qatar-maroon dark:bg-gray-700 dark:text-white"
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-qatar-maroon focus:border-qatar-maroon dark:bg-gray-700 dark:text-white mt-1"
                             />
                           </div>
                           
@@ -638,31 +638,31 @@ const EditSparePartModal = ({
                               dir="rtl"
                               value={formData.description_ar}
                               onChange={handleInputChange}
-                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-qatar-maroon focus:border-qatar-maroon dark:bg-gray-700 dark:text-white"
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-qatar-maroon focus:border-qatar-maroon dark:bg-gray-700 dark:text-white mt-1 text-right"
                             />
                           </div>
                         </div>
                         
                         {/* Price */}
                         <div>
-                  <label htmlFor="price" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {t('spareParts.add.priceLabel')} ({sparePart?.country?.currency_code}) *
-                  </label>
-                  <div className="relative rounded-md shadow-sm"> 
-                            <input
-                      type="number"
-                      id="price"
-                      name="price"
-                      min="0"
-                      value={formData.price}
-                      onChange={handleInputChange}
-                      className={`w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-qatar-maroon focus:border-qatar-maroon dark:bg-gray-700 dark:text-white`}
-                      placeholder="0.00"
-                      dir={language === 'ar' ? 'rtl' : 'ltr'}
-                            />
-                          </div>
-                        </div>
-                        {/* City */}
+                        <label htmlFor="price" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                          {t('spareParts.add.priceLabel')} ({sparePart?.country?.currency_code}) *
+                        </label>
+                        <div className="relative rounded-md shadow-sm"> 
+                                  <input
+                            type="number"
+                            id="price"
+                            name="price"
+                            min="0"
+                            value={formData.price}
+                            onChange={handleInputChange}
+                            className={`w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-qatar-maroon focus:border-qatar-maroon dark:bg-gray-700 dark:text-white mt-1`}
+                            placeholder="0.00"
+                            dir={language === 'ar' ? 'rtl' : 'ltr'}
+                                  />
+                                </div>
+                              </div>
+                              {/* City */}
                         <div>
                           <label htmlFor="city_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                             {t('spareParts.add.cityLabel')} *
@@ -672,7 +672,7 @@ const EditSparePartModal = ({
                             name="city_id"
                             value={formData.city_id}
                             onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-qatar-maroon focus:border-qatar-maroon dark:bg-gray-700 dark:text-white"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-qatar-maroon focus:border-qatar-maroon dark:bg-gray-700 dark:text-white mt-1"
                             required
                           >
                             <option value="">{t('spareParts.add.cityLabel')}</option>
@@ -694,7 +694,7 @@ const EditSparePartModal = ({
                             name="brand_id"
                             value={formData.brand_id}
                             onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-qatar-maroon focus:border-qatar-maroon dark:bg-gray-700 dark:text-white"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-qatar-maroon focus:border-qatar-maroon dark:bg-gray-700 dark:text-white mt-1"
                             required
                           >
                             <option value="">{t('spareParts.add.selectBrand')}</option>
@@ -716,7 +716,7 @@ const EditSparePartModal = ({
                             name="model_id"
                             value={formData.model_id}
                             onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-qatar-maroon focus:border-qatar-maroon dark:bg-gray-700 dark:text-white"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-qatar-maroon focus:border-qatar-maroon dark:bg-gray-700 dark:text-white mt-1"
                             disabled={!formData.brand_id}
                           >
                             <option value="">{t('spareParts.add.selectModel')}</option>
@@ -738,7 +738,7 @@ const EditSparePartModal = ({
                             name="category_id"
                             value={formData.category_id}
                             onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-qatar-maroon focus:border-qatar-maroon dark:bg-gray-700 dark:text-white"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-qatar-maroon focus:border-qatar-maroon dark:bg-gray-700 dark:text-white mt-1"
                             required
                           >
                             <option value="">{t('spareParts.add.selectCategory')}</option>
@@ -767,7 +767,7 @@ const EditSparePartModal = ({
                             name="condition"
                             value={formData.condition}
                             onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-qatar-maroon focus:border-qatar-maroon dark:bg-gray-700 dark:text-white"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-qatar-maroon focus:border-qatar-maroon dark:bg-gray-700 dark:text-white mt-1"
                           >
                             <option value="">{t('spareParts.add.selectCondition')}</option>
                             <option value="new">{t('spareParts.conditions.new')}</option>
@@ -786,7 +786,7 @@ const EditSparePartModal = ({
                             name="part_type"
                             value={formData.part_type}
                             onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-qatar-maroon focus:border-qatar-maroon dark:bg-gray-700 dark:text-white"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-qatar-maroon focus:border-qatar-maroon dark:bg-gray-700 dark:text-white mt-1"
                           >
                             <option value="">{t('spareParts.add.selectPartType')}</option>
                             <option value="original">{t('spareParts.add.original')}</option>
@@ -818,7 +818,7 @@ const EditSparePartModal = ({
                                       type="button"
                                       onClick={() => handleSetPrimaryImage(image.url)}
                                       className="p-1 rounded-full bg-white text-qatar-maroon hover:bg-gray-100"
-                                      title={t('spareParts.setAsPrimary')}
+                                      title={t('spareParts.add.setAsPrimary')}
                                     >
                                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
