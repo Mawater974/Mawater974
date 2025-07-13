@@ -11,6 +11,7 @@ import { Fragment } from 'react';
 import toast from 'react-hot-toast';
 import EditCarModal from '../../../components/EditCarModal';
 import { useCountry } from '../../../contexts/CountryContext';
+import { useLanguage } from '../../../contexts/LanguageContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
 
@@ -71,7 +72,7 @@ interface ExtendedCar extends Car {
   }[];
 }
 
-type CarStatus = 'Pending' | 'Approved' | 'Rejected' | 'Sold' | 'Expired' | 'Hidden';
+type CarStatus = 'pending' | 'approved' | 'rejected' | 'sold' | 'expired' | 'hidden' | 'archived';
 type SortOrder = 'newest' | 'oldest' | 'price_high' | 'price_low';
 
 export default function AdminCarsPage() {
@@ -81,9 +82,10 @@ export default function AdminCarsPage() {
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
-  const [activeStatus, setActiveStatus] = useState<CarStatus>('Pending');
+  const [activeStatus, setActiveStatus] = useState<CarStatus>('pending');
   const [sortOrder, setSortOrder] = useState<SortOrder>('newest');
   const { currentCountry } = useCountry();
+  const { t, currentLanguage } = useLanguage();
   const [viewMode, setViewMode] = useState<'grid' | 'detail'>('grid');
 
   useEffect(() => {
@@ -146,7 +148,7 @@ export default function AdminCarsPage() {
     }
   };
 
-  const createNotification = async (userId: string, title: string, message: string, type: string) => {
+  const createNotification = async (userId: string, type: string, brandName: string, modelName: string) => {
     try {
       const { error } = await supabase
         .from('notifications')
@@ -154,8 +156,16 @@ export default function AdminCarsPage() {
           {
             user_id: userId,
             type,
-            title,
-            message,
+            title_en: t(`notifications.${type}.title_en`),
+            title_ar: t(`notifications.${type}.title_ar`),
+            message_en: t(`notifications.${type}.message_en`, { 
+              brand: brandName,
+              model: modelName
+            }),
+            message_ar: t(`notifications.${type}.message_ar`, { 
+              brand: brandName,
+              model: modelName
+            })
           }
         ]);
 
@@ -177,26 +187,26 @@ export default function AdminCarsPage() {
       // Create notification for the user
       const car = cars.find(c => c.id === carId);
       if (car) {
-        if (newStatus === 'Approved') {
+        if (newStatus === 'approved') {
           await createNotification(
             car.user_id,
-            'Car Listing Approved!',
-            `Great news! Your ${car.brand.name} ${car.model.name} listing has been approved and is now live on our platform. Your car is now visible to potential buyers.`,
-            'approval'
+            'approval',
+            car.brand.name,
+            car.model.name
           );
-        } else if (newStatus === 'Rejected') {
+        } else if (newStatus === 'rejected') {
           await createNotification(
             car.user_id,
-            'Car Ad Rejected',
-            `Your car ad for ${car.brand.name} ${car.model.name} has been rejected. Please review and update your listing.`,
-            'rejection'
+            'rejection',
+            car.brand.name,
+            car.model.name
           );
-        } else if (newStatus === 'Sold') {
+        } else if (newStatus === 'sold') {
           await createNotification(
             car.user_id,
-            'Car Marked as Sold!',
-            `Your ${car.brand.name} ${car.model.name} has been marked as sold. Congratulations on your sale!`,
-            'sold'
+            'sold',
+            car.brand.name,
+            car.model.name
           );
         }
       }
@@ -267,8 +277,8 @@ export default function AdminCarsPage() {
       // Update all pending cars to approved
       const { error: updateError } = await supabase
         .from('cars')
-        .update({ status: 'Approved' })
-        .eq('status', 'Pending');
+        .update({ status: 'approved' })
+        .eq('status', 'pending');
 
       if (updateError) throw updateError;
 
@@ -296,7 +306,7 @@ export default function AdminCarsPage() {
       const { data: approvedCars, error: fetchError } = await supabase
         .from('cars')
         .select('id, brand:brands(name), model:models(name), user_id')
-        .eq('status', 'Approved');
+        .eq('status', 'approved');
 
       if (fetchError) throw fetchError;
 
@@ -308,8 +318,8 @@ export default function AdminCarsPage() {
       // Update all approved cars to sold
       const { error: updateError } = await supabase
         .from('cars')
-        .update({ status: 'Sold' })
-        .eq('status', 'Approved');
+        .update({ status: 'sold' })
+        .eq('status', 'approved');
 
       if (updateError) throw updateError;
 
@@ -354,7 +364,7 @@ export default function AdminCarsPage() {
       // Update car status to Approved
       const { error: updateError } = await supabase
         .from('cars')
-        .update({ status: 'Approved' })
+        .update({ status: 'approved' })
         .eq('id', carId);
 
       if (updateError) {
@@ -607,17 +617,17 @@ export default function AdminCarsPage() {
   };
 
   // Convenience methods for exporting specific statuses
-  const exportPendingCars = (format?: 'json' | 'csv' | 'both') => exportCarsByStatus(['Pending'], format);
-  const exportApprovedCars = (format?: 'json' | 'csv' | 'both') => exportCarsByStatus(['Approved'], format);
-  const exportRejectedCars = (format?: 'json' | 'csv' | 'both') => exportCarsByStatus(['Rejected'], format);
-  const exportSoldCars = (format?: 'json' | 'csv' | 'both') => exportCarsByStatus(['Sold'], format);
-  const exportExpiredCars = (format?: 'json' | 'csv' | 'both') => exportCarsByStatus(['Expired'], format);
-  const exportHiddenCars = (format?: 'json' | 'csv' | 'both') => exportCarsByStatus(['Hidden'], format);
+  const exportPendingCars = (format?: 'json' | 'csv' | 'both') => exportCarsByStatus(['pending'], format);
+  const exportApprovedCars = (format?: 'json' | 'csv' | 'both') => exportCarsByStatus(['approved'], format);
+  const exportRejectedCars = (format?: 'json' | 'csv' | 'both') => exportCarsByStatus(['rejected'], format);
+  const exportSoldCars = (format?: 'json' | 'csv' | 'both') => exportCarsByStatus(['sold'], format);
+  const exportExpiredCars = (format?: 'json' | 'csv' | 'both') => exportCarsByStatus(['expired'], format);
+  const exportHiddenCars = (format?: 'json' | 'csv' | 'both') => exportCarsByStatus(['hidden'], format);
   
   // Export all statuses together
   const exportAllCars = (format?: 'json' | 'csv' | 'both') => exportCarsByStatus([
-    'Pending', 'Approved', 'Rejected', 
-    'Sold', 'Expired', 'Hidden'
+    'pending', 'approved', 'rejected', 
+    'sold', 'expired', 'hidden'
   ], format);
 
   // Export functions
@@ -791,12 +801,12 @@ export default function AdminCarsPage() {
   }
 
   const statusTabs: { status: CarStatus; label: string }[] = [
-    { status: 'Pending', label: 'Pending' },
-    { status: 'Approved', label: 'Approved' },
-    { status: 'Rejected', label: 'Rejected' },
-    { status: 'Expired', label: 'Expired' },
-    { status: 'Sold', label: 'Sold' },
-    { status: 'Hidden', label: 'Hidden' }
+    { status: 'pending', label: 'Pending' },
+    { status: 'approved', label: 'Approved' },
+    { status: 'rejected', label: 'Rejected' },
+    { status: 'expired', label: 'Expired' },
+    { status: 'sold', label: 'Sold' },
+    { status: 'hidden', label: 'Hidden' }
   ];
 
   const sortOptions = [
@@ -823,7 +833,7 @@ export default function AdminCarsPage() {
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Manage Car Listings</h1>
               </div>
               <div className="flex items-center space-x-4">
-                {activeStatus === 'Pending' && (
+                {activeStatus === 'pending' && (
                   <button
                     onClick={handleAcceptAll}
                     className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md transition-colors duration-200"
@@ -831,7 +841,7 @@ export default function AdminCarsPage() {
                     Accept All Pending
                   </button>
                 )}
-                {activeStatus === 'Approved' && (
+                {activeStatus === 'approved' && (
                   <button
                     onClick={handleSetSold}
                     className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors duration-200"
@@ -839,7 +849,7 @@ export default function AdminCarsPage() {
                     Set All as Sold
                   </button>
                 )}
-                {activeStatus === 'Rejected' && (
+                {activeStatus === 'rejected' && (
                   <div className="flex space-x-2">
                     <button
                       onClick={handleSetApproved}
@@ -1149,7 +1159,7 @@ export default function AdminCarsPage() {
 
                     <div className="flex items-center justify-between">
                       <div className="text-sm text-gray-600 dark:text-gray-400">
-                        Posted by: {car.user.full_name}
+                        Posted by: {car.user?.full_name}
                       </div>
                     </div>
 
@@ -1167,31 +1177,31 @@ export default function AdminCarsPage() {
                       >
                         Edit
                       </button>
-                      {activeStatus === 'Pending' && (
+                      {activeStatus === 'pending' && (
                         <>
                           <button
-                            onClick={() => handleStatusChange(car.id, 'Approved')}
+                            onClick={() => handleStatusChange(car.id, 'approved')}
                             className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-green-600 hover:bg-green-600 hover:text-white rounded-md transition-colors duration-200"
                           >
                             Approve
                           </button>
                           <button
-                            onClick={() => handleStatusChange(car.id, 'Rejected')}
+                            onClick={() => handleStatusChange(car.id, 'rejected')}
                             className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-600 hover:text-white rounded-md transition-colors duration-200"
                           >
                             Reject
                           </button>
                         </>
                       )}
-                      {activeStatus === 'Approved' && (
+                      {activeStatus === 'approved' && (
                         <button
-                          onClick={() => handleStatusChange(car.id, 'Sold')}
+                          onClick={() => handleStatusChange(car.id, 'sold')}
                           className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-600 hover:text-white rounded-md transition-colors duration-200"
                         >
                           Set as Sold
                         </button>
                       )}
-                      {activeStatus === 'Rejected' && (
+                      {activeStatus === 'rejected' && (
                         <>
                           <button
                             onClick={() => handleSetApproved(car.id)}
@@ -1277,17 +1287,15 @@ export default function AdminCarsPage() {
                       <td className="px-6 py-4">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
                           ${
-                            car.status === 'Approved'
+                            car.status === 'approved'
                               ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                              : car.status === 'Rejected'
+                              : car.status === 'rejected'
                               ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                              : car.status === 'Sold'
+                              : car.status === 'sold'
                               ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                              : car.status === 'Expired'
+                              : car.status === 'hidden'
                               ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-                              : car.status === 'Hidden'
-                              ? 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
-                              : car.status === 'Pending'
+                              : car.status === 'pending'
                               ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
                               : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
                           }
@@ -1309,31 +1317,31 @@ export default function AdminCarsPage() {
                           >
                             Edit
                           </button>
-                          {activeStatus === 'Pending' && (
+                          {activeStatus === 'pending' && (
                             <>
                               <button
-                                onClick={() => handleStatusChange(car.id, 'Approved')}
+                                onClick={() => handleStatusChange(car.id, 'approved')}
                                 className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-green-600 hover:bg-green-600 hover:text-white rounded-md transition-colors duration-200"
                               >
                                 Approve
                               </button>
                               <button
-                                onClick={() => handleStatusChange(car.id, 'Rejected')}
+                                onClick={() => handleStatusChange(car.id, 'rejected')}
                                 className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-600 hover:text-white rounded-md transition-colors duration-200"
                               >
                                 Reject
                               </button>
                             </>
                           )}
-                          {activeStatus === 'Approved' && (
+                          {activeStatus === 'approved' && (
                             <button
-                              onClick={() => handleStatusChange(car.id, 'Sold')}
+                              onClick={() => handleStatusChange(car.id, 'sold')}
                               className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-600 hover:text-white rounded-md transition-colors duration-200"
                             >
                               Set as Sold
                             </button>
                           )}
-                          {activeStatus === 'Rejected' && (
+                          {activeStatus === 'rejected' && (
                             <>
                               <button
                                 onClick={() => handleSetApproved(car.id)}

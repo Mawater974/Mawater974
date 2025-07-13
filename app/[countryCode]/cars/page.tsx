@@ -248,7 +248,7 @@ export default function CarsPage() {
           country:countries(*), 
           images:car_images!car_images_car_id_fkey(url, is_main)
         `)
-        .eq('status', 'Approved');
+        .eq('status', 'approved');
 
       if (searchQuery && searchQuery.trim() !== '' && currentCountry?.id) {
         const trimmedSearchQuery = searchQuery.trim();

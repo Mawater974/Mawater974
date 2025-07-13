@@ -18,6 +18,7 @@ import {
   PencilIcon,
   TrashIcon,
   ShoppingBagIcon,
+  ArchiveBoxIcon,
 } from '@heroicons/react/24/outline';
 
 // Components
@@ -71,7 +72,7 @@ interface SparePart {
   description_ar?: string | null;
   price: number;
   currency: string;
-  status: 'Pending' | 'Approved' | 'Rejected' | 'Expired' | 'Sold' | 'Archived' ;
+  status: 'pending' | 'approved' | 'rejected' | 'expired' | 'sold' | 'archived' ;
   created_at: string;
   is_featured: boolean;
   brand: {
@@ -128,7 +129,7 @@ interface Brand {
 }
 
 interface ExtendedCarWithStatus {
-  status: 'Pending' | 'Approved' | 'Rejected' | 'Expired' | 'Sold';
+  status: 'pending' | 'approved' | 'rejected' | 'expired' | 'sold' | 'archived';
   expiration_date?: string;
   id: number;
   brand?: Brand;
@@ -229,16 +230,16 @@ const CarsTab = ({
           <div className="p-4">
             <div className="flex justify-between items-start">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                {car.brand?.name} {car.model?.name}
+                {language === 'ar' && car.brand?.name_ar ? car.brand.name_ar : car.brand?.name} {language === 'ar' && car.model?.name_ar ? car.model.name_ar : car.model?.name}
               </h3>
               <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                car.status === 'Approved' ? 'bg-green-100 text-green-800' :
-                car.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
-                car.status === 'Rejected' ? 'bg-red-100 text-red-800' :
-                car.status === 'Expired' ? 'bg-gray-100 text-gray-800' :
+                car.status === t('common.status.approved') ? 'bg-green-100 text-green-800' :
+                car.status === t('common.status.pending') ? 'bg-yellow-100 text-yellow-800' :
+                car.status === t('common.status.rejected') ? 'bg-red-100 text-red-800' :
+                car.status === t('common.status.expired') ? 'bg-gray-100 text-gray-800' :
                 'bg-blue-100 text-blue-800'
               }`}>
-                {car.status}
+                {t(`common.status.${car.status.toLowerCase()}`)}
               </span>
             </div>
             <p className="text-qatar-maroon font-bold text-lg mt-2">
@@ -368,25 +369,22 @@ const SparePartsTab = ({
           <div className="p-4">
             <div className="flex justify-between items-start">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                {part.title}
+                {language === 'ar' && part.name_ar ? part.name_ar : part.title}
               </h3>
               <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                part.status === 'Approved' ? 'bg-green-100 text-green-800' :
-                part.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
-                part.status === 'Rejected' ? 'bg-red-100 text-red-800' :
-                part.status === 'Expired' ? 'bg-gray-100 text-gray-800' :
+                part.status === t('common.status.approved') ? 'bg-green-100 text-green-800' :
+                part.status === t('common.status.pending') ? 'bg-yellow-100 text-yellow-800' :
+                part.status === t('common.status.rejected') ? 'bg-red-100 text-red-800' :
+                part.status === t('common.status.expired') ? 'bg-gray-100 text-gray-800' :
                 'bg-blue-100 text-blue-800'
               }`}>
-                {part.status}
+                {t(`common.status.${part.status.toLowerCase()}`)}
               </span>
             </div>
             <p className="text-qatar-maroon font-bold text-lg mt-2">
               {part.price.toLocaleString()} {part.currency || part.country?.currency_code}
             </p>
-            <div className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-              <p>{part.brand?.name} {part.model?.name}</p>
-              <p>{part.category?.[`name_${language}` as keyof typeof part.category] || part.category?.name_en}</p>
-            </div>
+            
             <div className="mt-4 flex justify-between items-center">
               <button
                 onClick={(e) => {
@@ -473,14 +471,14 @@ export default function MyAdsPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showSoldModal, setShowSoldModal] = useState(false);
   const [deleteItemType, setDeleteItemType] = useState<'car' | 'sparePart'>('car');
-  const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'expired' | 'sold'>('all');
+  const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'expired' | 'sold' | 'archived'>('all');
   
   const handleDeleteClick = (car: ExtendedCarWithStatus) => {
     setSelectedCar(car);
     setShowDeleteModal(true);
   };
 
-  const handleMarkAsSold = (car: ExtendedCarWithStatus) => {
+  const handleMarkCarAsSold = (car: ExtendedCarWithStatus) => {
     setSelectedCar(car);
     setShowSoldModal(true);
   };
@@ -493,21 +491,26 @@ export default function MyAdsPage() {
       if (deleteItemType === 'car' && selectedCar) {
         const { error } = await supabase
           .from('cars')
-          .delete()
+          .update({ status: 'archived' })
           .eq('id', selectedCar.id);
         
         if (error) throw error;
         
-        setCars(cars.filter(car => car.id !== selectedCar.id));
+        // Refresh cars data instead of updating locally
+        await fetchCars();
       } else if (deleteItemType === 'sparePart' && selectedSparePart) {
         const { error } = await supabase
           .from('spare_parts')
-          .delete()
+          .update({ status: 'archived' })
           .eq('id', selectedSparePart.id);
-          
+           
         if (error) throw error;
-        
-        setSpareParts(prev => prev.filter(part => part.id !== selectedSparePart.id));
+         
+        // Update local state to reflect the deletion
+        setSpareParts(spareParts.filter(part => part.id !== selectedSparePart.id));
+       
+        // Refresh spare parts data from server to ensure consistency
+        await fetchSpareParts();
       }
 
       setShowDeleteModal(false);
@@ -527,36 +530,53 @@ const handleSoldConfirm = async () => {
   if (!selectedCar && !selectedSparePart) return;
   
   setActionLoading(true);
+  
   try {
     if (selectedCar) {
+      // Update car status in the database
       const { error } = await supabase
         .from('cars')
-        .update({ status: 'Sold' })
+        .update({ status: 'sold' })
         .eq('id', selectedCar.id);
 
       if (error) throw error;
 
-      setCars(cars.map(car => 
-        car.id === selectedCar.id ? { ...car, status: 'Sold' } : car
-      ));
+      // Update local state directly
+      setCars(prevCars => 
+        prevCars.map(car => 
+          car.id === selectedCar.id ? { ...car, status: 'sold' } : car
+        )
+      );
     } else if (selectedSparePart) {
+      // Update spare part status in the database
       const { error } = await supabase
         .from('spare_parts')
-        .update({ status: 'Sold' })
+        .update({ status: 'sold' })
         .eq('id', selectedSparePart.id);
 
       if (error) throw error;
 
-      setSpareParts(prev => prev.map(part => 
-        part.id === selectedSparePart.id ? { ...part, status: 'Sold' } : part
-      ));
+      // Update local state directly instead of refetching
+      setSpareParts(prevParts => 
+        prevParts.map(part => 
+          part.id === selectedSparePart.id ? { ...part, status: 'sold' } : part
+        )
+      );
     }
     
+    // Close the modal and show success message
     setShowSoldModal(false);
     toast.success(t('myAds.markedAsSold'));
   } catch (error) {
     console.error('Error marking as sold:', error);
     toast.error(t('myAds.error.markAsSold'));
+    
+    // Re-fetch data from server on error to ensure consistency
+    if (selectedCar) {
+      fetchCars();
+    } else if (selectedSparePart) {
+      fetchSpareParts();
+    }
   } finally {
     setActionLoading(false);
     setSelectedCar(null);
@@ -604,16 +624,37 @@ const handleEditComplete = async (updatedCar: ExtendedCarWithStatus) => {
 const handleRenew = async (carId: number) => {
   if (!user) return;
   
+  const car = cars.find(c => c.id === carId);
+  if (!car) {
+    toast.error(t('myAds.carNotFound'));
+    return;
+  }
+
+  // Check if the car is expired before renewal
+  if (car.status !== 'expired') {
+    toast.error(t('myAds.onlyExpiredCanRenew'));
+    return;
+  }
+
   setRenewingCarId(carId);
   try {
-    const { error } = await supabase.rpc('renew_car_listing', {
-      car_id: carId,
-      days_to_add: 30 // Renew for 30 days
-    });
+    // Update status to approved and set expiration date to 30 days from now
+    const { error: updateError } = await supabase
+      .from('cars')
+      .update({ 
+        status: 'approved',
+        expiration_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+      })
+      .eq('id', carId);
 
-    if (error) throw error;
+    if (updateError) throw updateError;
 
-    // Refresh the car data
+    // Update local state to reflect the new status and refresh data
+    setCars(cars.map(c => 
+      c.id === carId ? { ...c, status: 'approved' } : c
+    ));
+    
+    // Refresh data from server
     await fetchCars();
     toast.success(t('car.renewedSuccessfully'));
   } catch (error) {
@@ -627,26 +668,54 @@ const handleRenew = async (carId: number) => {
 const handleRenewSparePart = async (sparePartId: string) => {
   if (!user) return;
   
+  const sparePart = spareParts.find(p => p.id === sparePartId);
+  if (!sparePart) {
+    toast.error(t('myAds.sparePartNotFound'));
+    return;
+  }
+
+  // Check if the spare part is expired before renewal
+  if (sparePart.status !== 'expired') {
+    toast.error(t('myAds.onlyExpiredCanRenew'));
+    return;
+  }
+
   setRenewingSparePartId(sparePartId);
   try {
-    const { error } = await supabase.rpc('renew_spare_part_listing', {
-      part_id: sparePartId,
-      days_to_add: 30 // Renew for 30 days
+    // Update status and let database trigger handle the expiration date
+    const { error: updateError } = await supabase.rpc('renew_spare_part', {
+      part_id: sparePartId
     });
 
-    if (error) throw error;
+    if (updateError) throw updateError;
 
-    // Refresh the spare parts data
-    await fetchSpareParts();
+    // Calculate new expiration date (30 days from now)
+    const newExpirationDate = new Date();
+    newExpirationDate.setDate(newExpirationDate.getDate() + 30);
+
+    // Update local state optimistically
+    setSpareParts(prevParts => 
+      prevParts.map(p => 
+        p.id === sparePartId 
+          ? { 
+              ...p, 
+              status: 'approved',
+              expiration_date: newExpirationDate.toISOString()
+            } 
+          : p
+      )
+    );
+    
     toast.success(t('spareParts.renewedSuccessfully'));
   } catch (error) {
     console.error('Error renewing spare part:', error);
     toast.error(t('common.errorOccurred'));
+    // Refresh data from server to ensure consistency
+    await fetchSpareParts();
   } finally {
     setRenewingSparePartId(null);
   }
 };
-
   useEffect(() => {
     if (user) {
       fetchCars();
@@ -683,9 +752,11 @@ const handleRenewSparePart = async (sparePartId: string) => {
   }, [user, filter]);
 
   const fetchSpareParts = async () => {
+    if (!user) return;
+    
     try {
       setLoading(true);
-      const { data: spareParts, error } = await supabase
+      let query = supabase
         .from('spare_parts')
         .select(`
           *,
@@ -696,9 +767,16 @@ const handleRenewSparePart = async (sparePartId: string) => {
           country:countries(id, name, name_ar, currency_code),
           images:spare_part_images(*)
         `)
-        .eq('user_id', user?.id)
-        .eq(filter !== 'all' ? 'status' : '', filter !== 'all' ? filter.charAt(0).toUpperCase() + filter.slice(1) : '')
+        .eq('user_id', user.id)
+        .neq('status', 'archived')
         .order('created_at', { ascending: false });
+
+      // Apply status filter if not 'all'
+      if (filter !== 'all') {
+        query = query.eq('status', filter.toLowerCase());
+      }
+
+      const { data: spareParts, error } = await query;
 
       if (error) throw error;
       setSpareParts(spareParts || []);
@@ -722,8 +800,9 @@ const handleRenewSparePart = async (sparePartId: string) => {
           city:cities(id, name, name_ar, country_id),
           country:countries(id, name, name_ar, currency_code)
         `)
-        .eq('user_id', user?.id)
-        .eq(filter !== 'all' ? 'status' : '', filter !== 'all' ? filter.charAt(0).toUpperCase() + filter.slice(1) : '')
+         .eq('user_id', user?.id)
+         .neq('status', 'archived')
+         .eq(filter !== 'all' ? 'status' : '', filter !== 'all' ? filter.toLowerCase() : '')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -771,17 +850,19 @@ const handleRenewSparePart = async (sparePartId: string) => {
   };
 
   const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'Pending':
+    switch (status.toLowerCase()) {
+      case 'pending':
         return <ClockIcon className="h-5 w-5 text-yellow-500" />;
-      case 'Approved':
+      case 'approved':
         return <CheckCircleIcon className="h-5 w-5 text-green-500" />;
-      case 'Rejected':
+      case 'rejected':
         return <XCircleIcon className="h-5 w-5 text-red-500" />;
-      case 'Expired':
+      case 'expired':
         return <XCircleIcon className="h-5 w-5 text-red-500" />;
-      case 'Sold':
+      case 'sold':
         return <TagIcon className="h-5 w-5 text-blue-500" />;
+      case 'archived':
+        return <ArchiveBoxIcon className="h-5 w-5 text-gray-500" />;
       default:
         return null;
     }
@@ -844,7 +925,7 @@ const handleRenewSparePart = async (sparePartId: string) => {
           {/* Cars Section */}
           {cars.length > 0 && (
             <div className="mb-12">
-              <h2 className="text-xl font-semibold mb-4">{t('cars')}</h2>
+              <h2 className="text-xl font-semibold mb-4">{t('myAds.carsAds')}</h2>
               <CarsTab 
                 loading={loading} 
                 cars={cars} 
@@ -856,7 +937,7 @@ const handleRenewSparePart = async (sparePartId: string) => {
                 renewingCarId={renewingCarId}
                 handleEditCar={handleEditCar}
                 handleDeleteClick={handleDeleteClick}
-                handleMarkAsSold={handleMarkAsSold}
+                handleMarkAsSold={handleMarkCarAsSold}
                 handleSetMainPhoto={() => Promise.resolve()}
                 actionLoading={actionLoading}
               />
@@ -866,7 +947,7 @@ const handleRenewSparePart = async (sparePartId: string) => {
           {/* Spare Parts Section */}
           {spareParts.length > 0 && (
             <div>
-              <h2 className="text-xl font-semibold mb-4">{t('spareParts.title')}</h2>
+              <h2 className="text-xl font-semibold mb-4">{t('myAds.sparePartsAds')}</h2>
               <SparePartsTab 
                 loading={loading} 
                 spareParts={filteredSpareParts}
@@ -939,7 +1020,7 @@ const handleRenewSparePart = async (sparePartId: string) => {
       )}
 
       {/* Mark as Sold Confirmation Modal */}
-      {showSoldModal && selectedCar && (
+      {showSoldModal && (selectedCar || selectedSparePart) && (
         <div className="fixed z-10 inset-0 overflow-y-auto">
           <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
             <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>

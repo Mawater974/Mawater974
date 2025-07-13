@@ -11,8 +11,10 @@ import { useLanguage } from '@/contexts/LanguageContext';
 interface Notification {
   id: string;
   user_id: string;
-  title: string;
-  message: string;
+  title_en: string;
+  title_ar: string;
+  message_en: string;
+  message_ar: string;
   type: string;
   is_read: boolean;
   created_at: string;
@@ -26,9 +28,22 @@ export default function NotificationsPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
   const [expandedMessage, setExpandedMessage] = useState<string | null>(null);
+  const toggleExpand = (id: string) => {
+    setExpandedMessage(prev => (prev === id ? null : id));
+  };
+
+  const getMessage = (notification: Notification) => {
+    return currentLanguage === 'ar' ? notification.message_ar : notification.message_en;
+  };
+
+  const getTitle = (notification: Notification) => {
+    return currentLanguage === 'ar' ? notification.title_ar : notification.title_en;
+  };
+
+  // Remove this line since we're getting currentLanguage from useLanguage hook
   const { user, isLoading: isAuthLoading } = useAuth();
-  const { t } = useLanguage();
   const router = useRouter();
+  const { t, currentLanguage } = useLanguage();
   const params = useParams();
   const countryCode = params.countryCode as string;
 
@@ -292,8 +307,8 @@ export default function NotificationsPage() {
                     <div className="p-3 sm:p-2">
                       <div className="space-y-3">
                         <div className="flex items-start justify-between gap-3">
-                          <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white flex-1">
-                            {notification.title}
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                            {getTitle(notification)}
                           </h3>
                           {!notification.is_read && (
                             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-qatar-maroon text-white flex-shrink-0">
@@ -305,9 +320,9 @@ export default function NotificationsPage() {
                         <div className="prose prose-sm dark:prose-invert max-w-none">
                           <div
                             className={`text-gray-600 dark:text-gray-300 text-sm sm:text-base ${expandedMessage === notification.id ? '' : 'line-clamp-2'}`}
-                            dangerouslySetInnerHTML={{ __html: notification.message }}
+                            dangerouslySetInnerHTML={{ __html: getMessage(notification) }}
                           />
-                          {notification.message.length > 150 && (
+                          {getMessage(notification).length > 150 && (
                             <button
                               onClick={() => toggleExpand(notification.id)}
                               className="text-qatar-maroon hover:text-qatar-maroon/80 text-sm mt-2 py-1"

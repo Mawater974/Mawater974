@@ -233,7 +233,7 @@ export default function ShowroomPage() {
             is_featured
           `)
           .eq('user_id', showroom.user_id)
-          .eq('status', 'Approved')
+          .eq('status', 'approved')
           .eq('country_id', showroom.country_id);
   
         if (carError) {

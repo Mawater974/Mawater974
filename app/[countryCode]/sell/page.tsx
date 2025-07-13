@@ -1616,12 +1616,22 @@ useEffect(() => {
         const brandName = brands.find(b => b.id === parseInt(formData.brand))?.name || formData.brand;
         const modelName = models.find(m => m.id === parseInt(formData.model))?.name || formData.model;
         
-        await createNotification(
-          user.id,
-          'Car Ad Submitted',
-          `Your car ad for ${brandName} ${modelName} has been submitted and is pending approval. We'll notify you once it's reviewed.`,
-          'pending'
-        );
+        await supabase
+          .from('notifications')
+          .insert({
+            user_id: user.id,
+            type: 'carSubmitted',
+            title_en: t('notifications.carSubmitted.title_en'),
+            title_ar: t('notifications.carSubmitted.title_ar'),
+            message_en: t('notifications.carSubmitted.message_en', {
+              brand: brandName,
+              model: modelName
+            }),
+            message_ar: t('notifications.carSubmitted.message_ar', {
+              brand: brandName,
+              model: modelName
+            })
+          });
       }
 
       setIsSubmitted(true);

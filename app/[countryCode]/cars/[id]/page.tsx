@@ -250,7 +250,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
           .eq('brand_id', car.brand_id)
           .eq('country_id', car.country?.id) // Filter by the same country
           .neq('id', car.id)
-          .eq('status', 'Approved')
+          .eq('status', 'approved')
           .eq('is_featured', true)
           .limit(4);
 
@@ -271,7 +271,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
           .eq('brand_id', car.brand_id)
           .eq('country_id', car.country?.id) // Filter by the same country
           .neq('id', car.id)
-          .eq('status', 'Approved')
+          .eq('status', 'approved')
           .eq('is_featured', false)
           .limit(4);
 
@@ -792,7 +792,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
                   <img
                     src={car.images[currentImageIndex]?.url}
                     alt={`${car.brand?.name || ''} ${car.model?.name || ''}`}
-                    className={`w-full h-full object-cover ${car.status !== 'Approved' ? 'opacity-70' : ''}`}
+                    className={`w-full h-full object-cover ${car.status !== 'approved' ? 'opacity-70' : ''}`}
                     onClick={() => openFullImage(currentImageIndex)}
                   />              {car.is_featured && (
                     <div className="absolute top-2 left-2 z-20 px-2 py-1 bg-qatar-maroon/90 text-white text-xs font-medium rounded-lg shadow-lg">
@@ -820,12 +820,12 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
                       </div>
                     )}
                   )}
-                  {car.status && car.status !== 'Approved' && (
+                  {car.status && car.status !== 'approved' && (
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                       <div className={`text-4xl font-bold transform rotate-[-15deg] px-6 py-3 rounded-lg ${
-                        car.status === 'Sold' ? 'bg-green-600/90 text-white' :
-                        car.status === 'Expired' ? 'bg-amber-600/90 text-white' :
-                        car.status === 'Hidden' ? 'bg-gray-800/90 text-white' :
+                        car.status === 'sold' ? 'bg-green-600/90 text-white' :
+                        car.status === 'expired' ? 'bg-amber-600/90 text-white' :
+                        car.status === 'hidden' ? 'bg-gray-800/90 text-white' :
                         'text-qatar-maroon bg-white/80 dark:bg-black/70'
                       }`}>
                         {car.status.toUpperCase()}
@@ -913,14 +913,14 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
                         <img
                           src={car.images[fullImageIndex]?.url}
                           alt={`${car.brand?.name || ''} ${car.model?.name || ''}`}
-                          className={`max-h-[90vh] max-w-[90vw] object-contain ${car.status !== 'Approved' ? 'opacity-70' : ''}`}
+                          className={`max-h-[90vh] max-w-[90vw] object-contain ${car.status !== 'approved' ? 'opacity-70' : ''}`}
                         />
-                        {car.status && car.status !== 'Approved' && (
+                        {car.status && car.status !== 'approved' && (
                           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                             <div className={`text-6xl font-bold transform rotate-[-15deg] px-8 py-4 rounded-lg ${
-                              car.status === 'Sold' ? 'bg-green-600/90 text-white' :
-                              car.status === 'Expired' ? 'bg-amber-600/90 text-white' :
-                              car.status === 'Hidden' ? 'bg-gray-800/90 text-white' :
+                              car.status === 'sold' ? 'bg-green-600/90 text-white' :
+                              car.status === 'expired' ? 'bg-amber-600/90 text-white' :
+                              car.status === 'hidden' ? 'bg-gray-800/90 text-white' :
                               'text-qatar-maroon bg-white/80 dark:bg-black/80'
                             }`}>
                               {car.status.toUpperCase()}

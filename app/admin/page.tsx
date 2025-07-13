@@ -78,7 +78,7 @@ interface UserWithStats extends Profile {
 
 type ViewMode = 'grid' | 'list';
 
-type CarStatus = 'Pending' | 'Approved' | 'Rejected' | 'Sold';
+type CarStatus = 'pending' | 'approved' | 'rejected' | 'sold';
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -562,9 +562,9 @@ export default function AdminDashboard() {
         totalUsers: usersData?.length || 0,
         totalCars: carsData?.length || 0,
         totalDealers: 0,
-        pendingCars: carsData?.filter(car => car.status === 'Pending').length || 0,
-        activeCars: carsData?.filter(car => car.status === 'Approved').length || 0,
-        soldCars: carsData?.filter(car => car.status === 'Sold').length || 0,
+        pendingCars: carsData?.filter(car => car.status === 'pending').length || 0,
+        activeCars: carsData?.filter(car => car.status === 'approved').length || 0,
+        soldCars: carsData?.filter(car => car.status === 'sold').length || 0,
         featuredCars: carsData?.filter(car => car.is_featured).length || 0,
         featuredPercentage: (carsData?.filter(car => car.is_featured).length || 0) / carsData?.length * 100 || 0,
         totalRevenue: carsData?.reduce((sum, car) => sum + (car.price || 0), 0) || 0,
@@ -599,9 +599,9 @@ export default function AdminDashboard() {
         };
 
         currentStats.count++;
-        if (car.status === 'Approved') currentStats.activeCount++;
-        if (car.status === 'Sold') currentStats.soldCount++;
-        if (car.status === 'Pending') currentStats.pendingCount++;
+        if (car.status === 'approved') currentStats.activeCount++;
+        if (car.status === 'sold') currentStats.soldCount++;
+        if (car.status === 'pending') currentStats.pendingCount++;
         if (car.price) {
           currentStats.totalRevenue += car.price;
           currentStats.prices.push(car.price);
@@ -717,9 +717,9 @@ export default function AdminDashboard() {
       };
 
       currentStats.count++;
-      if (car.status === 'Approved') currentStats.activeCount++;
-      if (car.status === 'Sold') currentStats.soldCount++;
-      if (car.status === 'Pending') currentStats.pendingCount++;
+      if (car.status === 'approved') currentStats.activeCount++;
+      if (car.status === 'sold') currentStats.soldCount++;
+      if (car.status === 'pending') currentStats.pendingCount++;
       if (car.price) {
         currentStats.totalRevenue += car.price;
         currentStats.prices.push(car.price);
@@ -755,9 +755,9 @@ export default function AdminDashboard() {
     setAnalytics(prev => ({
       ...prev,
       totalCars: cars.length,
-      pendingCars: cars.filter(car => car.status === 'Pending').length,
-      activeCars: cars.filter(car => car.status === 'Approved').length,
-      soldCars: cars.filter(car => car.status === 'Sold').length,
+      pendingCars: cars.filter(car => car.status === 'pending').length,
+      activeCars: cars.filter(car => car.status === 'approved').length,
+      soldCars: cars.filter(car => car.status === 'sold').length,
       featuredCars: cars.filter(car => car.is_featured).length,
       featuredPercentage: (cars.filter(car => car.is_featured).length / cars.length) * 100,
       totalRevenue: cars.reduce((sum, car) => sum + (car.price || 0), 0),
@@ -967,13 +967,13 @@ export default function AdminDashboard() {
                         View Details
                       </button>
                       <button
-                        onClick={() => handleCarStatusChange(car.id, 'Approved')}
+                        onClick={() => handleCarStatusChange(car.id, 'approved')}
                         className="text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300"
                       >
                         Approve
                       </button>
                       <button
-                        onClick={() => handleCarStatusChange(car.id, 'Rejected')}
+                        onClick={() => handleCarStatusChange(car.id, 'rejected')}
                         className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
                       >
                         Reject
@@ -1181,11 +1181,11 @@ export default function AdminDashboard() {
                   </button>
                   <button
                     onClick={() => {
-                      setCarListingsStatus('Approved');
-                      fetchCarListings('Approved');
+                      setCarListingsStatus('approved');
+                      fetchCarListings('approved');
                     }}
                     className={`px-4 py-2 rounded-md text-sm font-medium ${
-                      carListingsStatus === 'Approved'
+                      carListingsStatus === 'approved'
                         ? 'bg-green-500 text-white'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
                     }`}
@@ -1194,11 +1194,11 @@ export default function AdminDashboard() {
                   </button>
                   <button
                     onClick={() => {
-                      setCarListingsStatus('Rejected');
-                      fetchCarListings('Rejected');
+                      setCarListingsStatus('rejected');
+                      fetchCarListings('rejected');
                     }}
                     className={`px-4 py-2 rounded-md text-sm font-medium ${
-                      carListingsStatus === 'Rejected'
+                      carListingsStatus === 'rejected'
                         ? 'bg-red-500 text-white'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
                     }`}
@@ -1287,16 +1287,16 @@ export default function AdminDashboard() {
                     >
                       View Details
                     </Link>
-                    {car.status === 'Pending' && (
+                    {car.status === 'pending' && (
                       <>
                         <button
-                          onClick={() => handleCarStatusChange(car.id, 'Approved')}
+                          onClick={() => handleCarStatusChange(car.id, 'approved')}
                           className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-green-600 hover:bg-green-600 hover:text-white rounded-md transition-colors duration-200"
                         >
                           Approve
                         </button>
                         <button
-                          onClick={() => handleCarStatusChange(car.id, 'Rejected')}
+                          onClick={() => handleCarStatusChange(car.id, 'rejected')}
                           className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-600 hover:text-white rounded-md transition-colors duration-200"
                         >
                           Reject
@@ -1465,13 +1465,13 @@ export default function AdminDashboard() {
               </div>
               <div className="flex items-center">
                 <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                  car.status === 'Pending'
+                  car.status === 'pending'
                     ? 'bg-yellow-100 text-yellow-800'
-                    : car.status === 'Approved'
+                    : car.status === 'approved'
                     ? 'bg-green-100 text-green-800'
-                    : car.status === 'Rejected'
+                    : car.status === 'rejected'
                     ? 'bg-red-100 text-red-800'
-                    : car.status === 'Sold'
+                    : car.status === 'sold'
                     ? 'bg-blue-100 text-blue-800'
                     : 'bg-gray-100 text-gray-800'
                 }`}>
@@ -1500,16 +1500,16 @@ export default function AdminDashboard() {
               >
                 View Details
               </Link>
-              {car.status === 'Pending' && (
+              {car.status === 'pending' && (
                 <>
                   <button
-                    onClick={() => handleCarStatusChange(car.id, 'Approved')}
+                    onClick={() => handleCarStatusChange(car.id, 'approved')}
                     className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-green-600 hover:bg-green-600 hover:text-white rounded-md transition-colors duration-200"
                   >
                     Approve
                   </button>
                   <button
-                    onClick={() => handleCarStatusChange(car.id, 'Rejected')}
+                    onClick={() => handleCarStatusChange(car.id, 'rejected')}
                     className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-600 hover:text-white rounded-md transition-colors duration-200"
                   >
                     Reject
@@ -1555,13 +1555,13 @@ export default function AdminDashboard() {
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                 <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                  car.status === 'Pending'
+                  car.status === 'pending'
                     ? 'bg-yellow-100 text-yellow-800'
-                    : car.status === 'Approved'
+                    : car.status === 'approved'
                     ? 'bg-green-100 text-green-800'
-                    : car.status === 'Rejected'
+                    : car.status === 'rejected'
                     ? 'bg-red-100 text-red-800'
-                    : car.status === 'Sold'
+                    : car.status === 'sold'
                     ? 'bg-blue-100 text-blue-800'
                     : 'bg-gray-100 text-gray-800'
                 }`}>
@@ -1583,13 +1583,13 @@ export default function AdminDashboard() {
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
                 <div className="flex items-center gap-2">
-                  {car.status !== 'Sold' && (
+                  {car.status !== 'sold' && (
                     <>
                       <button
-                        onClick={() => handleCarStatusChange(car.id, 'Approved')}
-                        disabled={car.status === 'Approved'}
+                        onClick={() => handleCarStatusChange(car.id, 'approved')}
+                        disabled={car.status === 'approved'}
                         className={`p-1.5 rounded-md ${
-                          car.status === 'Approved'
+                          car.status === 'approved'
                             ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                             : 'bg-green-500 text-white hover:bg-green-600'
                         }`}
@@ -1598,10 +1598,10 @@ export default function AdminDashboard() {
                         <div className="w-5 h-5"></div>
                       </button>
                       <button
-                        onClick={() => handleCarStatusChange(car.id, 'Rejected')}
-                        disabled={car.status === 'Rejected'}
+                        onClick={() => handleCarStatusChange(car.id, 'rejected')}
+                        disabled={car.status === 'rejected'}
                         className={`p-1.5 rounded-md ${
-                          car.status === 'Rejected'
+                          car.status === 'rejected'
                             ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                             : 'bg-red-500 text-white hover:bg-red-600'
                         }`}
@@ -1611,9 +1611,9 @@ export default function AdminDashboard() {
                       </button>
                     </>
                   )}
-                  {car.status === 'Approved' && (
+                  {car.status === 'approved' && (
                     <button
-                      onClick={() => handleCarStatusChange(car.id, 'Sold')}
+                      onClick={() => handleCarStatusChange(car.id, 'sold')}
                       className="p-1.5 bg-blue-500 text-white rounded-md hover:bg-blue-600"
                       title="Mark as Sold"
                     >
@@ -1664,9 +1664,9 @@ export default function AdminDashboard() {
       };
 
       currentStats.count++;
-      if (car.status === 'Approved') currentStats.activeCount++;
-      if (car.status === 'Sold') currentStats.soldCount++;
-      if (car.status === 'Pending') currentStats.pendingCount++;
+      if (car.status === 'approved') currentStats.activeCount++;
+      if (car.status === 'sold') currentStats.soldCount++;
+      if (car.status === 'pending') currentStats.pendingCount++;
       if (car.price) {
         currentStats.totalRevenue += car.price;
         currentStats.prices.push(car.price);
@@ -1689,7 +1689,7 @@ export default function AdminDashboard() {
 
     // Create pending cars list
     const pendingCarsList = cars
-      .filter(car => car.status === 'Pending')
+      .filter(car => car.status === 'pending')
       .map(car => ({
         id: car.id,
         brand: car.brand?.name || 'Unknown',
@@ -1702,9 +1702,9 @@ export default function AdminDashboard() {
     setAnalytics(prev => ({
       ...prev,
       totalCars: cars.length,
-      pendingCars: cars.filter(car => car.status === 'Pending').length,
-      activeCars: cars.filter(car => car.status === 'Approved').length,
-      soldCars: cars.filter(car => car.status === 'Sold').length,
+      pendingCars: cars.filter(car => car.status === 'pending').length,
+      activeCars: cars.filter(car => car.status === 'approved').length,
+      soldCars: cars.filter(car => car.status === 'sold').length,
       featuredCars: cars.filter(car => car.is_featured).length,
       featuredPercentage: (cars.filter(car => car.is_featured).length / cars.length) * 100,
       totalRevenue: cars.reduce((sum, car) => sum + (car.price || 0), 0),
@@ -1756,9 +1756,9 @@ export default function AdminDashboard() {
         totalUsers: usersData?.length || 0,
         totalCars: carsData?.length || 0,
         totalDealers: usersData?.filter(user => user.role === 'dealer').length || 0,
-        pendingCars: carsData?.filter(car => car.status === 'Pending').length || 0,
-        activeCars: carsData?.filter(car => car.status === 'Approved').length || 0,
-        soldCars: carsData?.filter(car => car.status === 'Sold').length || 0,
+        pendingCars: carsData?.filter(car => car.status === 'pending').length || 0,
+        activeCars: carsData?.filter(car => car.status === 'approved').length || 0,
+        soldCars: carsData?.filter(car => car.status === 'sold').length || 0,
         featuredCars: carsData?.filter(car => car.is_featured).length || 0,
         featuredPercentage: (carsData?.filter(car => car.is_featured).length || 0) / (carsData?.length || 1) * 100,
         totalRevenue: carsData?.reduce((sum, car) => sum + (car.price || 0), 0) || 0,
