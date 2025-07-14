@@ -2,23 +2,70 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCountry } from '@/contexts/CountryContext';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'react-hot-toast';
-import Link from 'next/link';
-import Image from 'next/image';
+
+// Types for sorting
+type SortOption = {
+  id: string;
+  name: string;
+  name_ar: string;
+  field: string;
+  order: 'asc' | 'desc';
+};
+
+type TabType = 'cars' | 'spare-parts';
+
+// Sort options
+const SORT_OPTIONS: SortOption[] = [
+  {
+    id: 'newest',
+    name: 'Newest First',
+    name_ar: 'الأحدث أولاً',
+    field: 'created_at',
+    order: 'desc',
+  },
+  {
+    id: 'oldest',
+    name: 'Oldest First',
+    name_ar: 'الأقدم أولاً',
+    field: 'created_at',
+    order: 'asc',
+  },
+  {
+    id: 'price-high',
+    name: 'Price: High to Low',
+    name_ar: 'السعر: من الأعلى للأقل',
+    field: 'price',
+    order: 'desc',
+  },
+  {
+    id: 'price-low',
+    name: 'Price: Low to High',
+    name_ar: 'السعر: من الأقل للأعلى',
+    field: 'price',
+    order: 'asc',
+  },
+];
 import {
-  PlusCircleIcon,
   CheckCircleIcon,
   ClockIcon,
   XCircleIcon,
+  FunnelIcon,
+  ArrowUpIcon,
+  ArrowDownIcon,
+  PlusCircleIcon,
+  ShoppingBagIcon,
+  ArchiveBoxIcon,
   TagIcon,
   PencilIcon,
   TrashIcon,
-  ShoppingBagIcon,
-  ArchiveBoxIcon,
 } from '@heroicons/react/24/outline';
 
 // Components
@@ -449,6 +496,10 @@ export default function MyAdsPage() {
   const { t, language } = useLanguage();
   const { currentCountry } = useCountry();
   
+  const [activeTab, setActiveTab] = useState<TabType>('cars');
+  const [sortOption, setSortOption] = useState<SortOption>(SORT_OPTIONS[0]);
+  const [showSortOptions, setShowSortOptions] = useState(false);
+  
   const [cars, setCars] = useState<ExtendedCarWithStatus[]>([]);
   const [spareParts, setSpareParts] = useState<SparePart[]>([]);
   interface Notification {
@@ -874,17 +925,33 @@ const handleRenewSparePart = async (sparePartId: string) => {
     return expirationDate ? new Date(expirationDate) < new Date() : false;
   };
 
-  // Filter cars based on status
-  const filteredCars = cars.filter(car => {
-    if (filter === 'all') return true;
-    return car.status.toLowerCase() === filter.toLowerCase();
-  });
+  // Sort and filter cars
+  const filteredAndSortedCars = [...cars]
+    .filter(car => filter === 'all' || car.status.toLowerCase() === filter.toLowerCase())
+    .sort((a, b) => {
+      if (sortOption.field === 'created_at') {
+        return sortOption.order === 'asc'
+          ? new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+          : new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      } else if (sortOption.field === 'price') {
+        return sortOption.order === 'asc' ? a.price - b.price : b.price - a.price;
+      }
+      return 0;
+    });
 
-  // Filter spare parts based on status
-  const filteredSpareParts = spareParts.filter(part => {
-    if (filter === 'all') return true;
-    return part.status.toLowerCase() === filter.toLowerCase();
-  });
+  // Sort and filter spare parts
+  const filteredAndSortedSpareParts = [...spareParts]
+    .filter(part => filter === 'all' || part.status.toLowerCase() === filter.toLowerCase())
+    .sort((a, b) => {
+      if (sortOption.field === 'created_at') {
+        return sortOption.order === 'asc'
+          ? new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+          : new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      } else if (sortOption.field === 'price') {
+        return sortOption.order === 'asc' ? a.price - b.price : b.price - a.price;
+      }
+      return 0;
+    });
 
   if (loading) {
     return (
@@ -907,28 +974,113 @@ const handleRenewSparePart = async (sparePartId: string) => {
               href={`/${currentCountry?.code.toLowerCase()}/spare-parts/add`}
               className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-qatar-maroon hover:bg-qatar-maroon/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon"
             >
-              <PlusCircleIcon className="-ml-1 mr-2 h-5 w-5" />
+              <PlusCircleIcon className="mr-2 h-5 w-5" />
               {t('spareParts.addSparePart')}
             </Link>
             <Link
               href={`/${currentCountry?.code.toLowerCase()}/sell`}
               className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-qatar-maroon hover:bg-qatar-maroon/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon"
             >
-              <PlusCircleIcon className="-ml-1 mr-2 h-5 w-5" />
+              <PlusCircleIcon className="mr-2 h-5 w-5" />
               {t('myAds.addNewCarAd')}
             </Link>
           </div>
         </div>
 
-        {/* Combined Content */}
+        {/* Tabs */}
+        <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
+          <nav className="-mb-px flex space-x-8">
+            <button
+              onClick={() => setActiveTab('cars')}
+              className={`${activeTab === 'cars' 
+                ? 'border-qatar-maroon text-qatar-maroon' 
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200'} 
+                whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+            >
+              {t('myAds.cars')} ({cars.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('spare-parts')}
+              className={`${activeTab === 'spare-parts' 
+                ? 'border-qatar-maroon text-qatar-maroon' 
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200'} 
+                whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+            >
+              {t('myAds.spareParts')} ({spareParts.length})
+            </button>
+          </nav>
+        </div>
+
+        {/* Sort and Filter */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+          <div className="flex-1">
+            {/* Status filter buttons */}
+            <div className="flex flex-wrap gap-2">
+              {['all', 'pending', 'approved', 'rejected', 'expired', 'sold'].map((status) => (
+                <button
+                  key={status}
+                  onClick={() => setFilter(status as any)}
+                  className={`px-3 py-1 rounded-full text-xs font-medium ${
+                    filter === status
+                      ? 'bg-qatar-maroon text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  {t(`common.status.${status}`)}
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          {/* Sort dropdown */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowSortOptions(!showSortOptions)}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon"
+            >
+              <FunnelIcon className="h-4 w-4 mr-2" />
+              {language === 'en' ? sortOption.name : sortOption.name_ar}
+              {sortOption.order === 'asc' ? (
+                <ArrowUpIcon className="ml-2 h-4 w-4" />
+              ) : (
+                <ArrowDownIcon className="ml-2 h-4 w-4" />
+              )}
+            </button>
+            
+            {showSortOptions && (
+              <div className="absolute sm:right md:left-0 mt-1 w-48 rounded-lg shadow-xl bg-white dark:bg-gray-800 ring-1 ring-gray-200 dark:ring-gray-700 z-50 overflow-hidden transition-all duration-150 ease-in-out transform origin-top-right">
+                <div className="py-1" role="menu">
+                  {SORT_OPTIONS.map((option) => (
+                    <button
+                      key={option.id}
+                      onClick={() => {
+                        setSortOption(option);
+                        setShowSortOptions(false);
+                      }}
+                      className={`block w-full text-left px-4 py-2 text-sm ${
+                        sortOption.id === option.id
+                          ? 'bg-gray-100 dark:bg-gray-700 text-qatar-maroon'
+                          : 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                      }`}
+                      role="menuitem"
+                    >
+                      {language === 'en' ? option.name : option.name_ar}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Tab Content */}
         <div className="mb-8">
-          {/* Cars Section */}
-          {cars.length > 0 && (
-            <div className="mb-12">
-              <h2 className="text-xl font-semibold mb-4">{t('myAds.carsAds')}</h2>
+          {activeTab === 'cars' ? (
+            filteredAndSortedCars.length > 0 ? (
               <CarsTab 
                 loading={loading} 
-                cars={cars} 
+                cars={filteredAndSortedCars} 
                 t={t} 
                 currentCountry={currentCountry} 
                 language={language}
@@ -941,38 +1093,35 @@ const handleRenewSparePart = async (sparePartId: string) => {
                 handleSetMainPhoto={() => Promise.resolve()}
                 actionLoading={actionLoading}
               />
-            </div>
-          )}
-
-          {/* Spare Parts Section */}
-          {spareParts.length > 0 && (
-            <div>
-              <h2 className="text-xl font-semibold mb-4">{t('myAds.sparePartsAds')}</h2>
-              <SparePartsTab 
-                loading={loading} 
-                spareParts={filteredSpareParts}
-                t={t}
-                currentCountry={currentCountry}
-                language={language}
-                isExpired={isExpired}
-                onEditSparePart={handleEditSparePart}
-                onDeleteSparePart={handleDeleteSparePart}
-                onMarkAsSold={handleMarkSparePartAsSold}
-                actionLoading={actionLoading}
-                renewingSparePartId={renewingSparePartId}
-                onRenewSparePart={handleRenewSparePart}
-              />
-            </div>
-          )}
-
-          {/* No items message */}
-          {!loading && cars.length === 0 && spareParts.length === 0 && (
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-gray-500 dark:text-gray-400">
+                  {t('myAds.noCarsFound')}
+                </p>
+              </div>
+            )
+          ) : filteredAndSortedSpareParts.length > 0 ? (
+            <SparePartsTab 
+              loading={loading} 
+              spareParts={filteredAndSortedSpareParts}
+              t={t}
+              currentCountry={currentCountry}
+              language={language}
+              isExpired={isExpired}
+              onEditSparePart={handleEditSparePart}
+              onDeleteSparePart={handleDeleteSparePart}
+              onMarkAsSold={handleMarkSparePartAsSold}
+              actionLoading={actionLoading}
+              renewingSparePartId={renewingSparePartId}
+              onRenewSparePart={handleRenewSparePart}
+            />
+          ) : (
             <div className="text-center py-12">
               <p className="text-gray-500 dark:text-gray-400">
-                {t('noItemsFound')}
+                {t('myAds.noSparePartsFound')}
               </p>
             </div>
-          )}
+          )}  
         </div>
       </div>
 

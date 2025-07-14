@@ -105,6 +105,7 @@ export default function SpareParts() {
     try {
       setLoading(true);
       
+      // First, fetch the spare parts
       let query = supabase
         .from('spare_parts')
         .select(`
@@ -115,7 +116,8 @@ export default function SpareParts() {
           category:spare_part_categories(id, name_en, name_ar),
           city:cities(id, name, name_ar),
           images:spare_part_images(id, url, is_primary),
-          country_code
+          country_code,
+          user_id
         `)
         .eq('status', 'approved');
       
@@ -165,7 +167,40 @@ export default function SpareParts() {
         query = query.eq('country_code', currentCountry.code);
       }
       
-      const { data, error } = await query;
+      const { data: sparePartsData, error } = await query;
+      
+      if (error) throw error;
+      if (!sparePartsData) return;
+      
+      // Get unique user IDs from spare parts
+      const userIds = Array.from(new Set(sparePartsData.map(part => part.user_id)));
+      
+      // Fetch user data for these IDs if we have any
+      let usersMap = new Map();
+      if (userIds.length > 0) {
+        const { data: usersData } = await supabase
+          .from('profiles')
+          .select('id, full_name, role')
+          .in('id', userIds);
+        
+        // Create a map of user ID to user data
+        if (usersData) {
+          usersMap = new Map(usersData.map(user => [user.id, user]));
+        }
+      }
+      
+      // Combine spare parts with user data
+      const data = sparePartsData.map(part => {
+        const user = usersMap.get(part.user_id) || null;
+        return {
+          ...part,
+          user: user ? {
+            id: user.id,
+            full_name: user.full_name,
+            role: user.role
+          } : null
+        };
+      });
       
       if (error) throw error;
       

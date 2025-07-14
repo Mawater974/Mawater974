@@ -7,7 +7,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCountry } from '@/contexts/CountryContext';
 import { supabase } from '../../lib/supabase';
-import { Database } from '../../types/supabase';
 import { Tab } from '@headlessui/react';
 import { 
   PlusIcon, 
@@ -20,13 +19,18 @@ import {
   ShoppingBagIcon,
   EyeIcon,
   XMarkIcon,
-  ArrowDownTrayIcon
+  ArrowDownTrayIcon,
+  WrenchScrewdriverIcon,
+  TruckIcon,
+  HeartIcon
 } from '@heroicons/react/24/outline';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
 import EditCarModal from '@/components/EditCarModal';
 import LoadingSpinner from '@/components/LoadingSpinner';
-import { dir } from 'node:console';
+import CarsTable from '@/components/dealer-dashboard/CarsTable';
+import SparePartsTable, { ExtendedSparePart } from '@/components/dealer-dashboard/SparePartsTable';
+import { SparePart } from '@/types/spare-parts';
 
 interface DealershipData {
   id: number;
@@ -57,6 +61,7 @@ interface CarListing {
   status: string;
   created_at: string;
   views_count: number;
+  favorite_count?: number;
   images?: { url: string; is_main?: boolean }[];
   description?: string;
   description_ar?: string;
@@ -94,6 +99,27 @@ interface Country {
   currency_code?: string;
 }
 
+interface sparePart {
+  id: number;
+  title: string;
+  title_ar?: string;
+  brand: string;
+  brand_ar?: string;
+  model: string;
+  model_ar?: string;
+  category: string;
+  category_ar?: string;
+  price: number;
+  currency: string;
+  status: string;
+  created_at: string;
+  views_count: number;
+  favorite_count?: number;
+  images?: { url: string; is_primary?: boolean }[];
+  description?: string;
+  description_ar?: string;
+}
+
 export default function DealerDashboard() {
   const { supabase } = useSupabase();
   const { user, profile, isLoading: authLoading } = useAuth();
@@ -103,12 +129,17 @@ export default function DealerDashboard() {
   const [city, setCity] = useState<City | null>(null);
   const [country, setCountry] = useState<Country | null>(null);
   const [dealership, setDealership] = useState<DealershipData | null>(null);
-  const [carListings, setCarListings] = useState<CarListing[]>([]);
+  const [carListings, setCarListings] = useState<Omit<CarListing, 'favorite_count'>[]>([]);
+  const [spareParts, setSpareParts] = useState<Omit<SparePart, 'favorite_count'>[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedCar, setSelectedCar] = useState<CarListing | null>(null);
+  const [selectedSparePart, setSelectedSparePart] = useState<ExtendedSparePart | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteItemType, setDeleteItemType] = useState<'car' | 'sparePart'>('car');
+  const [actionLoading, setActionLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'cars' | 'spare-parts'>('cars');
   const [stats, setStats] = useState<DashboardStats>({
     totalListings: 0,
     approvedListings: 0,
@@ -122,13 +153,25 @@ export default function DealerDashboard() {
   const [isExporting, setIsExporting] = useState(false);
 
   function formatPrice(price: number, currencyCode?: string): string {
-    const formatter = new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currencyCode || country?.currency_code,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    });
-    return formatter.format(price);
+    // Use the provided currency code, or fall back to - if not available
+    const currency = currencyCode || '-';
+    
+    try {
+      const formatter = new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: currency,
+        minimumFractionDigits: 0,
+      });
+      return formatter.format(price);
+    } catch (error) {
+      console.error('Error formatting price:', error);
+      // Fallback to simple formatting if currency is invalid
+      return new Intl.NumberFormat('en-US', {
+        style: 'decimal',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+      }).format(price) + ' ' + currency;
+    }
   }
 
   // Function to export car listings to CSV with bilingual support
@@ -245,7 +288,6 @@ export default function DealerDashboard() {
     }
   };
 
-
   useEffect(() => {
     // Wait for both auth and country to be initialized
     if (authLoading || countryLoading) return;
@@ -274,8 +316,20 @@ export default function DealerDashboard() {
 
         setDealership(dealershipData);
 
-        // Fetch car listings with brand and model details
-        const { data: listings, error: listingsError } = await supabase
+        // Fetch spare parts first
+        const { data: sparePartsList, error: sparePartsError } = await supabase
+          .from('spare_parts')
+          .select(`
+            *,
+            brand:brands(id, name, name_ar),
+            images:spare_part_images(url, is_primary),
+            country:countries(id, name, name_ar, currency_code)
+          `)
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+
+        // Fetch car listings
+        const { data: carListings, error: carListingsError } = await supabase
           .from('cars')
           .select(`
             *,
@@ -288,18 +342,51 @@ export default function DealerDashboard() {
           .eq('dealership_id', dealershipData.id)
           .order('created_at', { ascending: false });
 
-        if (listingsError) throw listingsError;
-        setCarListings(listings || []);
+        if (carListingsError) throw carListingsError;
+        if (sparePartsError) throw sparePartsError;
 
-        // Calculate stats
-        const stats: DashboardStats = {
-          totalListings: listings?.length || 0,
-          totalViews: listings?.reduce((sum, car) => sum + (car.views_count || 0), 0) || 0,
-          approvedListings: listings?.filter(car => car.status.toLowerCase() === 'approved').length || 0,
-          pendingListings: listings?.filter(car => car.status.toLowerCase() === 'pending').length || 0,
-          rejectedListings: listings?.filter(car => car.status.toLowerCase() === 'rejected').length || 0,
-          soldListings: listings?.filter(car => car.status.toLowerCase() === 'sold').length || 0,
-          expiredListings: listings?.filter(car => car.status.toLowerCase() === 'expired').length || 0
+        setCarListings(carListings || []);
+        
+        // Ensure spare parts have all required fields and proper structure
+        const processedSpareParts = (sparePartsList || []).map(part => ({
+          ...part,
+          // Ensure brand is an object with name and name_ar
+          brand: typeof part.brand === 'string' 
+            ? { name: part.brand, name_ar: part.brand_ar }
+            : part.brand || { name: 'Unknown', name_ar: 'غير معروف' },
+          // Ensure images is always an array
+          images: part.images || [],
+          // Ensure required fields have defaults
+          title: part.title || 'Untitled',
+          description: part.description || '',
+          part_number: part.part_number || '',
+          condition: part.condition || 'New',
+          price: part.price || 0,
+          quantity: part.quantity || 0,
+          status: part.status || 'Pending',
+          created_at: part.created_at || new Date().toISOString(),
+          updated_at: part.updated_at || new Date().toISOString(),
+          views_count: part.views_count || 0,
+          currency_code: part.currency_code || part.country?.currency_code || 'QAR',
+          // Add country if not present
+          country: part.country || { currency_code: part.currency_code || 'QAR' }
+        }));
+        
+        setSpareParts(processedSpareParts);
+
+        // Update stats
+        const stats = {
+          totalListings: (carListings?.length || 0) + (sparePartsList?.length || 0),
+          totalViews: (carListings?.reduce((sum, car) => sum + (car.views_count || 0), 0) || 0) + 
+                     (sparePartsList?.reduce((sum, part) => sum + (part.views_count || 0), 0) || 0),
+          approvedListings: (carListings?.filter(car => car.status?.toLowerCase() === 'approved').length || 0) + 
+                           (sparePartsList?.filter(part => part.status?.toLowerCase() === 'approved').length || 0),
+          pendingListings: (carListings?.filter(car => car.status?.toLowerCase() === 'pending').length || 0) + 
+                          (sparePartsList?.filter(part => part.status?.toLowerCase() === 'pending').length || 0),
+          rejectedListings: (carListings?.filter(car => car.status?.toLowerCase() === 'rejected').length || 0) + 
+                           (sparePartsList?.filter(part => part.status?.toLowerCase() === 'rejected').length || 0),
+          soldListings: carListings?.filter(car => car.status?.toLowerCase() === 'sold').length || 0,
+          expiredListings: carListings?.filter(car => car.status?.toLowerCase() === 'expired').length || 0
         };
         setStats(stats);
 
@@ -355,71 +442,69 @@ export default function DealerDashboard() {
     };
   }, [user, carListings]);
 
-  const handleDeleteCar = async (carId: number) => {
-    if (!confirm(t('dashboard.confirmDelete'))) return;
+  const handleDeleteClick = (car: CarListing) => {
+    setSelectedCar(car);
+    setShowDeleteModal(true);
+    setDeleteItemType('car');
+  };
 
+  const handleDeleteSparePart = (part: ExtendedSparePart) => {
+    setSelectedSparePart(part);
+    setDeleteItemType('sparePart');
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if ((!selectedCar && !selectedSparePart) || !deleteItemType) return;
+    
+    setActionLoading(true);
     try {
-      // Delete car images first
-      const { data: imageData, error: imageError } = await supabase
-        .from('car_images')
-        .delete()
-        .eq('car_id', carId)
-        .select();
+      if (deleteItemType === 'car' && selectedCar) {
+        const { error } = await supabase
+          .from('cars')
+          .update({ status: 'archived' })
+          .eq('id', selectedCar.id);
+        
+        if (error) throw error;
+        
+        // Refresh cars data
+        await fetchCars();
+      } else if (deleteItemType === 'sparePart' && selectedSparePart) {
+        const { error } = await supabase
+          .from('spare_parts')
+          .update({ status: 'archived' })
+          .eq('id', selectedSparePart.id);
+           
+        if (error) throw error;
+        
+        // Refresh spare parts data
+        await fetchSpareParts();
+      }
 
-      if (imageError) throw imageError;
-
-      // Delete car listing
-      const { error } = await supabase
-        .from('cars')
-        .delete()
-        .eq('id', carId)
-        .eq('dealership_id', dealership?.id);
-
-      if (error) throw error;
-
-      // Update local state
-      setCarListings(prev => prev.filter(car => car.id !== carId));
-      setStats(prev => ({
-        ...prev,
-        totalListings: (prev.totalListings || 0) - 1,
-        totalViews: prev.totalViews - (carListings.find(car => car.id === carId)?.views_count || 0),
-        approvedListings: prev.approvedListings - (carListings.find(car => car.id === carId)?.status.toLowerCase() === 'approved' ? 1 : 0),
-        pendingListings: prev.pendingListings - (carListings.find(car => car.id === carId)?.status.toLowerCase() === 'pending' ? 1 : 0),
-        rejectedListings: prev.rejectedListings - (carListings.find(car => car.id === carId)?.status.toLowerCase() === 'rejected' ? 1 : 0),
-        soldListings: prev.soldListings - (carListings.find(car => car.id === carId)?.status.toLowerCase() === 'sold' ? 1 : 0),
-        expiredListings: prev.expiredListings - (carListings.find(car => car.id === carId)?.status.toLowerCase() === 'expired' ? 1 : 0)
-      }));
-
-      toast.success(t('dashboard.deleteSuccess'));
+      setShowDeleteModal(false);
+      toast.success(t('myAds.adDeleted'));
     } catch (error) {
-      console.error('Error deleting car:', error);
-      setError('Error deleting car');
-      toast.error(t('dashboard.deleteError'));
+      console.error('Error archiving item:', error);
+      toast.error(t('myAds.error.delete'));
+    } finally {
+      setActionLoading(false);
+      setSelectedCar(null);
+      setSelectedSparePart(null);
     }
   };
 
-  const handleRenew = async (carId: number) => {
-    try {
-      const newExpirationDate = new Date();
-      newExpirationDate.setDate(newExpirationDate.getDate() + 30); // Add 30 days
+  const handleEditCar = (car: CarListing) => {
+    setSelectedCar(car);
+    setIsEditModalOpen(true);
+  };
 
-      const { error } = await supabase
-        .from('cars')
-        .update({ 
-          expiration_date: newExpirationDate.toISOString(),
-          status: 'Approved' 
-        })
-        .eq('id', carId)
-        .eq('dealership_id', dealership?.id);
+  const handleEditSparePart = (part: ExtendedSparePart) => {
+    setSelectedSparePart(part);
+    // TODO: Implement spare part edit modal if needed
+  };
 
-      if (error) throw error;
-
-      toast.success(t('dashboard.adRenewed'));
-      await fetchCars();
-    } catch (error) {
-      console.error('Error renewing ad:', error);
-      toast.error(t('dashboard.renewError'));
-    }
+  const handleEditComplete = () => {
+    fetchCars(); // Refresh the car listings
   };
 
   function getStatusColor(status: string): string {
@@ -465,10 +550,6 @@ export default function DealerDashboard() {
     setIsEditModalOpen(true);
   };
 
-  const handleEditComplete = () => {
-    fetchCars(); // Refresh the car listings
-  };
-
   const fetchCars = async () => {
     try {
       const { data: carListings, error } = await supabase
@@ -485,7 +566,13 @@ export default function DealerDashboard() {
 
       if (error) throw error;
 
-      setCarListings(carListings || []);
+      // If no cars, set empty array and return
+      if (!carListings || carListings.length === 0) {
+        setCarListings([]);
+        return;
+      }
+
+      setCarListings(carListings);
 
       // Update stats
       const stats = {
@@ -624,7 +711,7 @@ export default function DealerDashboard() {
             { 
               label: 'dashboard.totalViews', 
               value: stats.totalViews, 
-              icon: <ChartBarIcon className="h-8 w-8 text-blue-500 dark:text-blue-400" />,
+              icon: <EyeIcon className="h-8 w-8 text-blue-500 dark:text-blue-400" />,
               bgGradient: 'from-blue-100 to-blue-50 dark:from-blue-900/20 dark:to-blue-900/10'
             }
           ].map((stat, index) => (
@@ -653,30 +740,66 @@ export default function DealerDashboard() {
                     ? dealership.business_name_ar
                     : dealership?.business_name}
                 </h1>
-                <button
-                  onClick={exportToCSV}
-                  disabled={isExporting || carListings.length === 0}
-                  className="ml-auto flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <ArrowDownTrayIcon className="h-5 w-5 mr-2" />
-                  {isExporting ? (language === 'ar' ? 'جاري التصدير...' : 'Exporting...') : (language === 'ar' ? 'تصدير البيانات' : 'Export Data')}
-                </button>
-                <button
-                  onClick={() => router.push(`/${currentCountry?.code.toLowerCase()}/sell`)}
-                  className={getButtonClass('primary')}
-                >
-                  <PlusIcon className="h-5 w-5" />
-                  {t('myAds.createListing')}
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={exportToCSV}
+                    disabled={isExporting || (activeTab === 'cars' ? carListings.length === 0 : spareParts.length === 0)}
+                    className="flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ArrowDownTrayIcon className="h-5 w-5 mr-2" />
+                    {isExporting ? (language === 'ar' ? 'جاري التصدير...' : 'Exporting...') : (language === 'ar' ? 'تصدير البيانات' : 'Export Data')}
+                  </button>
+                  <button
+                    onClick={() => router.push(`/${currentCountry?.code.toLowerCase()}/${activeTab === 'cars' ? 'sell' : 'spare-parts/add'}`)}
+                    className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-qatar-maroon hover:bg-qatar-maroon-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon`}
+                  >
+                    <PlusIcon className="h-5 w-5 mr-2" />
+                    {activeTab === 'cars' ? t('myAds.createListing') : t('spareParts.addSparePart')}
+                  </button>
+                </div>
               </div>
-              <div className="w-full">
+              
+              {/* Main Tabs */}
+              <div className="border-b border-gray-200 dark:border-gray-700 mb-4">
+                <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+                  <button
+                    onClick={() => setActiveTab('cars')}
+                    className={`${activeTab === 'cars' 
+                      ? 'border-qatar-maroon text-qatar-maroon dark:border-qatar-maroon/80 dark:text-qatar-maroon/80' 
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'} 
+                      whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                  >
+                    <TruckIcon className="h-5 w-5 inline-block mr-2" />
+                    {t('dashboard.cars')} ({carListings.length})
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('spare-parts')}
+                    className={`${activeTab === 'spare-parts' 
+                      ? 'border-qatar-maroon text-qatar-maroon dark:border-qatar-maroon/80 dark:text-qatar-maroon/80' 
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'} 
+                      whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                  >
+                    <WrenchScrewdriverIcon className="h-5 w-5 inline-block mr-2" />
+                    {t('dashboard.spareParts')} ({spareParts.length})
+                  </button>
+                </nav>
+              </div>
+              
+              {/* Status Filter Tabs */}
+              <div className="w-full mb-6">
                 <Tab.Group>
-                  <Tab.List className="flex space-x-2 rounded-xl bg-qatar-maroon/20 p-1">
+                  <Tab.List className="flex flex-wrap gap-1 rounded-lg bg-gray-100 dark:bg-gray-700 p-1">
                     {['all', 'approved', 'pending', 'rejected', 'expired', 'sold'].map((status) => (
                       <Tab
                         key={status}
                         onClick={() => setSelectedStatus(status)}
-                        className={getTabClass(selectedStatus === status)}
+                        className={({ selected }) =>
+                          `px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                            selected 
+                              ? 'bg-white dark:bg-gray-800 shadow text-qatar-maroon dark:text-qatar-maroon/80' 
+                              : 'text-gray-600 hover:bg-white/50 dark:text-gray-300 dark:hover:bg-gray-600/50'
+                          }`
+                        }
                       >
                         {t(`dashboard.${status}`)}
                       </Tab>
@@ -687,172 +810,121 @@ export default function DealerDashboard() {
             </div>
           </div>
 
-          <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
-            <table className="w-full text-sm text-left">
-              <thead className="text-xs uppercase bg-gray-50 dark:bg-gray-700">
-                <tr>
-                  <th scope="col" className="px-6 py-3 text-gray-700 dark:text-gray-300 font-semibold">{t('dashboard.brand')}</th>
-                  <th scope="col" className="px-6 py-3 text-gray-700 dark:text-gray-300 font-semibold">{t('dashboard.model')}</th>
-                  <th scope="col" className="px-6 py-3 text-gray-700 dark:text-gray-300 font-semibold">{t('dashboard.year')}</th>
-                  <th scope="col" className="px-6 py-3 text-gray-700 dark:text-gray-300 font-semibold">{t('dashboard.price')}</th>
-                  <th scope="col" className="px-6 py-3 text-gray-700 dark:text-gray-300 font-semibold">{t('dashboard.status')}</th>
-                  <th scope="col" className="px-6 py-3 text-gray-700 dark:text-gray-300 font-semibold">{t('dashboard.featured')}</th>
-                  <th scope="col" className="px-6 py-3 text-gray-700 dark:text-gray-300 font-semibold">{t('dashboard.actions')}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
-                {filteredListings.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
-                      {t('dashboard.noListings')}
-                    </td>
-                  </tr>
-                ) : (
-                  filteredListings.map((car) => (
-                    <tr key={car.id} className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                      <td className="px-6 py-4 text-gray-900 dark:text-white font-medium">
-                        {language === 'ar' && car.brand.name_ar ? car.brand.name_ar : car.brand.name}
-                      </td>
-                      <td className="px-6 py-4 text-gray-900 dark:text-white">
-                        {language === 'ar' && car.model.name_ar ? car.model.name_ar : car.model.name}
-                      </td>
-                      <td className="px-6 py-4 text-gray-900 dark:text-white">{car.year}</td>
-                      <td className="px-6 py-4 text-gray-900 dark:text-white font-medium" dir="ltr">
-                      {car.price.toLocaleString('en-US')} {t(`common.currency.${car.country?.currency_code}`)}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`px-3 py-1.5 rounded-full text-xs font-medium ${getStatusColor(car.status)}`}>
-                          {t(`dashboard.${car.status.toLowerCase()}`)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          car.featured ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {car.featured ? t('common.yes') : t('common.no')}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <button
-                            onClick={() => router.push(`/${currentCountry?.code.toLowerCase()}/cars/${car.id}`)}
-                            className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
-                            title={t('dashboard.view')}
-                          >
-                            <EyeIcon className="h-5 w-5" />
-                          </button>
-                          <button
-                            onClick={() => handleEditClick(car)}
-                            className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
-                            title={t('dashboard.edit')}
-                          >
-                            <PencilIcon className="h-5 w-5" />
-                          </button>
-                          {car.status.toLowerCase() === 'expired' && (
-                            <button
-                              onClick={() => handleRenew(car.id)}
-                              className="inline-flex items-center px-2.5 py-1.5 border border-qatar-maroon shadow-sm text-xs font-medium rounded text-white bg-qatar-maroon hover:bg-qatar-maroon-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon"
-                            >
-                              <ClockIcon className="h-4 w-4 mr-1 rtl:ml-1 rtl:mr-0" />
-                              {t('dashboard.renewAd')}
-                            </button>
-                          )}
-                          <button
-                            onClick={() => handleDeleteCar(car.id)}
-                            className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 transition-colors"
-                            title={t('dashboard.delete')}
-                          >
-                            <TrashIcon className="h-5 w-5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+          {/* Content based on active tab */}
+          {activeTab === 'cars' ? (
+            <CarsTable 
+              cars={filteredListings} 
+              language={language}
+              onEdit={handleEditCar}
+              onDelete={(id) => {
+                const car = filteredListings.find(c => c.id === id);
+                if (car) handleDeleteClick(car);
+              }}
+              onView={(car) => router.push(`/${currentCountry?.code.toLowerCase()}/cars/${car.id}`)}
+              formatPrice={formatPrice}
+              t={t}
+            />
+          ) : (
+            <SparePartsTable 
+              spareParts={spareParts.filter(part => {
+                if (selectedStatus === 'all') return true;
+                if (!part.status) return false;
+                return part.status.toLowerCase() === selectedStatus;
+              }).map(part => ({
+                ...part,
+                // Ensure required fields have default values
+                title: part.title || 'Untitled',
+                description: part.description || '',
+                part_number: part.part_number || '',
+                brand: part.brand || 'Unknown',
+                condition: part.condition || '',
+                category: part.category || '',
+                price: part.price || 0,
+                quantity: part.quantity || 0,
+                status: part.status || 'Pending',
+                created_at: part.created_at || new Date().toISOString(),
+                updated_at: part.updated_at || new Date().toISOString(),
+                views_count: part.views_count || 0,
+                currency_code: part.currency_code || '-',
+                // Add country with currency_code if needed by the component
+                ...(part.country_id ? {
+                  country: {
+                    currency_code: part.currency_code || '-'
+                  }
+                } : {})
+              }))} 
+onEdit={handleEditSparePart}
+              onDelete={(id) => {
+                const part = spareParts.find(p => p.id === id);
+                if (part) handleDeleteSparePart(part);
+              }}
+              onView={(part) => {
+                router.push(`/${currentCountry?.code.toLowerCase()}/spare-parts/${part.id}`);
+              }}
+              formatPrice={formatPrice}
+              t={t}
+            />
+          )}
         </div>
 
-        {/* Car Details Modal */}
-        {selectedCar && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="p-6">
-                <div className="flex justify-between items-start mb-6">
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {language === 'ar' && selectedCar.brand.name_ar ? selectedCar.brand.name_ar : selectedCar.brand.name}{' '}
-                    {language === 'ar' && selectedCar.model.name_ar ? selectedCar.model.name_ar : selectedCar.model.name}{' '}
-                    {selectedCar.year}
-                  </h2>
-                  <button
-                    onClick={() => setSelectedCar(null)}
-                    className={getButtonClass('close')}
-                  >
-                    <XMarkIcon className="h-6 w-6" />
-                  </button>
-                </div>
-
-                {/* Car Images */}
-                {selectedCar.images && selectedCar.images.length > 0 && (
-                  <div className="relative h-80 mb-8 rounded-xl overflow-hidden shadow-lg">
-                    <Image
-                      src={selectedCar.images[0].url}
-                      alt={`${selectedCar.brand.name} ${selectedCar.model.name}`}
-                      fill
-                      className="object-cover"
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 75vw, 50vw"
-                    />
-                  </div>
-                )}
-
-                {/* Car Details */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-6">
-                    <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
-                      <ChartBarIcon className="h-5 w-5 text-qatar-maroon" />
-                      {t('car.specifications')}
-                    </h3>
-                    <dl className="space-y-3">
-                      {[
-                        { label: 'car.price', value: `${selectedCar.price.toLocaleString('en-US')} ${t(`common.currency.${selectedCar.country?.currency_code}`)}` },
-                        { label: 'car.mileage', value: `${selectedCar.mileage} km` },
-                        { label: 'car.fuelType', value: selectedCar.fuel_type },
-                        { label: 'car.gearboxType', value: selectedCar.gearbox_type },
-                        { label: 'car.bodyType', value: selectedCar.body_type },
-                        { label: 'car.condition', value: selectedCar.condition }
-                      ].map((detail, index) => (
-                        <div key={index} className="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-600 last:border-0">
-                          <dt className="text-gray-600 dark:text-gray-400">{t(detail.label)}</dt>
-                          <dd className="font-medium text-gray-900 dark:text-white">{detail.value}</dd>
-                        </div>
-                      ))}
-                    </dl>
-                  </div>
-                  <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-6">
-                    <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
-                      <ShoppingBagIcon className="h-5 w-5 text-qatar-maroon" />
-                      {t('car.description')}
-                    </h3>
-                    <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
-                      {language === 'ar' && selectedCar.description_ar
-                        ? selectedCar.description_ar
-                        : selectedCar.description}
-                    </p>
-                  </div>
-                </div>
+        {/* Delete Confirmation Modal */}
+        {showDeleteModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                  {t('myAds.delete.title')}
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setSelectedCar(null);
+                    setSelectedSparePart(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
+                >
+                  <XMarkIcon className="h-6 w-6" />
+                </button>
+              </div>
+              <p className="text-gray-600 dark:text-gray-300 mb-6">
+                {t('myAds.delete.message')}
+              </p>
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setSelectedCar(null);
+                    setSelectedSparePart(null);
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                  disabled={actionLoading}
+                >
+                  {t('common.cancel')}
+                </button>
+                <button
+                  onClick={handleDeleteConfirm}
+                  disabled={actionLoading}
+                  className={`px-4 py-2 text-sm font-medium text-white rounded-md transition-colors ${
+                    actionLoading
+                      ? 'bg-red-400 cursor-not-allowed'
+                      : 'bg-red-600 hover:bg-red-700'
+                  }`}
+                >
+                  {actionLoading ? t('common.deleting') : t('common.delete')}
+                </button>
               </div>
             </div>
           </div>
         )}
-        {/* Edit Modal */}
+
+        {/* Edit Car Modal */}
         {selectedCar && (
           <EditCarModal
             isOpen={isEditModalOpen}
             onClose={() => setIsEditModalOpen(false)}
             car={selectedCar}
             onUpdate={() => {
-              setSelectedCar(null);
+              setIsEditModalOpen(false);
               fetchCars();
             }}
             onEditComplete={handleEditComplete}
