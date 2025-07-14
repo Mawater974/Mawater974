@@ -30,4 +30,13 @@ export interface SparePart {
   dealership_id?: number;
   currency_code?: string;
   favorite_count?: number;
+  user?: {
+    id: string;
+    phone_number: string;
+    email: string;
+    full_name: string;
+    role: string;
+    avatar_url: string;
+    created_at: string;
+  };
 }

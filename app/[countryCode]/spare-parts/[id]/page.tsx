@@ -6,7 +6,7 @@ import { createClient } from '@/utils/supabase/client';
 import { ArrowLeft, Phone, Mail, MessageCircle, AlertCircle, Share2, Flag, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { ChevronLeftIcon, ChevronRightIcon, XMarkIcon } from '@heroicons/react/24/solid';
 import { useCountry } from '@/contexts/CountryContext';
-
+import { useAuth } from '@/contexts/AuthContext';
 // Using native button instead of shadcn/ui Button
 const Button = ({ children, className = '', ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
   <button 
@@ -58,7 +58,7 @@ interface City {
 
 interface UserProfile {
   name: string;
-  phone: string;
+  phone_number: string;
   email: string;
 }
 
@@ -91,6 +91,20 @@ const getNameAr = (item: WithName | null | undefined): string => {
   return typeof item === 'string' ? item : item.name_ar || item.name || '';
 };
 
+interface UserProfile {
+  id: string;
+  full_name: string;
+  email: string;
+  phone_number: string;
+  avatar_url: string | null;
+  created_at: string;
+  role?: string;
+  company_name?: string | null;
+  company_description?: string | null;
+  website?: string | null;
+  phone_verified?: boolean;
+}
+
 interface SparePart {
   id: string;
   title: string;
@@ -119,20 +133,15 @@ interface SparePart {
   model?: WithName;
   category?: WithName & { name_en?: string };
   city?: City | null;
-  user?: {
-    id: string;
-    full_name: string;
-    email: string;
-    phone: string;
-    avatar_url: string | null;
-    created_at: string;
-  };
+  user?: UserProfile;
+  
   images?: Array<{
     id: string;
     url: string;
     is_primary: boolean;
     created_at: string;
   }>;
+  
   country?: {
     id: string;
     name: string;
@@ -140,6 +149,7 @@ interface SparePart {
     flag: string;
     currency_code?: string;
   };
+  
   featured?: boolean;
   is_featured?: boolean;
   
@@ -152,6 +162,7 @@ export default function SparePartDetails() {
   const router = useRouter();
   const { currentLanguage, t } = useLanguage();
   const { currentCountry } = useCountry();
+  const { user } = useAuth();
 
   // State declarations
   const [sparePart, setSparePart] = useState<SparePart | null>(null);
@@ -201,6 +212,12 @@ export default function SparePartDetails() {
       return newIndex;
     });
   }, [sparePart?.images]);
+
+  useEffect(() => {
+    if (user && sparePart) {
+      const isOwner = user.id === sparePart.user_id;
+    }
+  }, [user, sparePart]);
 
   // Handle keyboard navigation for image gallery
   useEffect(() => {
@@ -264,15 +281,7 @@ export default function SparePartDetails() {
         if (!sparePartData) throw new Error('Spare part not found');
 
         // Get related data with proper error handling
-        const [
-          { data: brandData },
-          { data: modelData },
-          { data: categoryData },
-          { data: cityData },
-          { data: userData },
-          { data: profileData },
-          { data: imagesData }
-        ] = await Promise.all([
+        const queries = [
           // Fetch brand with error handling
           (async () => {
             try {
@@ -364,6 +373,7 @@ export default function SparePartDetails() {
             }
           })(),
           
+
           sparePartData.city_id
             ? supabase
                 .from('cities')
@@ -372,19 +382,40 @@ export default function SparePartDetails() {
                 .single<City>()
             : Promise.resolve({ data: null }),
           
-          // Get basic user data
+          // Get user data with profile information
           supabase
             .from('users')
-            .select('id, full_name, created_at')
+            .select(`
+              id,
+              full_name,
+              email,
+              created_at,
+              profiles (
+                phone_number,
+                avatar_url,
+                phone_verified,
+                role,
+                company_name,
+                company_description,
+                website
+              )
+            `)
             .eq('id', sparePartData.user_id)
-            .single<{ id: string; full_name: string; created_at: string }>(),
-          
-          // Get profile data with contact information
-          supabase
-            .from('profiles')
-            .select('email, phone, avatar_url, phone_verified')
-            .eq('id', sparePartData.user_id)
-            .single<{ email: string; phone: string; avatar_url: string | null; phone_verified: boolean }>(),
+            .single<{
+              id: string;
+              full_name: string;
+              email: string;
+              created_at: string;
+              profiles: {
+                phone_number: string;
+                avatar_url: string | null;
+                phone_verified: boolean;
+                role: string;
+                company_name: string | null;
+                company_description: string | null;
+                website: string | null;
+              } | null;
+            }>(),
           
           supabase
             .from('spare_part_images')
@@ -396,7 +427,18 @@ export default function SparePartDetails() {
               is_primary: boolean;
               created_at: string;
             }>>()
-        ]);
+        ];
+
+        const [
+          { data: brandData },
+          { data: modelData },
+          { data: categoryData },
+          { data: cityData },
+          { data: userData },
+          { data: imagesData }
+        ] = await Promise.all(queries);
+
+        const profileData = userData?.profiles;
 
         // Debug log the fetched data
         console.log('Fetched data:', {
@@ -417,14 +459,19 @@ export default function SparePartDetails() {
           model: modelData as WithName,
           category: categoryData as WithName & { name_en?: string },
           city: cityData as City | null,
-          user: {
-            id: userData?.id || '',
-            full_name: userData?.full_name || '',
-            email: profileData?.email || '',
-            phone: profileData?.phone_verified ? profileData.phone : '',
+          user: userData ? {
+            id: userData.id,
+            full_name: userData.full_name || '',
+            email: userData.email || '',
+            phone_number: profileData?.phone_number || '',
             avatar_url: profileData?.avatar_url || null,
-            created_at: userData?.created_at || new Date().toISOString()
-          },
+            created_at: userData.created_at || new Date().toISOString(),
+            role: profileData?.role || 'user',
+            company_name: profileData?.company_name || null,
+            company_description: profileData?.company_description || null,
+            website: profileData?.website || null,
+            phone_verified: profileData?.phone_verified || false
+          } : undefined,
           images: imagesData || [],
           country_id: sparePartData.country_id,
           featured: sparePartData.featured,
@@ -701,15 +748,23 @@ export default function SparePartDetails() {
         </div>
         
         {/* Details */}
-        <div>
-          <div className="flex justify-between items-start">
-            <div>           
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                {currentLanguage === 'ar' && sparePart.name_ar ? sparePart.name_ar : sparePart.title}
-              </h1>
-              
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex justify-between items-center w-full mb-6">
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
+              {currentLanguage === 'ar' && sparePart.name_ar ? sparePart.name_ar : sparePart.title}
+            </h1>
+            <div className="text-2xl md:text-3xl font-bold text-primary">
+              {sparePart.price.toLocaleString()} {t(`${sparePart.currency}`)}
+              {sparePart.is_negotiable && (
+                <div className="text-sm text-muted-foreground text-right">{t('spareParts.isNegotiable')}</div>
+              )}
+            </div>
+          </div>
+          <div>
+            
+            <div>
               {/* Part Details */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
                 
                 
                 {/* Category Box */}
@@ -792,15 +847,6 @@ export default function SparePartDetails() {
                 )}
               </div>
             </div>
-            
-            <div className="text-right">
-              <div className="text-3xl font-bold text-primary">
-                {sparePart.price.toLocaleString()} {t(`${sparePart.currency}`)}
-              </div>
-              {sparePart.is_negotiable && (
-                <div className="text-sm text-muted-foreground">{t('spareParts.isNegotiable')}</div>
-              )}
-            </div>
           </div>
           
           <div className="border-t border-gray-200 my-6"></div>
@@ -818,63 +864,46 @@ export default function SparePartDetails() {
           </div>
           
          
-          
-          <div className="space-y-4">
-            <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3">
-                {t('spareParts.contactInformation')}
-              </h3>
-              <div className="flex items-center">
-                <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 mr-3">
-                  <span className="text-lg">👤</span>
-                </div>
-                <div>
-                  <h4 className="font-medium">{sparePart?.user?.full_name || t('common.seller')}</h4>
-                  <p className="text-sm text-gray-500">
-                    {t('spareParts.memberSince')} {sparePart?.created_at ? new Date(sparePart.created_at).getFullYear() : ''}
-                  </p>
-                </div>
+          {/* Owner Info */}
+          <div className="flex items-center space-x-3 rtl:space-x-reverse py-3 px-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <div className="w-12 h-12 bg-qatar-maroon/10 rounded-full flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-qatar-maroon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
               </div>
-
-              <div className="mt-4 space-y-2">
-                <div className="flex items-center">
-                  <Phone className="h-4 w-4 mr-2 text-gray-500" />
-                  <a href={`tel:${sparePart?.user?.phone || ''}`} className="hover:underline">
-                    {sparePart?.user?.phone || t('common.phoneNotProvided')}
-                  </a>
-                </div>
-                <div className="flex items-center">
-                  <Mail className="h-4 w-4 mr-2 text-gray-500" />
-                  <a href={`mailto:${sparePart?.user?.email || ''}`} className="hover:underline">
-                    {sparePart?.user?.email || t('common.emailNotProvided')}
-                  </a>
-                </div>
+              <div className="flex flex-col">
+                <p className="font-semibold text-gray-900 dark:text-white">{sparePart.user?.full_name}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {sparePart.user?.role === 'dealer' ? t('car.details.dealer') : t('car.details.privateSeller')}
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  {t('car.details.listed')} {formatDate(sparePart.created_at, 'dd/MM/yyyy')}
+                </p>
               </div>
-
-              <button 
-                onClick={handleSendMessage}
-                className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md flex items-center justify-center"
-              >
-                <MessageCircle className="h-4 w-4 mr-2" />
-                {t('common.sendMessage')}
-              </button>
+              <div className="ml-auto">
+                {sparePart.user?.phone_number && (
+                  <a
+                    href={`tel:${sparePart.user.phone_number}`}
+                    className="flex items-center space-x-2 text-qatar-maroon hover:text-qatar-maroon/80"
+                    dir="ltr"
+                  >
+                    <PhoneIcon className="h-5 w-5" />
+                    <span className="font-ltr" style={{ direction: 'ltr', unicodeBidi: 'embed' }}>{sparePart.user?.phone_number.replace(/^(\+\d{1,3})(\d+)/, '$1-$2')}</span>
+                  </a>
+                )}
+              </div>
             </div>
-            
-            <button className="w-full border border-gray-300 rounded-md py-2 px-4 flex items-center justify-center hover:bg-gray-50">
-              <AlertCircle className="h-4 w-4 mr-2" />
-              {t('common.reportListing')}
-            </button>
-          </div>
-        </div>
-      </div>
-      
-      {/* Similar Items */}
-      <div className="mt-16">
-        <h2 className="text-2xl font-bold mb-6">{t('spareParts.similarSpareParts')}</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {/* Similar items would be mapped here */}
-          <div className="text-center py-8 text-muted-foreground">
-            {t('spareParts.similarSparePartsPlaceholder')}
+          
+          
+          {/* Similar Items */}
+          <div className="mt-16">
+            <h2 className="text-2xl font-bold mb-6">{t('spareParts.similarSpareParts')}</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {/* Similar items would be mapped here */}
+              <div className="text-center py-8 text-muted-foreground">
+                {t('spareParts.similarSparePartsPlaceholder')}
+              </div>
+            </div>
           </div>
         </div>
       </div>

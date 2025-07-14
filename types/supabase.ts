@@ -105,6 +105,13 @@ export interface SparePart {
   location?: string;
   location_ar?: string;
   city_id?: number;
+  user?: {
+    id: string;
+    full_name: string;
+    email: string;
+    phone_number: string;
+    role: string;
+  };
 }
 
 export interface Comment {
