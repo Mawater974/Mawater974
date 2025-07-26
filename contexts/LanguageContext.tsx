@@ -1497,6 +1497,7 @@ const translations = {
     'common.status.hidden': 'Hidden',
     'common.status.deleted': 'Deleted',
     'common.status.archived': 'Archived',
+    'common.filters': 'Filters',
    
     'notifications.carSubmitted.title_en': 'Car Ad Submitted',
     'notifications.carSubmitted.message_en': 'Your car ad for {brand} {model} has been submitted and is pending approval. We will notify you once it is reviewed.',
@@ -1537,6 +1538,41 @@ const translations = {
     'notifications.archived.message_en': 'Your {brand} {model} listing has been archived. We will notify you if there are any updates.',
     'notifications.archived.title_ar': 'تم إرشفة إعلان السيارة',
     'notifications.archived.message_ar': 'تم إرشفة إعلان سيارتك ({brand} {model}). سنقوم بإعلامك في حال وجود أي تحديثات.',
+  
+    'notifications.spare_part_approval.title_en': 'Spare Part Approved!',
+    'notifications.spare_part_approval.message_en': 'Your spare part has been approved and is now live on our platform.',
+    'notifications.spare_part_approval.title_ar': 'تم قبول قطعة الغيار',
+    'notifications.spare_part_approval.message_ar': 'تم قبول قطعة الغيار الخاصة بك. الآن قطعة الغيار معروضة على منصتنا.',
+
+    'notifications.spare_part_rejection.title_en': 'Spare Part Rejected!',
+    'notifications.spare_part_rejection.message_en': 'Unfortunately, your spare part has been rejected. We will notify you if there are any updates.',
+    'notifications.spare_part_rejection.title_ar': 'تم رفض قطعة الغيار',
+    'notifications.spare_part_rejection.message_ar': 'نأسف، تم رفض قطعة الغيار الخاصة بك. سنقوم بإعلامك في حال وجود أي تحديثات.',
+
+    'notifications.spare_part_sold.title_en': 'Spare Part Sold!',
+    'notifications.spare_part_sold.message_en': 'Congratulations! Your spare part has been sold.',
+    'notifications.spare_part_sold.title_ar': 'تم بيع قطعة الغيار',
+    'notifications.spare_part_sold.message_ar': 'مبروك! تم بيع قطعة الغيار الخاصة بك.',
+
+    'notifications.spare_part_expiration.title_en': 'Spare Part Expiration!',
+    'notifications.spare_part_expiration.message_en': 'Your spare part has expired. We will notify you if there are any updates.',
+    'notifications.spare_part_expiration.title_ar': 'انتهت صلاحية قطعة الغيار',
+    'notifications.spare_part_expiration.message_ar': 'انتهت صلاحية قطعة الغيار الخاصة بك. سنقوم بإعلامك في حال وجود أي تحديثات.',
+
+    'notifications.spare_part_hidden.title_en': 'Spare Part Hidden!',
+    'notifications.spare_part_hidden.message_en': 'Your spare part has been hidden. We will notify you if there are any updates.',
+    'notifications.spare_part_hidden.title_ar': 'تم إخفاء قطعة الغيار',
+    'notifications.spare_part_hidden.message_ar': 'تم إخفاء قطعة الغيار الخاصة بك. سنقوم بإعلامك في حال وجود أي تحديثات.',
+
+    'notifications.spare_part_deleted.title_en': 'Spare Part Deleted!',
+    'notifications.spare_part_deleted.message_en': 'Your spare part has been deleted. We will notify you if there are any updates.',
+    'notifications.spare_part_deleted.title_ar': 'تم حذف قطعة الغيار',
+    'notifications.spare_part_deleted.message_ar': 'تم حذف قطعة الغيار الخاصة بك. سنقوم بإعلامك في حال وجود أي تحديثات.',
+
+    'notifications.spare_part_archived.title_en': 'Spare Part Archived!',
+    'notifications.spare_part_archived.message_en': 'Your spare part has been archived. We will notify you if there are any updates.',
+    'notifications.spare_part_archived.title_ar': 'تم إرشفة قطعة الغيار',
+    'notifications.spare_part_archived.message_ar': 'تم إرشفة قطعة الغيار الخاصة بك. سنقوم بإعلامك في حال وجود أي تحديثات.',
   
   },
   ar: {
@@ -2905,6 +2941,8 @@ const translations = {
     'common.status.deleted': 'محذوف',
     'common.status.archived': 'مؤرشف',
     'common.status.all': 'الكل',
+    'common.filters': 'فلتر',
+    
     'notifications.carSubmitted.title_en': 'Car Ad Submitted',
     'notifications.carSubmitted.message_en': 'Your car ad for {brand} {model} has been submitted and is pending approval. We will notify you once it is reviewed.',
     'notifications.carSubmitted.title_ar': 'تم رفع إعلان السيارة',
@@ -2944,6 +2982,41 @@ const translations = {
     'notifications.archived.message_en': 'Your {brand} {model} listing has been archived. We will notify you if there are any updates.',
     'notifications.archived.title_ar': 'تم إرشفة إعلان السيارة',
     'notifications.archived.message_ar': 'تم إرشفة إعلان سيارتك ({brand} {model}). سنقوم بإعلامك في حال وجود أي تحديثات.',
+    
+    'notifications.spare_part_approval.title_en': 'Spare Part Approved!',
+    'notifications.spare_part_approval.message_en': 'Your spare part has been approved and is now live on our platform.',
+    'notifications.spare_part_approval.title_ar': 'تم قبول قطعة الغيار',
+    'notifications.spare_part_approval.message_ar': 'تم قبول قطعة الغيار الخاصة بك. الآن قطعة الغيار معروضة على منصتنا.',
+
+    'notifications.spare_part_rejection.title_en': 'Spare Part Rejected!',
+    'notifications.spare_part_rejection.message_en': 'Unfortunately, your spare part has been rejected. We will notify you if there are any updates.',
+    'notifications.spare_part_rejection.title_ar': 'تم رفض قطعة الغيار',
+    'notifications.spare_part_rejection.message_ar': 'نأسف، تم رفض قطعة الغيار الخاصة بك. سنقوم بإعلامك في حال وجود أي تحديثات.',
+
+    'notifications.spare_part_sold.title_en': 'Spare Part Sold!',
+    'notifications.spare_part_sold.message_en': 'Congratulations! Your spare part has been sold.',
+    'notifications.spare_part_sold.title_ar': 'تم بيع قطعة الغيار',
+    'notifications.spare_part_sold.message_ar': 'مبروك! تم بيع قطعة الغيار الخاصة بك.',
+
+    'notifications.spare_part_expiration.title_en': 'Spare Part Expiration!',
+    'notifications.spare_part_expiration.message_en': 'Your spare part has expired. We will notify you if there are any updates.',
+    'notifications.spare_part_expiration.title_ar': 'انتهت صلاحية قطعة الغيار',
+    'notifications.spare_part_expiration.message_ar': 'انتهت صلاحية قطعة الغيار الخاصة بك. سنقوم بإعلامك في حال وجود أي تحديثات.',
+
+    'notifications.spare_part_hidden.title_en': 'Spare Part Hidden!',
+    'notifications.spare_part_hidden.message_en': 'Your spare part has been hidden. We will notify you if there are any updates.',
+    'notifications.spare_part_hidden.title_ar': 'تم إخفاء قطعة الغيار',
+    'notifications.spare_part_hidden.message_ar': 'تم إخفاء قطعة الغيار الخاصة بك. سنقوم بإعلامك في حال وجود أي تحديثات.',
+
+    'notifications.spare_part_deleted.title_en': 'Spare Part Deleted!',
+    'notifications.spare_part_deleted.message_en': 'Your spare part has been deleted. We will notify you if there are any updates.',
+    'notifications.spare_part_deleted.title_ar': 'تم حذف قطعة الغيار',
+    'notifications.spare_part_deleted.message_ar': 'تم حذف قطعة الغيار الخاصة بك. سنقوم بإعلامك في حال وجود أي تحديثات.',
+
+    'notifications.spare_part_archived.title_en': 'Spare Part Archived!',
+    'notifications.spare_part_archived.message_en': 'Your spare part has been archived. We will notify you if there are any updates.',
+    'notifications.spare_part_archived.title_ar': 'تم إرشفة قطعة الغيار',
+    'notifications.spare_part_archived.message_ar': 'تم إرشفة قطعة الغيار الخاصة بك. سنقوم بإعلامك في حال وجود أي تحديثات.',
   
   },
 };

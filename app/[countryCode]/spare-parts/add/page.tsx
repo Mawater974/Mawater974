@@ -443,6 +443,23 @@ export default function AddSparePart() {
         }
       }
       
+      // After the successful insert of the spare part
+      const notificationType = `spare_part_submitted`;
+      const { data: notificationData, error: notificationError } = await supabase
+        .from('notifications')
+        .insert([{
+          user_id: user.id,
+          type: notificationType,
+          title_en: 'Spare Part Ad Submitted',
+          title_ar: 'تم رفع إعلان قطعة الغيار',
+          message_en: `Your spare part ad for "${formData.title}" has been submitted and is pending approval. We will notify you once it is reviewed.`,
+          message_ar: `إعلان قطعة الغيار "${formData.title}" تم نشره بنجاح وتم قبوله. سيتم إشعارك بمجرد مراجعته`,
+          is_read: false,
+          created_at: new Date().toISOString()
+        }])
+        .select('*')
+        .single();
+      
       // Reset form
       setFormData(initialFormData);
       setPreviewUrls([]);

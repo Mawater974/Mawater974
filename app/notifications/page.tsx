@@ -33,7 +33,8 @@ export default function NotificationsPage() {
   };
 
   const getMessage = (notification: Notification) => {
-    return currentLanguage === 'ar' ? notification.message_ar : notification.message_en;
+    const message = currentLanguage === 'ar' ? notification.message_ar : notification.message_en;
+    return message || ''; // Return empty string if message is undefined or null
   };
 
   const getTitle = (notification: Notification) => {
@@ -322,7 +323,7 @@ export default function NotificationsPage() {
                             className={`text-gray-600 dark:text-gray-300 text-sm sm:text-base ${expandedMessage === notification.id ? '' : 'line-clamp-2'}`}
                             dangerouslySetInnerHTML={{ __html: getMessage(notification) }}
                           />
-                          {getMessage(notification).length > 150 && (
+                          {getMessage(notification)?.length > 150 && (
                             <button
                               onClick={() => toggleExpand(notification.id)}
                               className="text-qatar-maroon hover:text-qatar-maroon/80 text-sm mt-2 py-1"
