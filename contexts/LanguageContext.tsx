@@ -1498,8 +1498,12 @@ const translations = {
     'common.status.deleted': 'Deleted',
     'common.status.archived': 'Archived',
     'common.filters': 'Filters',
-   
-    'notifications.carSubmitted.title_en': 'Car Ad Submitted',
+   'spareParts.add.messages.submitted': 'Spare part submitted successfully',
+   'spareParts.add.messages.review': 'Your spare part Ad is pending approval. We will notify you once it is reviewed.',
+   'spareParts.add.messages.viewListings': 'View Listings',
+   'spareParts.add.messages.returnHome': 'Return Home',
+
+   'notifications.carSubmitted.title_en': 'Car Ad Submitted',
     'notifications.carSubmitted.message_en': 'Your car ad for {brand} {model} has been submitted and is pending approval. We will notify you once it is reviewed.',
     'notifications.carSubmitted.title_ar': 'تم رفع إعلان السيارة',
     'notifications.carSubmitted.message_ar': 'إعلان السيارة {brand} {model} تم نشره بنجاح وتم قبوله. سيتم إشعارك بمجرد مراجعته ',
@@ -2942,7 +2946,12 @@ const translations = {
     'common.status.archived': 'مؤرشف',
     'common.status.all': 'الكل',
     'common.filters': 'فلتر',
+    'spareParts.add.messages.submitted': 'تم رفع اعلان قطعة الغيار بنجاح',
+    'spareParts.add.messages.review': 'اعلان قطعة الغيار قيد المراجعة, سيتم إشعارك بمجرد مراجعته',
+    'spareParts.add.messages.viewListings': 'عرض الإعلانات',
+    'spareParts.add.messages.returnHome': 'عودة إلى الصفحة الرئيسية',
     
+
     'notifications.carSubmitted.title_en': 'Car Ad Submitted',
     'notifications.carSubmitted.message_en': 'Your car ad for {brand} {model} has been submitted and is pending approval. We will notify you once it is reviewed.',
     'notifications.carSubmitted.title_ar': 'تم رفع إعلان السيارة',
