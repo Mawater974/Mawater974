@@ -13,10 +13,11 @@ export default function AdminNavbar() {
   const [isOpen, setIsOpen] = useState(false);
 
   const navItems = [
-    { name: 'Dashboard', href: '/admin' },
+    { name: 'Admin Dashboard', href: '/admin' },
     { name: 'Analytics', href: '/admin/analytics' },
     { name: 'Country Analytics', href: '/admin/country-analytics' },
     { name: 'Cars', href: '/admin/cars' },
+    { name: 'Spare Parts', href: '/admin/spare-parts' },
     { name: 'Dealerships', href: '/admin/dealership-requests' },
     { name: 'Users', href: '/admin/users' },
     { name: 'Database', href: '/admin/database' },
@@ -40,7 +41,7 @@ export default function AdminNavbar() {
 
   return (
     <div className="bg-white dark:bg-gray-800 shadow-md mb-4">
-      <div className="max-w-7xl mx-auto px-4">
+      <div className="mx-auto px-2">
         <div className="flex justify-between h-16">
           <div className="flex">
             <div className="flex-shrink-0 flex items-center">

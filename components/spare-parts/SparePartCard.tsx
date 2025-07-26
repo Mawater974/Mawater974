@@ -11,18 +11,13 @@ import { useCountry } from '@/contexts/CountryContext';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabaseClient';
 import ImageCarousel from '../ImageCarousel';
 
-type SparePart = {
-  id: string;
-  title: string;
-  description: string | null;
-  price: number;
-  currency: string;
-  part_type: 'original' | 'aftermarket';
-  status: string;
-  created_at: string;
-  is_featured?: boolean;
+import { SparePart as SparePartType } from '@/types/spare-parts';
+
+type SparePart = Omit<SparePartType, 'images' | 'id' | 'user'> & {
+  id: string | number;
   brand: {
     id: number;
     name: string;
@@ -51,22 +46,16 @@ type SparePart = {
     currency_code: string;
   } | null;
   images: Array<{
-    id: string;
     url: string;
-    is_primary: boolean;
+    is_main?: boolean;
   }>;
   is_favorite?: boolean;
-  user?: {
-    id: string;
-    full_name: string | null;
-    role?: string;
-  } | null;
 };
 
 interface SparePartCardProps {
   part: SparePart;
   countryCode: string;
-  onToggleFavorite?: ((...args: any[]) => void) | ((e: React.MouseEvent) => void);
+  onToggleFavorite?: (id: string | number) => void;
   isFavorite?: boolean;
   featured?: boolean;
 }
@@ -84,9 +73,7 @@ const SparePartCard: React.FC<SparePartCardProps> = ({
   const { t, language, currentLanguage } = useLanguage();
 
   const [isLoading, setIsLoading] = React.useState(false);
-  
-  // Use the prop value if provided, otherwise fall back to part.is_favorite
-  const isFavorited = typeof isFavorite !== 'undefined' ? isFavorite : part.is_favorite || false;
+  const [isFavorited, setIsFavorited] = React.useState(isFavorite);
 
   const handleFavoriteClick = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -103,46 +90,27 @@ const SparePartCard: React.FC<SparePartCardProps> = ({
     
     try {
       if (onToggleFavorite) {
-        // Try different calling patterns based on the expected parameters
-        try {
-          // First try with the event object as the first parameter (matching the spare parts page)
-          await (onToggleFavorite as (id: string, e: React.MouseEvent) => void)(part.id, e);
-        } catch (err) {
-          // If that fails, try with the event object only (matching the favorites page)
-          try {
-            await (onToggleFavorite as (e: React.MouseEvent) => void)(e);
-          } catch (err2) {
-            // If that also fails, try with just the ID (fallback)
-            await (onToggleFavorite as (id: string) => void)(part.id);
-          }
-        }
+        onToggleFavorite(part.id as string);
       } else {
-        // Fallback: Direct API call if no parent handler
-        const { error } = await supabase
-          .from('favorites')
-          .upsert(
-            { 
-              user_id: user.id, 
-              spare_part_id: part.id,
-              created_at: new Date().toISOString()
-            },
-            { onConflict: 'user_id,spare_part_id' }
-          )
-          .select();
-          
+        const { error } = await supabase.rpc('toggle_favorite', {
+          p_item_id: part.id.toString(),
+          p_item_type: 'spare_part',
+          p_user_id: user.id,
+          p_action: newFavoriteState ? 'add' : 'remove'
+        });
+
         if (error) throw error;
       }
-      
-      // The parent component is responsible for updating the favorite state
+
+      setIsFavorited(newFavoriteState);
       toast.success(
         newFavoriteState 
-          ? t('spareParts.favorite.added') || 'Added to favorites'
-          : t('spareParts.favorite.removed') || 'Removed from favorites'
+          ? t('favorites.added', { item: part.title })
+          : t('favorites.removed', { item: part.title })
       );
     } catch (error) {
-      console.error('Error updating favorite:', error);
-      toast.error(t('common.errorOccurred') || 'An error occurred');
-      // The parent component is responsible for handling errors
+      console.error('Error toggling favorite:', error);
+      toast.error(t('common.error'));
     } finally {
       setIsLoading(false);
     }
@@ -162,7 +130,7 @@ const SparePartCard: React.FC<SparePartCardProps> = ({
             {t('common.featured')}
           </div>
         )}
-        {part.user?.role === 'dealer' && (
+        {part.user_id && (
           <div className="absolute top-2 right-2 z-20 px-2 py-1 bg-blue-500/90 text-white text-xs font-medium rounded-full">
             {t('car.dealer.badge') || 'Dealer'}
           </div>
@@ -171,7 +139,10 @@ const SparePartCard: React.FC<SparePartCardProps> = ({
         <div className="relative aspect-[16/9]">
           {part.images && part.images.length > 0 ? (
             <ImageCarousel
-              images={part.images}
+              images={part.images.map((image) => ({
+                ...image,
+                is_main: image.is_main || false
+              }))}
               alt={part.title}
               fallbackImage="/placeholder-spare-part.jpg"
             />
@@ -233,16 +204,18 @@ const SparePartCard: React.FC<SparePartCardProps> = ({
           <div className="flex flex-col gap-2">
             <div>
               <span className="text-2xl font-semibold text-qatar-maroon">
-                {formatPrice(part.price, part.currency || part.country?.currency_code)}
+                {formatPrice(part.price, part.currency_code || part.country?.currency_code)}
               </span>
             </div>
 
             {part.category && part.category.name_en && (
               <div className="text-sm text-gray-500 dark:text-gray-400">
                 {language === 'ar' ? part.category.name_ar : part.category.name_en}
-                {part.part_type && (
+                {part.condition && (
                   <span className="ml-2">
-                • {part.part_type === 'original' ? t('spareParts.partType.original') : t('spareParts.partType.aftermarket')}
+                    {t(`spareParts.condition.${part.condition}`, { 
+                      defaultValue: part.condition.charAt(0).toUpperCase() + part.condition.slice(1) 
+                    })}
                   </span>
                 )}
               </div>
