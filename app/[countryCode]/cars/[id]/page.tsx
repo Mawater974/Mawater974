@@ -245,6 +245,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
             brand:brands!inner(id, name, name_ar),
             model:models!inner(id, name, name_ar),
             user:profiles!inner(full_name, email, phone_number),
+            country:countries!inner(id, currency_code, code, name, name_ar),
             images:car_images!car_images_car_id_fkey(url)
           `)
           .eq('brand_id', car.brand_id)
@@ -266,6 +267,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
             brand:brands!inner(id, name, name_ar),
             model:models!inner(id, name, name_ar),
             user:profiles!inner(full_name, email, phone_number),
+            country:countries!inner(id, currency_code, code, name, name_ar),
             images:car_images(url)
           `)
           .eq('brand_id', car.brand_id)
@@ -286,7 +288,8 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
             images: carData.images?.map(img => img.url) || [],
             brand: carData.brand,
             model: carData.model,
-            user: carData.user
+            user: carData.user,
+            country: carData.country
           }));
           setFeaturedSimilarCars(processedFeaturedCars);
         }
@@ -297,7 +300,8 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
             images: carData.images?.map(img => img.url) || [],
             brand: carData.brand,
             model: carData.model,
-            user: carData.user
+            user: carData.user,
+            country: carData.country
           }));
           setSimilarCars(processedNormalCars);
         }
@@ -435,7 +439,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
           .select('id')
           .eq('user_id', user.id)
           .eq('car_id', car.id)
-          .single();
+          .maybeSingle();
 
         if (error) {
           console.error('Error checking favorite status:', error);
@@ -453,35 +457,29 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
 
   const handleFavoriteClick = async () => {
     if (!user || !car || isUpdatingFavorite) return;
-
+  
+    const wasFavorite = isFavorite;
     setIsUpdatingFavorite(true);
+    setIsFavorite(!wasFavorite); // Optimistic update
+  
     try {
-      if (isFavorite) {
-        // Remove from favorites
+      if (wasFavorite) {
         const { error } = await supabase
           .from('favorites')
           .delete()
           .eq('user_id', user.id)
           .eq('car_id', car.id);
-
         if (error) throw error;
-        setIsFavorite(false);
       } else {
-        // Add to favorites
         const { error } = await supabase
           .from('favorites')
-          .insert([
-            {
-              user_id: user.id,
-              car_id: car.id
-            }
-          ]);
-
+          .insert([{ user_id: user.id, car_id: car.id }]);
         if (error) throw error;
-        setIsFavorite(true);
       }
     } catch (error) {
       console.error('Error updating favorite:', error);
+      setIsFavorite(wasFavorite); // Revert on error
+      // Consider adding a toast notification here
     } finally {
       setIsUpdatingFavorite(false);
     }
@@ -641,12 +639,15 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
 
   const handleSaveEdit = async () => {
     if (!editingComment || !editContent.trim()) return;
-
+  
     setIsSubmittingEdit(true);
     try {
       const { data: updatedComment, error } = await supabase
         .from('comments')
-        .update({ content: editContent.trim() })
+        .update({ 
+          content: editContent.trim(),
+          updated_at: new Date().toISOString()  // Update comment's updated_at
+        })
         .eq('id', editingComment.id)
         .select(`
           *,
@@ -658,9 +659,21 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
           )
         `)
         .single();
-
+  
       if (error) throw error;
-
+  
+      // Update car's updated_at
+      const { error: carError } = await supabase
+        .from('cars')
+        .update({ 
+          updated_at: updatedComment.updated_at  // Use the same timestamp as the comment
+        })
+        .eq('id', car?.id);
+  
+      if (carError) {
+        console.error('Error updating car timestamp:', carError);
+      }
+  
       // Update comments state
       if (editingComment.parent_id) {
         setComments(prevComments => 
@@ -685,7 +698,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
           )
         );
       }
-
+  
       setEditingComment(null);
       setEditContent('');
       toast.success(t('car.details.commentUpdated'));
@@ -695,7 +708,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
       setIsSubmittingEdit(false);
     }
   };
-
+  
   const handleDeleteComment = async (comment: CommentWithReplies) => {
     if (!window.confirm(t('car.details.deleteConfirm'))) return;
 

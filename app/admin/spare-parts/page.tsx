@@ -41,7 +41,6 @@ type SparePart = {
   description: string;
   description_ar: string | null;
   price: number;
-  condition: 'new' | 'used' | 'refurbished';
   part_type: 'original' | 'aftermarket';
   status: 'pending' | 'approved' | 'rejected';
   created_at: string;
@@ -67,7 +66,6 @@ type DatabaseSparePart = {
   description: string;
   description_ar?: string | null;
   price: number;
-  condition: 'new' | 'used' | 'refurbished';
   part_type?: 'original' | 'aftermarket';
   status: 'pending' | 'approved' | 'rejected';
   created_at: string;
@@ -89,10 +87,18 @@ export default function AdminSparePartsPage() {
     try {
       setLoading(true);
       
-      // First, get the spare parts with basic info
+      // Fetch spare parts with related data in a single query
       const { data: sparePartsData, error: partsError } = await supabase
         .from('spare_parts')
-        .select('*')
+        .select(`
+          *,
+          brands:brands(id, name),
+          models:car_models(id, name),
+          categories:categories(id, name),
+          cities:cities(id, name),
+          profiles:profiles(id, email, phone),
+          spare_part_images:spare_part_images(spare_part_id, url, is_primary)
+        `)
         .order('created_at', { ascending: false });
 
       if (partsError) throw partsError;
@@ -100,23 +106,6 @@ export default function AdminSparePartsPage() {
         setSpareParts([]);
         return;
       }
-
-      // Get related data in parallel
-      const [
-        { data: brands },
-        { data: models },
-        { data: categories },
-        { data: cities },
-        { data: profiles },
-        { data: images }
-      ] = await Promise.all([
-        supabase.from('brands').select('id, name'),
-        supabase.from('car_models').select('id, name'),
-        supabase.from('categories').select('id, name'),
-        supabase.from('cities').select('id, name'),
-        supabase.from('profiles').select('id, email, phone'),
-        supabase.from('spare_part_images').select('spare_part_id, url, is_primary')
-      ]);
 
       // Type assertions for the fetched data
       const typedBrands = (brands || []) as Brand[];
@@ -127,30 +116,23 @@ export default function AdminSparePartsPage() {
       const typedImages = (images || []) as SparePartImage[];
       const typedSpareParts = sparePartsData as DatabaseSparePart[];
 
-      // Map the data together with proper types
-      const formattedData: SparePart[] = typedSpareParts.map(part => {
-        // Ensure all required fields have default values
-        const sparePart: SparePart = {
-          ...part,
-          title_ar: part.title_ar || null,
-          description_ar: part.description_ar || null,
-          part_type: part.part_type || 'original',
-          brand_name: typedBrands.find(b => b.id === part.brand_id)?.name || null,
-          model_name: typedModels.find(m => m.id === part.model_id)?.name || null,
-          category_name: typedCategories.find(c => c.id === part.category_id)?.name || null,
-          city_name: typedCities.find(c => c.id === part.city_id)?.name || null,
-          user_email: typedProfiles.find(p => p.id === part.user_id)?.email || null,
-          user_phone: typedProfiles.find(p => p.id === part.user_id)?.phone || null,
-          images: typedImages
-            .filter(img => img.spare_part_id === part.id)
-            .map(img => ({
-              url: img.url,
-              is_primary: img.is_primary
-            })) || []
-        };
-        
-        return sparePart;
-      });
+      // Map the data with proper types
+      const formattedData: SparePart[] = sparePartsData.map(part => ({
+        ...part,
+        title_ar: part.title_ar || null,
+        description_ar: part.description_ar || null,
+        part_type: part.part_type || 'original',
+        brand_name: part.brands?.name || null,
+        model_name: part.models?.name || null,
+        category_name: part.categories?.name || null,
+        city_name: part.cities?.name || null,
+        user_email: part.profiles?.email || null,
+        user_phone: part.profiles?.phone || null,
+        images: part.spare_part_images?.map(img => ({
+          url: img.url,
+          is_primary: img.is_primary
+        })) || []
+      }));
 
       setSpareParts(formattedData);
     } catch (error) {
@@ -218,20 +200,6 @@ export default function AdminSparePartsPage() {
     }
   };
 
-  const getConditionBadge = (condition: string) => {
-    const baseStyles = 'px-2 py-1 text-xs font-medium rounded';
-    
-    switch (condition) {
-      case 'new':
-        return <span className={`${baseStyles} bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 border border-blue-200 dark:border-blue-800`}>New</span>;
-      case 'used':
-        return <span className={`${baseStyles} bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200`}>Used</span>;
-      case 'refurbished':
-        return <span className={`${baseStyles} bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200`}>Refurbished</span>;
-      default:
-        return <span className={`${baseStyles} bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300`}>{condition}</span>;
-    }
-  };
 
   if (loading) {
     return (
@@ -242,7 +210,7 @@ export default function AdminSparePartsPage() {
   }
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Spare Parts Management</h1>
@@ -274,7 +242,6 @@ export default function AdminSparePartsPage() {
                 <TableHead>Category</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Price</TableHead>
-                <TableHead>Condition</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Posted</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -316,8 +283,7 @@ export default function AdminSparePartsPage() {
                   </TableCell>
                   <TableCell>{part.category_name || 'N/A'}</TableCell>
                   <TableCell>{getPartTypeBadge(part.part_type || 'original')}</TableCell>
-                  <TableCell>${(part.price || 0).toLocaleString()}</TableCell>
-                  <TableCell>{getConditionBadge(part.condition)}</TableCell>
+                  <TableCell>{(part.price || 0).toLocaleString()} {part.currency}</TableCell>
                   <TableCell>{getStatusBadge(part.status)}</TableCell>
                   <TableCell>
                     {format(new Date(part.created_at), 'MMM d, yyyy')}

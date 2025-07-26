@@ -1106,8 +1106,10 @@ export default function AdminCarsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
               {cars.map((car) => (
                 <div
+
                   key={car.id}
                   className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden border border-gray-200 dark:border-gray-700 hover:border-qatar-maroon dark:hover:border-qatar-maroon transition-colors duration-200"
+
                 >
                   {/* Car Image */}
                   <div className="relative aspect-[16/9] overflow-hidden">

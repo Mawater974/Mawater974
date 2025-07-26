@@ -61,6 +61,7 @@ export default function SpareParts() {
   const [spareParts, setSpareParts] = useState<SparePart[]>([]);
   const [categories, setCategories] = useState<Array<{id: number, name_en: string, name_ar: string}>>([]);
   const [brands, setBrands] = useState<Array<{id: number, name: string, name_ar: string | null}>>([]);
+  const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
     search: '',
     category: '',
@@ -104,103 +105,13 @@ export default function SpareParts() {
   const fetchSpareParts = async () => {
     try {
       setLoading(true);
-      
-      // First, fetch the spare parts
-      let query = supabase
-        .from('spare_parts')
-        .select(`
-          *,
-          is_featured,
-          brand:brands(id, name, name_ar),
-          model:models(id, name, name_ar),
-          category:spare_part_categories(id, name_en, name_ar),
-          city:cities(id, name, name_ar),
-          images:spare_part_images(id, url, is_primary),
-          country_code,
-          user_id
-        `)
-        .eq('status', 'approved');
-      
-      // Apply filters
-      if (filters.search) {
-        query = query.ilike('title', `%${filters.search}%`);
-      }
-      
-      if (filters.category) {
-        query = query.eq('category_id', filters.category);
-      }
-      
-      if (filters.brand) {
-        query = query.eq('brand_id', filters.brand);
-      }
-      
-      if (filters.condition) {
-        query = query.eq('condition', filters.condition);
-      }
-      
-      if (filters.minPrice) {
-        query = query.gte('price', filters.minPrice);
-      }
-      
-      if (filters.maxPrice) {
-        query = query.lte('price', filters.maxPrice);
-      }
-      
-      // Apply sorting - Featured first, then by selected sort option
-      if (filters.sortBy === 'price_low') {
-        query = query
-          .order('is_featured', { ascending: false })
-          .order('price', { ascending: true });
-      } else if (filters.sortBy === 'price_high') {
-        query = query
-          .order('is_featured', { ascending: false })
-          .order('price', { ascending: false });
-      } else {
-        // Default sort: featured first, then by newest
-        query = query
-          .order('is_featured', { ascending: false })
-          .order('created_at', { ascending: false });
-      }
-      
-      // Filter by country
-      if (currentCountry?.code) {
-        query = query.eq('country_code', currentCountry.code);
-      }
-      
-      const { data: sparePartsData, error } = await query;
+      const { data, error } = await buildQuery(filters);
       
       if (error) throw error;
-      if (!sparePartsData) return;
+      if (!data) return;
       
-      // Get unique user IDs from spare parts
-      const userIds = Array.from(new Set(sparePartsData.map(part => part.user_id)));
-      
-      // Fetch user data for these IDs if we have any
-      let usersMap = new Map();
-      if (userIds.length > 0) {
-        const { data: usersData } = await supabase
-          .from('profiles')
-          .select('id, full_name, role')
-          .in('id', userIds);
-        
-        // Create a map of user ID to user data
-        if (usersData) {
-          usersMap = new Map(usersData.map(user => [user.id, user]));
-        }
-      }
-      
-      // Combine spare parts with user data
-      const data = sparePartsData.map(part => {
-        const user = usersMap.get(part.user_id) || null;
-        return {
-          ...part,
-          user: user ? {
-            id: user.id,
-            full_name: user.full_name,
-            role: user.role
-          } : null
-        };
-      });
+      // Process the data (combine with user data, etc.)
+      const processedData = await processSparePartsData(data);
       
       if (error) throw error;
       
@@ -350,21 +261,117 @@ export default function SpareParts() {
     }));
   };
   
+  const fetchSparePartsWithFilters = async (customFilters = filters) => {
+    // This is a helper function to fetch with custom filters
+    const query = buildQuery(customFilters);
+    const { data, error } = await query;
+    
+    if (error) {
+      console.error('Error fetching spare parts:', error);
+      toast.error(t('common.errorFetchingData'));
+      return;
+    }
+    
+    // Process the data and update state
+    const processedData = await processSparePartsData(data);
+    setSpareParts(processedData);
+    setLoading(false);
+  };
+
+  const buildQuery = (filters: any) => {
+    let query = supabase
+      .from('spare_parts')
+      .select(`
+        *,
+        is_featured,
+        brand:brands(id, name, name_ar),
+        model:models(id, name, name_ar),
+        category:spare_part_categories(id, name_en, name_ar),
+        city:cities(id, name, name_ar),
+        images:spare_part_images(id, url, is_primary),
+        country_code,
+        user_id
+      `)
+      .eq('status', 'approved');
+    
+    // Apply filters
+    if (filters.search) query = query.ilike('title', `%${filters.search}%`);
+    if (filters.category) query = query.eq('category_id', filters.category);
+    if (filters.brand) query = query.eq('brand_id', filters.brand);
+    if (filters.condition) query = query.eq('condition', filters.condition);
+    if (filters.minPrice) query = query.gte('price', filters.minPrice);
+    if (filters.maxPrice) query = query.lte('price', filters.maxPrice);
+    
+    // Apply sorting
+    if (filters.sortBy === 'price_low') {
+      query = query.order('is_featured', { ascending: false }).order('price', { ascending: true });
+    } else if (filters.sortBy === 'price_high') {
+      query = query.order('is_featured', { ascending: false }).order('price', { ascending: false });
+    } else {
+      query = query.order('is_featured', { ascending: false }).order('created_at', { ascending: false });
+    }
+    
+    // Filter by country
+    if (currentCountry?.code) {
+      query = query.eq('country_code', currentCountry.code);
+    }
+    
+    return query;
+  };
+  
+  const processSparePartsData = async (data: any[]) => {
+    if (!data) return [];
+    
+    // Get unique user IDs from spare parts
+    const userIds = Array.from(new Set(data.map(part => part.user_id)));
+    
+    // Fetch user data for these IDs if we have any
+    let usersMap = new Map();
+    if (userIds.length > 0) {
+      const { data: usersData } = await supabase
+        .from('profiles')
+        .select('id, full_name, role')
+        .in('id', userIds);
+      
+      if (usersData) {
+        usersMap = new Map(usersData.map(user => [user.id, user]));
+      }
+    }
+    
+    // Combine spare parts with user data
+    return data.map(part => ({
+      ...part,
+      user: usersMap.get(part.user_id) || null,
+      is_favorite: false // Will be updated in the main fetch
+    }));
+  };
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
+    // Close filters on mobile after search
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      setShowFilters(false);
+    }
     fetchSpareParts();
   };
   
   const handleResetFilters = () => {
-    setFilters({
+    const resetFilters = {
       search: '',
       category: '',
       brand: '',
-      condition: '',
+      condition: '' as '' | 'new' | 'used' | 'refurbished',
       minPrice: '',
       maxPrice: '',
-      sortBy: 'newest'
-    });
+      sortBy: 'newest' as 'newest' | 'price_low' | 'price_high'
+    };
+    setFilters(resetFilters);
+    // Close filters on mobile after reset
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      setShowFilters(false);
+    }
+    // Trigger search with reset filters
+    fetchSparePartsWithFilters(resetFilters);
   };
   
   const formatDate = (dateString: string) => {
@@ -404,8 +411,31 @@ export default function SpareParts() {
           </Link>
         </div>
         
+        {/* Search and Filters Toggle Button - Mobile Only */}
+        <div className="md:hidden mb-4">
+          <button
+            type="button"
+            onClick={() => setShowFilters(!showFilters)}
+            className="w-full flex items-center justify-between px-4 py-3 bg-qatar-maroon text-white rounded-lg"
+          >
+            <span>{t('common.filters')}</span>
+            <svg
+              className={`h-5 w-5 transform transition-transform ${showFilters ? 'rotate-180' : ''}`}
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fillRule="evenodd"
+                d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </button>
+        </div>
+
         {/* Search and Filters Section */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-8">
+        <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-8 transition-all duration-300 ease-in-out ${showFilters ? 'block' : 'hidden md:block'}`}>
           <form onSubmit={handleSearch}>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <div>
@@ -551,7 +581,18 @@ export default function SpareParts() {
               </div>
             </div>
             
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6">
+            <div className="flex flex-col-reverse sm:flex-row justify-between items-center gap-4 mt-6">
+              <div className="w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={handleResetFilters}
+                  className="w-full text-gray-700 dark:text-gray-300 px-6 py-2.5 border border-gray-300 dark:border-gray-600 
+                            rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  {t('common.resetFilters')}
+                </button>
+              </div>
+              
               <button
                 type="submit"
                 className="w-full sm:w-auto bg-qatar-maroon text-white px-6 py-2.5 rounded-lg hover:bg-qatar-maroon/90 
@@ -561,15 +602,6 @@ export default function SpareParts() {
                   <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
                 </svg>
                 {t('common.search')}
-              </button>
-              
-              <button
-                type="button"
-                onClick={handleResetFilters}
-                className="w-full sm:w-auto text-gray-700 dark:text-gray-300 px-4 py-2.5 border border-gray-300 dark:border-gray-600 
-                          rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-              >
-                {t('common.resetFilters')}
               </button>
             </div>
           </form>

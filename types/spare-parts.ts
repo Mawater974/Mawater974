@@ -9,11 +9,11 @@ export interface SparePart {
   brand_ar?: string;
   category: string;
   category_ar?: string;
-  condition: 'New' | 'Used' | 'Refurbished';
+  condition: 'new' | 'used' | 'refurbished';
   price: number;
   quantity: number;
   images?: { url: string; is_main?: boolean }[];
-  status: 'Approved' | 'Pending' | 'Rejected' | 'Sold' | 'Hidden';
+  status: 'approved' | 'pending' | 'rejected' | 'sold' | 'hidden';
   user_id: string;
   country_id: number;
   created_at: string;
@@ -32,11 +32,11 @@ export interface SparePart {
   favorite_count?: number;
   user?: {
     id: string;
-    phone_number: string;
-    email: string;
     full_name: string;
-    role: string;
-    avatar_url: string;
+    email: string;
+    phone_number: string;
     created_at: string;
+    role: string;
   };
 }
+

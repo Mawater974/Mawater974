@@ -46,6 +46,7 @@ interface Analytics {
   totalRevenue: number;
   averagePrice: number;
   adminUsers: number;
+  dealerUsers: number;
   normalUsers: number;
   totalViews: number;
   recentActivity: {
@@ -78,7 +79,7 @@ interface UserWithStats extends Profile {
 
 type ViewMode = 'grid' | 'list';
 
-type CarStatus = 'pending' | 'approved' | 'rejected' | 'sold';
+type CarStatus = 'pending' | 'approved' | 'rejected' | 'sold' | 'hidden' | 'archived';
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -97,6 +98,7 @@ export default function AdminDashboard() {
     totalRevenue: 0,
     averagePrice: 0,
     adminUsers: 0,
+    dealerUsers: 0,
     normalUsers: 0,
     totalViews: 0,
     recentActivity: [],
@@ -108,7 +110,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [carListingsStatus, setCarListingsStatus] = useState<CarStatus>('Pending');
+  const [carListingsStatus, setCarListingsStatus] = useState<CarStatus>('pending');
   const [carListings, setCarListings] = useState<ExtendedCar[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [errorCar, setErrorCar] = useState<string | null>(null);
@@ -120,6 +122,13 @@ export default function AdminDashboard() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isPhotoViewerOpen, setIsPhotoViewerOpen] = useState(false);
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('oldest');
+
+  // Fetch car listings when component mounts or carListingsStatus changes
+  useEffect(() => {
+    if (user && isAdmin) {
+      fetchCarListings(carListingsStatus);
+    }
+  }, [user, isAdmin, carListingsStatus]);
   const [expandedBrands, setExpandedBrands] = useState<{ [key: string]: boolean }>({});
   const [showAllBrands, setShowAllBrands] = useState(false);
   const [countries, setCountries] = useState([
@@ -324,21 +333,76 @@ export default function AdminDashboard() {
     setIsLoading(true);
     setErrorCar(null);
     try {
-      const { data, error } = await supabase
+      // Convert status to lowercase for case-insensitive comparison
+      const statusLower = status.toLowerCase();
+      
+      // First, get all cars with their related data
+      const { data: carsData, error: carsError } = await supabase
         .from('cars')
         .select(`
           *,
           brand:brands(*),
           model:models(*),
           user:profiles!user_id(*),
-          images,
-          thumbnail
+          car_images!inner(*)
         `)
-        .eq('status', status);
+        .order('created_at', { ascending: sortOrder === 'oldest' });
+      
+      if (carsError) throw carsError;
+
+      // Get all car images in a separate query for better performance
+      const carIds = carsData?.map(car => car.id) || [];
+      const { data: imagesData, error: imagesError } = await supabase
+        .from('car_images')
+        .select('*')
+        .in('car_id', carIds);
+      
+      if (imagesError) throw imagesError;
+
+      // Group images by car_id
+      const imagesByCarId = imagesData?.reduce((acc, image) => {
+        if (!acc[image.car_id]) {
+          acc[image.car_id] = [];
+        }
+        acc[image.car_id].push({
+          url: image.url,
+          is_primary: image.is_primary
+        });
+        return acc;
+      }, {} as Record<number, Array<{ url: string; is_primary: boolean }>>) || {};
+
+      // Combine car data with images
+      const combinedData = carsData?.map(car => ({
+        ...car,
+        images: imagesByCarId[car.id] || [],
+        thumbnail: imagesByCarId[car.id]?.find(img => img.is_primary)?.url || 
+                  (imagesByCarId[car.id]?.[0]?.url || '')
+      }));
+        
+      // Filter by status in memory to handle case sensitivity
+      const filteredData = combinedData?.filter(car => 
+        car.status?.toLowerCase() === statusLower
+      ) || [];
 
       if (error) throw error;
 
-      setCarListings(data || []);
+      setCarListings(filteredData);
+      
+      // Update analytics with the count of pending cars
+      if (statusLower === 'pending') {
+        setAnalytics(prev => ({
+          ...prev,
+          pendingCars: filteredData?.length || 0,
+          pendingCarsList: filteredData?.map(car => ({
+            id: car.id,
+            brand: car.brand?.name || 'Unknown',
+            model: car.model?.name || 'Unknown',
+            year: car.year,
+            price: car.price || 0,
+            seller: car.user?.full_name || car.user?.email || 'Unknown'
+          })) || []
+        }));
+      }
     } catch (error) {
       console.error('Error fetching cars:', error);
       setErrorCar('Failed to fetch cars');
@@ -533,19 +597,49 @@ export default function AdminDashboard() {
     try {
       setLoading(true);
       
-      // Fetch cars with related data
+      // Fetch cars with their related data
       const { data: carsData, error: carsError } = await supabase
         .from('cars')
         .select(`
           *,
           brand:brands(*),
           model:models(*),
-          seller:profiles!user_id(*),
-          images
+          user:profiles!user_id(*)
         `)
         .order('created_at', { ascending: false });
 
       if (carsError) throw carsError;
+
+      // Get all car images in a separate query for better performance
+      const carIds = carsData?.map(car => car.id) || [];
+      const { data: imagesData, error: imagesError } = await supabase
+        .from('car_images')
+        .select('*')
+        .in('car_id', carIds);
+      
+      if (imagesError) throw imagesError;
+
+      // Group images by car_id
+      const imagesByCarId = imagesData?.reduce((acc, image) => {
+        if (!acc[image.car_id]) {
+          acc[image.car_id] = [];
+        }
+        acc[image.car_id].push({
+          url: image.url,
+          is_primary: image.is_primary
+        });
+        return acc;
+      }, {} as Record<number, Array<{ url: string; is_primary: boolean }>>) || {};
+
+      // Process cars data with images
+      const processedCars = carsData?.map(car => {
+        const carImages = imagesByCarId[car.id] || [];
+        return {
+          ...car,
+          images: carImages,
+          thumbnail: carImages.find(img => img.is_primary)?.url || carImages[0]?.url || null
+        };
+      }) || [];
 
       // Fetch users with their car counts
       const { data: usersData, error: usersError } = await supabase
@@ -570,7 +664,8 @@ export default function AdminDashboard() {
         totalRevenue: carsData?.reduce((sum, car) => sum + (car.price || 0), 0) || 0,
         averagePrice: carsData?.reduce((sum, car) => sum + (car.price || 0), 0) / carsData?.length || 0,
         adminUsers: usersData?.filter(user => user.role === 'admin').length || 0,
-        normalUsers: (usersData?.length || 0) - (usersData?.filter(user => user.role === 'admin').length || 0),
+        dealerUsers: usersData?.filter(user => user.role === 'dealer').length || 0,
+        normalUsers: usersData?.filter(user => user.role === 'normal_user').length || 0,
         totalViews: 0,
         recentActivity: [],
         carsByBrand: [],
@@ -742,7 +837,7 @@ export default function AdminDashboard() {
 
     // Create pending cars list
     const pendingCarsList = cars
-      .filter(car => car.status === 'Pending')
+      .filter(car => car.status === 'pending')
       .map(car => ({
         id: car.id,
         brand: car.brand?.name || 'Unknown',
@@ -897,7 +992,7 @@ export default function AdminDashboard() {
                   {analytics?.totalUsers || 0}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">
-                  {analytics?.adminUsers || 0} admin / {analytics?.normalUsers || 0} normal
+                  {analytics?.adminUsers || 0} admin / {analytics?.normalUsers || 0} normal / {analytics?.dealerUsers || 0} dealer
                 </p>
               </div>
             </div>
@@ -1168,11 +1263,11 @@ export default function AdminDashboard() {
                 <div className="flex gap-2">
                   <button
                     onClick={() => {
-                      setCarListingsStatus('Pending');
-                      fetchCarListings('Pending');
+                      setCarListingsStatus('pending');
+                      fetchCarListings('pending');
                     }}
                     className={`px-4 py-2 rounded-md text-sm font-medium ${
-                      carListingsStatus === 'Pending'
+                      carListingsStatus.toLowerCase() === 'pending'
                         ? 'bg-yellow-500 text-white'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
                     }`}
@@ -1764,7 +1859,8 @@ export default function AdminDashboard() {
         totalRevenue: carsData?.reduce((sum, car) => sum + (car.price || 0), 0) || 0,
         averagePrice: carsData?.reduce((sum, car) => sum + (car.price || 0), 0) / carsData?.length || 0,
         adminUsers: usersData?.filter(user => user.role === 'admin').length || 0,
-        normalUsers: (usersData?.length || 0) - (usersData?.filter(user => user.role === 'admin').length || 0),
+        dealerUsers: usersData?.filter(user => user.role === 'dealer').length || 0,
+        normalUsers: usersData?.filter(user => user.role === 'normal_user').length || 0,
         totalViews,
         recentActivity: [],
         carsByBrand: [],
