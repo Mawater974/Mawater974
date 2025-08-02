@@ -27,10 +27,12 @@ import {
 import Image from 'next/image';
 import toast from 'react-hot-toast';
 import EditCarModal from '@/components/EditCarModal';
+import EditSparePartModal from '@/components/EditSparePartModal';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import CarsTable from '@/components/dealer-dashboard/CarsTable';
-import SparePartsTable, { ExtendedSparePart } from '@/components/dealer-dashboard/SparePartsTable';
+import SparePartsTable from '@/components/dealer-dashboard/SparePartsTable-1';
 import { SparePart } from '@/types/spare-parts';
+import type { SparePartListing } from '@/components/dealer-dashboard/SparePartsTable-1';
 
 interface DealershipData {
   id: number;
@@ -60,6 +62,21 @@ interface CarListing {
   currency: string;
   status: string;
   created_at: string;
+  country_id: number;
+  country: {
+    id: number;
+    name: string;
+    name_ar?: string;
+    code: string;
+    currency_code?: string;
+  };
+  city_id: number;
+  city: {
+    id: number;
+    name: string;
+    name_ar?: string;
+    country_id?: number;
+  };
   views_count: number;
   favorite_count?: number;
   images?: { url: string; is_main?: boolean }[];
@@ -72,6 +89,7 @@ interface CarListing {
   condition?: string;
   featured?: boolean;
   expiration_date?: string;
+  
 }
 
 interface DashboardStats {
@@ -82,6 +100,7 @@ interface DashboardStats {
   soldListings: number;
   totalViews: number;
   expiredListings: number;
+  totalFavorites: number;
 }
 
 interface City {
@@ -128,49 +147,70 @@ export default function DealerDashboard() {
   const { currentCountry, isLoading: countryLoading } = useCountry();
   const [city, setCity] = useState<City | null>(null);
   const [country, setCountry] = useState<Country | null>(null);
+  const [selectedCountry, setSelectedCountry] = useState<string | number | null>(null);
+  const [cities, setCities] = useState<Array<{ id: number; name: string; name_ar: string | null; country_id: number }>>([]);
   const [dealership, setDealership] = useState<DealershipData | null>(null);
   const [carListings, setCarListings] = useState<Omit<CarListing, 'favorite_count'>[]>([]);
-  const [spareParts, setSpareParts] = useState<Omit<SparePart, 'favorite_count'>[]>([]);
+  const [spareParts, setSpareParts] = useState<SparePartListing[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedCar, setSelectedCar] = useState<CarListing | null>(null);
-  const [selectedSparePart, setSelectedSparePart] = useState<ExtendedSparePart | null>(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedSparePart, setSelectedSparePart] = useState<SparePartListing | null>(null);
+  const [isEditCarModalOpen, setIsEditCarModalOpen] = useState(false);
+  const [isEditSparePartModalOpen, setIsEditSparePartModalOpen] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteItemType, setDeleteItemType] = useState<'car' | 'sparePart'>('car');
   const [actionLoading, setActionLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'cars' | 'spare-parts'>('cars');
   const [stats, setStats] = useState<DashboardStats>({
     totalListings: 0,
+    totalViews: 0,
     approvedListings: 0,
     pendingListings: 0,
     rejectedListings: 0,
     soldListings: 0,
-    totalViews: 0,
-    expiredListings: 0
+    expiredListings: 0,
+    totalFavorites: 0,
   });
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [isExporting, setIsExporting] = useState(false);
 
   function formatPrice(price: number, currencyCode?: string): string {
-    // Use the provided currency code, or fall back to - if not available
-    const currency = currencyCode || '-';
+    // If no price is provided, return a placeholder
+    if (price === null || price === undefined) return '-';
     
+    // If no currency code is provided or it's just a dash, format as a plain number
+    if (!currencyCode || currencyCode.trim() === '' || currencyCode === '-') {
+      return new Intl.NumberFormat('en-US', {
+        style: 'decimal',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+      }).format(price);
+    }
+    
+    // Try to format with the provided currency code
     try {
+      // Check if the currency code is valid
       const formatter = new Intl.NumberFormat('en-US', {
         style: 'currency',
-        currency: currency,
+        currency: currencyCode.trim().toUpperCase(),
+        currencyDisplay: 'narrowSymbol',
         minimumFractionDigits: 0,
       });
+      
+      // Test if the formatter works by formatting a small number
+      formatter.format(1);
+      
+      // If we get here, the currency code is valid
       return formatter.format(price);
     } catch (error) {
-      console.error('Error formatting price:', error);
+      console.warn(`Invalid currency code: ${currencyCode}. Falling back to plain number format.`);
       // Fallback to simple formatting if currency is invalid
       return new Intl.NumberFormat('en-US', {
         style: 'decimal',
         minimumFractionDigits: 0,
         maximumFractionDigits: 0
-      }).format(price) + ' ' + currency;
+      }).format(price) + ' ' + currencyCode;
     }
   }
 
@@ -230,6 +270,9 @@ export default function DealerDashboard() {
         const gearbox = getTranslation(car.gearbox_type, '');
         const bodyType = getTranslation(car.body_type, '');
         const condition = getTranslation(car.condition, '');
+        const city = getTranslation(car.city?.name, car.city?.name_ar);
+        const country = getTranslation(car.country?.name, car.country?.name_ar);
+        
         
         // Prepare the row with proper column mapping for both languages
         const row = {
@@ -238,6 +281,10 @@ export default function DealerDashboard() {
           'Brand (AR)': brand.ar,
           'Model (EN)': model.en,
           'Model (AR)': model.ar,
+          'Country (EN)': country.en,
+          'Country (AR)': country.ar,
+          'City (EN)': city.en,
+          'City (AR)': city.ar,
           'Year': car.year || '',
           'Price': priceValue,
           'Currency': currencyCode,
@@ -362,33 +409,48 @@ export default function DealerDashboard() {
           part_number: part.part_number || '',
           condition: part.condition || 'New',
           price: part.price || 0,
+          country: part.country || { currency_code: part.currency_code || '' },
+          city: part.city || { name: 'Unknown', name_ar: 'غير معروف' },
           quantity: part.quantity || 0,
           status: part.status || 'Pending',
           created_at: part.created_at || new Date().toISOString(),
           updated_at: part.updated_at || new Date().toISOString(),
           views_count: part.views_count || 0,
-          currency_code: part.currency_code || part.country?.currency_code || 'QAR',
-          // Add country if not present
-          country: part.country || { currency_code: part.currency_code || 'QAR' }
+          currency_code: part.currency_code || part.country?.currency_code || '',
         }));
         
         setSpareParts(processedSpareParts);
 
+        // Calculate total favorites from cars and spare parts
+        const carFavorites = carListings?.reduce((sum, car) => sum + (car.favorite_count || 0), 0) || 0;
+        const sparePartFavorites = sparePartsList?.reduce((sum, part) => sum + (part.favorite_count || 0), 0) || 0;
+        
         // Update stats
-        const stats = {
-          totalListings: (carListings?.length || 0) + (sparePartsList?.length || 0),
-          totalViews: (carListings?.reduce((sum, car) => sum + (car.views_count || 0), 0) || 0) + 
-                     (sparePartsList?.reduce((sum, part) => sum + (part.views_count || 0), 0) || 0),
-          approvedListings: (carListings?.filter(car => car.status?.toLowerCase() === 'approved').length || 0) + 
-                           (sparePartsList?.filter(part => part.status?.toLowerCase() === 'approved').length || 0),
-          pendingListings: (carListings?.filter(car => car.status?.toLowerCase() === 'pending').length || 0) + 
-                          (sparePartsList?.filter(part => part.status?.toLowerCase() === 'pending').length || 0),
-          rejectedListings: (carListings?.filter(car => car.status?.toLowerCase() === 'rejected').length || 0) + 
-                           (sparePartsList?.filter(part => part.status?.toLowerCase() === 'rejected').length || 0),
-          soldListings: carListings?.filter(car => car.status?.toLowerCase() === 'sold').length || 0,
-          expiredListings: carListings?.filter(car => car.status?.toLowerCase() === 'expired').length || 0
-        };
-        setStats(stats);
+        const totalListings = carListings.length + sparePartsList.length;
+        const totalViews = carListings.reduce((sum, car) => sum + (car.views_count || 0), 0) + 
+                         sparePartsList.reduce((sum, part) => sum + (part.views_count || 0), 0);
+        const approvedListings = carListings.filter(car => car.status === 'approved').length + 
+                               sparePartsList.filter(part => part.status === 'approved').length;
+        const pendingListings = carListings.filter(car => car.status === 'pending').length + 
+                              sparePartsList.filter(part => part.status === 'pending').length;
+        const rejectedListings = carListings.filter(car => car.status === 'rejected').length + 
+                                sparePartsList.filter(part => part.status === 'rejected').length;
+        const soldListings = carListings.filter(car => car.status === 'sold').length + 
+                           sparePartsList.filter(part => part.status === 'sold').length;
+        const expiredListings = carListings.filter(car => car.status === 'expired').length + 
+                              sparePartsList.filter(part => part.status === 'expired').length;
+        const totalFavorites = carFavorites + sparePartFavorites;
+
+        setStats({
+          totalListings,
+          totalViews,
+          approvedListings,
+          pendingListings,
+          rejectedListings,
+          soldListings,
+          expiredListings,
+          totalFavorites,
+        });
 
       } catch (error) {
         console.error('Error fetching dealer data:', error);
@@ -495,19 +557,172 @@ export default function DealerDashboard() {
 
   const handleEditCar = (car: CarListing) => {
     setSelectedCar(car);
-    setIsEditModalOpen(true);
+    setIsEditCarModalOpen(true);
   };
 
-  const handleEditSparePart = (part: ExtendedSparePart) => {
+  const handleCloseEditCarModal = () => {
+    setIsEditCarModalOpen(false);
+    setSelectedCar(null);
+  };
+
+  const handleEditSparePart = (part: SparePartListing) => {
     setSelectedSparePart(part);
-    // TODO: Implement spare part edit modal if needed
+    setIsEditSparePartModalOpen(true);
   };
 
-  const handleEditComplete = () => {
-    fetchCars(); // Refresh the car listings
+  const handleCloseEditSparePartModal = () => {
+    setIsEditSparePartModalOpen(false);
+    setSelectedSparePart(null);
   };
 
-  function getStatusColor(status: string): string {
+  const handleUpdateCar = async (updatedCar: CarListing) => {
+    try {
+      const { error } = await supabase
+        .from('cars')
+        .update(updatedCar)
+        .eq('id', updatedCar.id);
+
+      if (error) throw error;
+
+      // Refresh the cars list
+      await fetchCars();
+      toast.success(t('cars.updateSuccess'));
+      setIsEditCarModalOpen(false);
+    } catch (error) {
+      console.error('Error updating car:', error);
+      toast.error(t('common.updateError'));
+    }
+  };
+
+  const fetchSpareParts = async () => {
+    if (!user) return;
+    
+    try {
+      // First, fetch the basic spare parts data
+      const { data: sparePartsData, error: partsError } = await supabase
+        .from('spare_parts')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (partsError) throw partsError;
+      if (!sparePartsData || sparePartsData.length === 0) {
+        setSpareParts([]);
+        return;
+      }
+
+      // Fetch related data in parallel
+      const [brands, models, categories, countries, images] = await Promise.all([
+        supabase.from('brands').select('id, name, name_ar'),
+        supabase.from('models').select('id, name, name_ar'),
+        supabase.from('spare_part_categories').select('id, name_en, name_ar'),
+        supabase.from('countries').select('id, name, name_ar, code, currency_code'),
+        supabase.from('spare_part_images')
+          .select('id, spare_part_id, url, is_primary')
+          .in('spare_part_id', sparePartsData.map(p => p.id))
+      ]);
+
+      // Check for errors in any of the queries
+      if (brands.error || models.error || categories.error || countries.error || images.error) {
+        throw new Error('Error fetching related data');
+      }
+
+      // Transform the data to match SparePartListing type
+      const formattedData = sparePartsData.map(part => {
+        // Find related data
+        const partBrand = brands.data?.find(b => b.id === part.brand_id);
+        const partModel = models.data?.find(m => m.id === part.model_id);
+        const partCategory = categories.data?.find(c => c.id === part.category_id);
+        const partCountry = countries.data?.find(c => c.id === part.country_id);
+        const partImages = images.data?.filter(img => img.spare_part_id === part.id) || [];
+
+        // Handle country data
+        let countryData: SparePartListing['country'] | undefined;
+        if (partCountry) {
+          countryData = {
+            id: partCountry.id,
+            name: partCountry.name || '',
+            name_ar: partCountry.name_ar,
+            code: partCountry.code || '',
+            currency_code: partCountry.currency_code
+          };
+        }
+
+        // Handle category data
+        let categoryData: SparePartListing['category'] | undefined;
+        if (partCategory) {
+          categoryData = {
+            id: partCategory.id,
+            name: partCategory.name_en || '',
+            name_ar: partCategory.name_ar
+          };
+        }
+
+        // Handle brand data
+        let brandData: SparePartListing['brand'] | undefined;
+        if (partBrand) {
+          brandData = {
+            id: partBrand.id,
+            name: partBrand.name || '',
+            name_ar: partBrand.name_ar
+          };
+        }
+
+        // Handle model data
+        let modelData: SparePartListing['model'] | undefined;
+        if (partModel) {
+          modelData = {
+            id: partModel.id,
+            name: partModel.name || '',
+            name_ar: partModel.name_ar
+          };
+        }
+
+        // Format images
+        const formattedImages = partImages.map(img => ({
+          id: img.id,
+          url: img.url,
+          is_primary: Boolean(img.is_primary)
+        }));
+
+        // Return the formatted spare part
+        return {
+          ...part,
+          brand: brandData || { id: 0, name: '' },
+          model: modelData,
+          category: categoryData || { id: 0, name: '' },
+          country: countryData,
+          images: formattedImages
+        } as SparePartListing;
+      });
+      
+      setSpareParts(formattedData);
+    } catch (error) {
+      console.error('Error fetching spare parts:', error);
+      toast.error(t('common.fetchError'));
+    }
+  };
+
+  const handleUpdateSparePart = async (updatedPart: SparePartListing) => {
+    try {
+      const { error } = await supabase
+        .from('spare_parts')
+        .update(updatedPart)
+        .eq('id', updatedPart.id);
+
+      if (error) throw error;
+
+      // Refresh the spare parts list
+      await fetchSpareParts();
+      toast.success(t('spareParts.updateSuccess'));
+      setIsEditSparePartModalOpen(false);
+    } catch (error) {
+      console.error('Error updating spare part:', error);
+      toast.error(t('common.updateError'));
+    }
+  };
+
+  const getStatusColor = (status: string): string => {
     switch (status.toLowerCase()) {
       case 'approved':
         return 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-100';
@@ -522,32 +737,32 @@ export default function DealerDashboard() {
       default:
         return 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100';
     }
-  }
+  };
 
-  function getTabClass(isSelected: boolean): string {
+  const getTabClass = (isSelected: boolean): string => {
     return `w-full rounded-lg py-2.5 text-sm font-medium leading-5 transition-all ring-white/60 ring-offset-2 ring-offset-qatar-maroon focus:outline-none focus:ring-2 ${
       isSelected 
         ? 'bg-white text-qatar-maroon shadow-md transform scale-105 dark:bg-gray-700 dark:text-white' 
         : 'text-gray-700 hover:bg-white/[0.12] hover:text-qatar-maroon dark:text-gray-300 dark:hover:text-white'
     }`;
-  }
+  };
 
-  function getButtonClass(variant: 'primary' | 'close'): string {
+  const getButtonClass = (variant: 'primary' | 'close'): string => {
     if (variant === 'primary') {
       return 'flex items-center gap-2 bg-qatar-maroon text-white px-6 py-2.5 rounded-lg hover:bg-qatar-maroon/90 transition-all hover:scale-105 shadow-md hover:shadow-lg';
     }
     return 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-full p-1 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors';
-  }
+  };
 
-  function formatCarTitle(brand: { name: string; name_ar?: string }, model: { name: string; name_ar?: string }, year: number, language: string): string {
+  const formatCarTitle = (brand: { name: string; name_ar?: string }, model: { name: string; name_ar?: string }, year: number, language: string): string => {
     const brandName = language === 'ar' && brand.name_ar ? brand.name_ar : brand.name;
     const modelName = language === 'ar' && model.name_ar ? model.name_ar : model.name;
     return `${brandName} ${modelName} ${year}`;
-  }
+  };
 
   const handleEditClick = (car: any) => {
     setSelectedCar(car);
-    setIsEditModalOpen(true);
+    setIsEditCarModalOpen(true);
   };
 
   const fetchCars = async () => {
@@ -582,7 +797,8 @@ export default function DealerDashboard() {
         pendingListings: carListings?.filter(car => car.status.toLowerCase() === 'pending').length || 0,
         rejectedListings: carListings?.filter(car => car.status.toLowerCase() === 'rejected').length || 0,
         soldListings: carListings?.filter(car => car.status.toLowerCase() === 'sold').length || 0,
-        expiredListings: carListings?.filter(car => car.status.toLowerCase() === 'expired').length || 0
+        expiredListings: carListings?.filter(car => car.status.toLowerCase() === 'expired').length || 0,
+        totalFavorites: carListings?.reduce((sum, car) => sum + (car.favorite_count || 0), 0) || 0
       };
       setStats(stats);
     } catch (error) {
@@ -670,7 +886,7 @@ export default function DealerDashboard() {
     <div className="min-h-screen flex items-center justify-center py-8 px-4" dir={dir}>
       <div className="container mx-auto">
         {/* Stats Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {[
             { 
               label: 'dashboard.totalListings', 
@@ -689,6 +905,12 @@ export default function DealerDashboard() {
               value: stats.pendingListings, 
               icon: <ClockIcon className="h-8 w-8 text-yellow-500 dark:text-yellow-400" />,
               bgGradient: 'from-yellow-100 to-yellow-50 dark:from-yellow-900/20 dark:to-yellow-900/10'
+            },
+            { 
+              label: 'dashboard.totalFavorites', 
+              value: stats.totalFavorites, 
+              icon: <HeartIcon className="h-8 w-8 text-pink-500 dark:text-pink-400" />,
+              bgGradient: 'from-pink-100 to-pink-50 dark:from-pink-900/20 dark:to-pink-900/10'
             },
             { 
               label: 'dashboard.rejectedListings', 
@@ -731,7 +953,7 @@ export default function DealerDashboard() {
         </div>
 
         {/* Main Content */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-8">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 mb-4">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
             <div className="w-full">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
@@ -746,14 +968,14 @@ export default function DealerDashboard() {
                     disabled={isExporting || (activeTab === 'cars' ? carListings.length === 0 : spareParts.length === 0)}
                     className="flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <ArrowDownTrayIcon className="h-5 w-5 mr-2" />
+                    <ArrowDownTrayIcon className="h-5 w-5 mr-1 ml-1" />
                     {isExporting ? (language === 'ar' ? 'جاري التصدير...' : 'Exporting...') : (language === 'ar' ? 'تصدير البيانات' : 'Export Data')}
                   </button>
                   <button
                     onClick={() => router.push(`/${currentCountry?.code.toLowerCase()}/${activeTab === 'cars' ? 'sell' : 'spare-parts/add'}`)}
                     className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-qatar-maroon hover:bg-qatar-maroon-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon`}
                   >
-                    <PlusIcon className="h-5 w-5 mr-2" />
+                    <PlusIcon className="h-5 w-5 mr-1 ml-1" />
                     {activeTab === 'cars' ? t('myAds.createListing') : t('spareParts.addSparePart')}
                   </button>
                 </div>
@@ -769,7 +991,7 @@ export default function DealerDashboard() {
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'} 
                       whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
                   >
-                    <TruckIcon className="h-5 w-5 inline-block mr-2" />
+                    <TruckIcon className="h-5 w-5 inline-block mr-2 ml-2" />
                     {t('dashboard.cars')} ({carListings.length})
                   </button>
                   <button
@@ -779,7 +1001,7 @@ export default function DealerDashboard() {
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'} 
                       whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
                   >
-                    <WrenchScrewdriverIcon className="h-5 w-5 inline-block mr-2" />
+                    <WrenchScrewdriverIcon className="h-5 w-5 inline-block mr-2 ml-2" />
                     {t('dashboard.spareParts')} ({spareParts.length})
                   </button>
                 </nav>
@@ -825,7 +1047,7 @@ export default function DealerDashboard() {
               t={t}
             />
           ) : (
-            <SparePartsTable 
+            <SparePartsTable
               spareParts={spareParts.filter(part => {
                 if (selectedStatus === 'all') return true;
                 if (!part.status) return false;
@@ -853,7 +1075,7 @@ export default function DealerDashboard() {
                   }
                 } : {})
               }))} 
-onEdit={handleEditSparePart}
+              onEdit={handleEditSparePart}
               onDelete={(id) => {
                 const part = spareParts.find(p => p.id === id);
                 if (part) handleDeleteSparePart(part);
@@ -918,16 +1140,26 @@ onEdit={handleEditSparePart}
         )}
 
         {/* Edit Car Modal */}
-        {selectedCar && (
+        {isEditCarModalOpen && selectedCar && (
           <EditCarModal
-            isOpen={isEditModalOpen}
-            onClose={() => setIsEditModalOpen(false)}
+            isOpen={isEditCarModalOpen}
+            onClose={handleCloseEditCarModal}
             car={selectedCar}
             onUpdate={() => {
-              setIsEditModalOpen(false);
               fetchCars();
+              handleCloseEditCarModal();
             }}
-            onEditComplete={handleEditComplete}
+          />
+        )}
+        {isEditSparePartModalOpen && selectedSparePart && (
+          <EditSparePartModal
+            isOpen={isEditSparePartModalOpen}
+            onClose={handleCloseEditSparePartModal}
+            sparePart={selectedSparePart as any}
+            onUpdate={() => {
+              fetchSpareParts();
+              handleCloseEditSparePartModal();
+            }}
           />
         )}
       </div>

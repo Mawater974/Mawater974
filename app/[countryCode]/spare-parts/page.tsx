@@ -394,8 +394,8 @@ export default function SpareParts() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+      <div className="container mx-auto px-4 py-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
           <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4 md:mb-0">
             {t('spareParts.title')}
           </h1>
@@ -435,7 +435,7 @@ export default function SpareParts() {
         </div>
 
         {/* Search and Filters Section */}
-        <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-8 transition-all duration-300 ease-in-out ${showFilters ? 'block' : 'hidden md:block'}`}>
+        <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 mb-8 border border-gray-200 dark:border-gray-700 transition-all duration-300 ease-in-out ${showFilters ? 'block' : 'hidden md:block'}`}>
           <form onSubmit={handleSearch}>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <div>

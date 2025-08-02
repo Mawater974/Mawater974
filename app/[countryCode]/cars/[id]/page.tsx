@@ -999,7 +999,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
             </div>
 
             {/* Owner Info */}
-            <div className="flex items-center space-x-3 rtl:space-x-reverse py-3 px-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+            <div className="flex items-center space-x-3 rtl:space-x-reverse py-3 px-4 bg-gray-100 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-lg">
               <div className="w-12 h-12 bg-qatar-maroon/10 rounded-full flex items-center justify-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-qatar-maroon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -1031,7 +1031,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
             {/* Key Specifications Grid */}
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {/* Mileage */}
-              <div className="bg-gradient-to-br from-gray-100 to-gray-200/50 dark:from-gray-800 dark:to-gray-700 p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+              <div className="bg-gradient-to-br from-gray-100 to-gray-200/50 dark:from-gray-800 dark:to-gray-700 p-4 rounded-xl shadow-md hover:shadow-lg transition-shadow border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center space-x-2 rtl:space-x-reverse mb-2">
                   <MileageIcon className="h-6 w-6 text-qatar-maroon" />
                   <span className="text-sm font-medium text-gray-600 dark:text-gray-300">{t('car.mileage.label')}</span>
@@ -1041,7 +1041,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
               </div>
 
               {/* Gearbox Type */}
-              <div className="bg-gradient-to-br from-gray-100 to-gray-200/50 dark:from-gray-800 dark:to-gray-700 p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+              <div className="bg-gradient-to-br from-gray-100 to-gray-200/50 dark:from-gray-800 dark:to-gray-700 p-4 rounded-xl shadow-md hover:shadow-lg transition-shadow border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center space-x-2 rtl:space-x-reverse mb-2">
                   <GearboxIcon className="h-6 w-6 text-qatar-maroon" />
                   <span className="text-sm font-medium text-gray-600 dark:text-gray-300">{t('car.gearboxType.label')}</span>
@@ -1052,7 +1052,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
               </div>
 
               {/* Fuel Type */}
-              <div className="bg-gradient-to-br from-gray-100 to-gray-200/50 dark:from-gray-800 dark:to-gray-700 p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+              <div className="bg-gradient-to-br from-gray-100 to-gray-200/50 dark:from-gray-800 dark:to-gray-700 p-4 rounded-xl shadow-md hover:shadow-lg transition-shadow border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center space-x-2 rtl:space-x-reverse mb-2">
                   <FuelTypeIcon className="h-6 w-6 text-qatar-maroon" />
                   <span className="text-sm font-medium text-gray-600 dark:text-gray-300">{t('car.fuelType.label')}</span>
@@ -1063,7 +1063,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
               </div>
 
               {/* Condition */}
-              <div className="bg-gradient-to-br from-gray-100 to-gray-200/50 dark:from-gray-800 dark:to-gray-700 p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+              <div className="bg-gradient-to-br from-gray-100 to-gray-200/50 dark:from-gray-800 dark:to-gray-700 p-4 rounded-xl shadow-md hover:shadow-lg transition-shadow border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center space-x-2 rtl:space-x-reverse mb-2">
                   <ConditionIcon className="h-6 w-6 text-qatar-maroon" />
                   <span className="text-sm font-medium text-gray-600 dark:text-gray-300">{t('car.details.condition')}</span>
@@ -1074,7 +1074,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
               </div>
 
               {/* Cylinders */}
-              <div className="bg-gradient-to-br from-gray-100 to-gray-200/50 dark:from-gray-800 dark:to-gray-700 p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+              <div className="bg-gradient-to-br from-gray-100 to-gray-200/50 dark:from-gray-800 dark:to-gray-700 p-4 rounded-xl shadow-md hover:shadow-lg transition-shadow border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center space-x-2 rtl:space-x-reverse mb-2">
                   <CylinderIcon className="h-6 w-6 text-qatar-maroon" />
                   <span className="text-sm font-medium text-gray-600 dark:text-gray-300">{t('car.details.cylinders')}</span>
@@ -1084,7 +1084,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
 
 
               {/* Color */}
-              <div className="bg-gradient-to-br from-gray-100 to-gray-200/50 dark:from-gray-800 dark:to-gray-700 p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+              <div className="bg-gradient-to-br from-gray-100 to-gray-200/50 dark:from-gray-800 dark:to-gray-700 p-4 rounded-xl shadow-md hover:shadow-lg transition-shadow border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center space-x-2 rtl:space-x-reverse mb-2">
                   <ColorIcon className="h-6 w-6 text-qatar-maroon" />
                   <span className="text-sm font-medium text-gray-600 dark:text-gray-300">{t('car.details.color')}</span>
@@ -1093,7 +1093,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
               </div>
 
               {/* Body Type */}
-              <div className="bg-gradient-to-br from-gray-100 to-gray-200/50 dark:from-gray-800 dark:to-gray-700 p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+              <div className="bg-gradient-to-br from-gray-100 to-gray-200/50 dark:from-gray-800 dark:to-gray-700 p-4 rounded-xl shadow-md hover:shadow-lg transition-shadow border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center space-x-2 rtl:space-x-reverse mb-2">
                   <BodyTypeIcon className="h-6 w-6 text-qatar-maroon" />
                   <span className="text-sm font-medium text-gray-600 dark:text-gray-300">{t('car.details.bodyType')}</span>
@@ -1102,7 +1102,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
               </div>
               {/* Doors */}
               {car.doors && (
-                <div className="bg-gradient-to-br from-gray-100 to-gray-200/50 dark:from-gray-800 dark:to-gray-700 p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+                <div className="bg-gradient-to-br from-gray-100 to-gray-200/50 dark:from-gray-800 dark:to-gray-700 p-4 rounded-xl shadow-md hover:shadow-lg transition-shadow border border-gray-200 dark:border-gray-700">
                   <div className="flex items-center space-x-2 rtl:space-x-reverse mb-2">
                     <CardoorIcon className="h-6 w-6 text-qatar-maroon" />
                     <span className="text-sm font-medium text-gray-600 dark:text-gray-300">{t('car.doors.label')}</span>
@@ -1117,7 +1117,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
 
               {/* Drive Type */}
               {car.drive_type && (
-                <div className="bg-gradient-to-br from-gray-100 to-gray-200/50 dark:from-gray-800 dark:to-gray-700 p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+                <div className="bg-gradient-to-br from-gray-100 to-gray-200/50 dark:from-gray-800 dark:to-gray-700 p-4 rounded-xl shadow-md hover:shadow-lg transition-shadow border border-gray-200 dark:border-gray-700">
                   <div className="flex items-center space-x-2 rtl:space-x-reverse mb-2">
                     <DriveTypeIcon className="h-6 w-6 text-qatar-maroon" />
                     <span className="text-sm font-medium text-gray-600 dark:text-gray-300">{t('car.driveType.label')}</span>
@@ -1129,7 +1129,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
               )}
 
               {/* Warranty */}
-              <div className="bg-gradient-to-br from-gray-100 to-gray-200/50 dark:from-gray-800 dark:to-gray-700 p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+              <div className="bg-gradient-to-br from-gray-100 to-gray-200/50 dark:from-gray-800 dark:to-gray-700 p-4 rounded-xl shadow-md hover:shadow-lg transition-shadow border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center space-x-2 rtl:space-x-reverse mb-2">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-qatar-maroon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
@@ -1145,7 +1145,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
                 </p>
               </div>
               {/* Location */}
-              <div className="bg-gradient-to-br from-gray-100 to-gray-200/50 dark:from-gray-800 dark:to-gray-700 p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+              <div className="bg-gradient-to-br from-gray-100 to-gray-200/50 dark:from-gray-800 dark:to-gray-700 p-4 rounded-xl shadow-md hover:shadow-lg transition-shadow border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center space-x-2 rtl:space-x-reverse mb-2">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-qatar-maroon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -1161,7 +1161,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
               </div>
 
               {/* Views */}
-              <div className="bg-gradient-to-br from-gray-100 to-gray-200/50 dark:from-gray-800 dark:to-gray-700 p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+              <div className="bg-gradient-to-br from-gray-100 to-gray-200/50 dark:from-gray-800 dark:to-gray-700 p-4 rounded-xl shadow-md hover:shadow-lg transition-shadow border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center space-x-2 rtl:space-x-reverse mb-2">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-qatar-maroon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -1181,7 +1181,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
             </div>
             {/* Comments */}
             <div className="mt-8 space-y-6">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">{t('car.details.comments')}</h2>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('car.details.comments')}</h2>
               <div className="space-y-4">
                 {user ? (
                   <form onSubmit={handleSubmitComment} className="space-y-4">
@@ -1206,7 +1206,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
                         onChange={(e) => setNewComment(e.target.value)}
                         placeholder={replyTo ? t('car.details.writeReply') : t('car.details.writeComment')}
                         rows={4}
-                        className="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-qatar-maroon focus:border-qatar-maroon bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                        className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-qatar-maroon focus:border-qatar-maroon bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                         required
                       />
                     </div>
