@@ -298,6 +298,21 @@ const translations = {
     'car.details.description': 'Description',
     'car.details.noDescription': 'No description provided.',
     'car.details.contactSeller': 'Contact Seller',
+    
+    // Form Validation Errors
+    'errors.brand_required': 'Please select a brand',
+    'errors.model_required': 'Please select a model',
+    'errors.year_required': 'Please enter the year',
+    'errors.mileage_required': 'Please enter the mileage',
+    'errors.price_required': 'Please enter the price',
+    'errors.description_required': 'Please enter a description',
+    'errors.city_id_required': 'Please select a city',
+    'errors.images_required': 'Please upload at least one image',
+    'errors.general': 'An error occurred. Please try again.',
+    'errors.loading_data': 'Error loading data. Please try again.',
+    'errors.loading_models': 'Error loading models. Please try again.',
+    'errors.loading_listing': 'Error loading listing. Please try again.',
+    'sell.listing_created': 'Your listing has been created successfully!',
     'car.details.showContact': 'Show Contact Information',
     'car.details.similarCars': 'Similar Cars',
     'car.details.listed': 'Listed',
@@ -527,9 +542,10 @@ const translations = {
     'sell.plan.featured.select': 'Select Featured',
     'sell.plan.featured.includes': 'What\'s included',
     // Continue Button
-    'sell.plan.continue': 'Continue with {plan} Listing',
+    'sell.plan.continue': 'Continue with',
     'sell.plan.selectPlan': 'Select a Plan',
-    // Plan Features
+    'sell.plan.selectToContinue': 'Select a plan to continue',
+
     'sell.title': 'Sell Car',
     'sell.subtitle': 'Provide comprehensive information to help potential buyers understand your vehicle',
     'sell.features.basic.visibility': 'Basic listing visibility',
@@ -1028,6 +1044,9 @@ const translations = {
     'dashboard.renewAd': 'Renew Ad',
     'dashboard.cars': 'Cars',
     'dashboard.spareParts': 'Spare Parts',
+    'dashboard.totalFavorites': 'Total Favorites',
+
+
     'admin.dealership.status.pending': 'Pending',
     'admin.dealership.status.approved': 'Active',
     'admin.dealership.status.rejected': 'Rejected',
@@ -1436,6 +1455,9 @@ const translations = {
     'common.posting': 'Posting...',
     'spareParts.add.submitButton': 'Submit',
     'spareParts.add.termsAndConditions': 'By posting, you agree to our {terms} and {privacy}.',
+    'spareParts.add.countryLabel':'Country',
+    'spareParts.add.selectCountry':'Select Country',
+    'spareParts.add.selectCountryFirst':'Select Country First',
     'common.termsOfService': 'Terms of Service',
     'common.privacyPolicy': 'Privacy Policy',
     'spareParts.conditions.used': 'Used',
@@ -1578,6 +1600,18 @@ const translations = {
     'notifications.spare_part_archived.title_ar': 'تم إرشفة قطعة الغيار',
     'notifications.spare_part_archived.message_ar': 'تم إرشفة قطعة الغيار الخاصة بك. سنقوم بإعلامك في حال وجود أي تحديثات.',
   
+    'spareParts.part': 'Spare Part',
+    'spareParts.details': 'Details',
+    'spareParts.price': 'Price',
+    'spareParts.status': 'Status',
+    'spareParts.statistics': 'Statistics',
+    'spareParts.actions': 'Actions',
+    'cars.vehicle': 'Car',
+    'cars.details': 'Details',
+    'cars.price': 'Price',
+    'cars.status': 'Status',
+    'cars.statistics': 'Statistics',
+    'cars.actions': 'Actions',
   },
   ar: {
     // Navigation
@@ -2042,8 +2076,10 @@ const translations = {
     'sell.plan.featured.select': 'اختر المميز',
     'sell.plan.featured.includes': 'المميزات المتضمنة',
     // Continue Button
-    'sell.plan.continue': 'المتابعة مع الإعلان {plan}',
+    'sell.plan.continue': 'المتابعة مع',
     'sell.plan.selectPlan': 'اختر خطة',
+    'sell.plan.selectToContinue': 'اختر خطة للاستمرار',
+
     // Plan Features
     'sell.title': 'إعلان سيارة',
     'sell.subtitle': 'قدم معلومات شاملة لمساعدة المشترين المحتملين على فهم سيارتك',
@@ -2469,7 +2505,7 @@ const translations = {
     'dashboard.reapply': 'إعادة التقديم',
     'dashboard.approvedListings': 'القوائم النشطة',
     'dashboard.pendingListings': 'القوائم المعلقة',
-    'dashboard.expiredListings': 'القوائم المنتهية الصلاحية',
+    'dashboard.expiredListings': 'القوائم المنتهية  ',
     'dashboard.rejectedListings': 'القوائم المرفوضة',
     'dashboard.soldListings': 'القوائم المباعة',
     'dashboard.all': 'الكل',
@@ -2502,6 +2538,7 @@ const translations = {
     'dashboard.renewAd': 'تجديد الإعلان',
     'dashboard.cars': 'سيارات',
     'dashboard.spareParts': 'قطع غيار',
+    'dashboard.totalFavorites': 'الإعجابات الكلية',
     // Dealership Approval Notifications
     'dealership.requestSubmitted': 'تم تقديم طلب الوكالة بنجاح.',
     'dealership.requestError': 'حدث خطأ أثناء تقديم طلبك. يرجى المحاولة مرة أخرى.',
@@ -2892,6 +2929,9 @@ const translations = {
     'common.posting': 'Posting...',
     'spareParts.add.submitButton': 'إرسال',
     'spareParts.add.termsAndConditions': 'عند نشر الاعلان فانك توافق على الشروط والأحكام',
+    'spareParts.add.countryLabel':'الدولة',
+    'spareParts.add.selectCountry':'اختر الدولة',
+    'spareParts.add.selectCountryFirst':'اختر الدولة اولا',
     'common.termsOfService': 'شروط الخدمة',
     'common.privacyPolicy': 'سياسة الخصوصية',
     'spareParts.conditions.used': 'مستخدم',
@@ -3027,6 +3067,25 @@ const translations = {
     'notifications.spare_part_archived.title_ar': 'تم إرشفة قطعة الغيار',
     'notifications.spare_part_archived.message_ar': 'تم إرشفة قطعة الغيار الخاصة بك. سنقوم بإعلامك في حال وجود أي تحديثات.',
   
+    'spareParts.part': 'قطعة الغيار',
+    'spareParts.details': 'تفاصيل',
+    'spareParts.price': 'السعر',
+    'spareParts.status': 'الحالة',
+    'spareParts.statistics': 'إحصائيات',
+    'spareParts.actions': 'الإجراءات',
+    'status.pending': 'قيد الانتظار',
+    'status.approved': 'تم الموافقة',
+    'status.rejected': 'مرفوضة',
+    'status.expired': 'انتهت الصلاحية',
+    'status.sold': 'تم البيع',
+    'status.archived': 'تمت الازالة',
+    'status.hidden': 'مخفي',
+    'cars.vehicle': 'السيارة',
+    'cars.details': 'تفاصيل',
+    'cars.price': 'السعر',
+    'cars.status': 'الحالة',
+    'cars.statistics': 'إحصائيات',
+    'cars.actions': 'الإجراءات',
   },
 };
 

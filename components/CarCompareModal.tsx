@@ -241,7 +241,7 @@ export default function CarCompareModal({ isOpen, onClose, cars }: CarCompareMod
           <div className="fixed inset-0 bg-black bg-opacity-25" />
         </Transition.Child>
 
-        <div className="fixed inset-0 overflow-y-auto">
+        <div className="fixed inset-0 overflow-y-auto backdrop-blur-sm">
           <div className="flex min-h-full items-center justify-center p-4 text-center">
             <Transition.Child
               as={Fragment}
@@ -268,7 +268,7 @@ export default function CarCompareModal({ isOpen, onClose, cars }: CarCompareMod
 
                 {/* Mobile View */}
                 <div className="block sm:hidden">
-                  <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div className="grid grid-cols-2 gap-3 mb-4 backdrop-blur-sm">
                     {sortedCars.map((car, index) => (
                       <div key={car.id}>
                         <div className="relative aspect-[3/2] rounded-lg overflow-hidden shadow-lg mb-2">
@@ -320,7 +320,7 @@ export default function CarCompareModal({ isOpen, onClose, cars }: CarCompareMod
                   </div>
                   
                   {specs.map((spec) => (
-                    <div key={spec.key} className="mb-3">
+                    <div key={spec.key} className="mb-3 backdrop-blur-sm">
                       <div className="font-medium text-sm text-gray-700 dark:text-gray-300 mb-1">
                         {spec.label}
                       </div>

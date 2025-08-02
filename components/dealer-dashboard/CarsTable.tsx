@@ -74,21 +74,22 @@ export default function CarsTable({
   const language = propLanguage || contextLanguage;
   const renderStatusBadge = (status: string) => {
     const statusClasses = {
-      Approved: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-      Pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-      Rejected: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-      Sold: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-      Expired: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
-      Hidden: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
+      approved: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+      pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+      rejected: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+      sold: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+      expired: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
+      hidden: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
     };
-
+    const normalizedStatus = status.toLowerCase();
+    const statusText = status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+    const statusClass = statusClasses[normalizedStatus as keyof typeof statusClasses] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
+    
     return (
       <span 
-        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-          statusClasses[status as keyof typeof statusClasses] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
-        }`}
+        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusClass}`}
       >
-        {status}
+        {t ? t(`status.${normalizedStatus}`, { defaultValue: statusText }) : statusText}
       </span>
     );
   };
@@ -109,22 +110,22 @@ export default function CarsTable({
         <thead className="bg-gray-50 dark:bg-gray-800">
           <tr>
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-              Vehicle
+              {t('cars.vehicle')}
             </th>
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-              Details
+              {t('cars.details')}
             </th>
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-              Price
+              {t('cars.price')}
             </th>
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-              Status
+              {t('cars.status')}
             </th>
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-              Statistics
+              {t('cars.statistics')}
             </th>
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-              Actions
+              {t('cars.actions')}
             </th>
           </tr>
         </thead>

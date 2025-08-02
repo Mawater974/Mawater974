@@ -13,7 +13,9 @@ import { useCountry } from '@/contexts/CountryContext';
 interface SparePartImage {
   id: string;
   url: string;
-  is_primary?: boolean;
+  is_primary: boolean;
+  isNew?: boolean;
+  file?: File;
 }
 
 interface SparePart {
@@ -51,12 +53,14 @@ interface SparePart {
     id: number;
     name: string;
     name_ar: string | null;
+    country_id?: number;
   };
   country?: {
     id: number;
     name: string;
     name_ar: string | null;
     currency_code?: string;
+    code?: string;
   };
 }
 
@@ -65,7 +69,7 @@ interface EditSparePartModalProps {
   onClose: () => void;
   sparePart?: SparePart | null;
   onUpdate: () => void;
-  onEditComplete: (updatedSparePart: SparePart) => void;
+  onEditComplete?: (updatedSparePart: SparePart) => void; // Made optional
 }
 
 interface FormData {
@@ -95,13 +99,14 @@ const EditSparePartModal = ({
   onClose, 
   sparePart, 
   onUpdate, 
-  onEditComplete 
+  onEditComplete = () => {} // Default empty function
 }: EditSparePartModalProps): JSX.Element | null => {
   const { t, language } = useLanguage();
   const { supabase } = useSupabase();
   
   const [loading, setLoading] = useState(false);
   const [images, setImages] = useState<SparePartImage[]>([]);
+  const [originalImages, setOriginalImages] = useState<SparePartImage[]>([]);
   const [uploading, setUploading] = useState(false);
   const { currentCountry } = useCountry();
   
@@ -109,6 +114,7 @@ const EditSparePartModal = ({
   const [brands, setBrands] = useState<DropdownOption[]>([]);
   const [models, setModels] = useState<DropdownOption[]>([]);
   const [categories, setCategories] = useState<DropdownOption[]>([]);
+  const [countries, setCountries] = useState<DropdownOption[]>([]);
   const [cities, setCities] = useState<DropdownOption[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [filteredModels, setFilteredModels] = useState<DropdownOption[]>([]);
@@ -119,8 +125,8 @@ const EditSparePartModal = ({
     description: '',
     description_ar: '',
     price: '',
-    condition: '',
-    part_type: '',
+    condition: 'new', // Set default value
+    part_type: 'original', // Set default value
     brand_id: '',
     model_id: '',
     category_id: '',
@@ -132,6 +138,57 @@ const EditSparePartModal = ({
   const safeString = (value: string | number | undefined | null): string => {
     if (value === undefined || value === null) return '';
     return String(value);
+  };
+
+  // Helper function to safely get the first part of a URL path
+  const getFileNameFromUrl = (url: string): string => {
+    try {
+      const urlObj = new URL(url);
+      const pathParts = urlObj.pathname.split('/');
+      return pathParts[pathParts.length - 1];
+    } catch (e) {
+      // If URL parsing fails, try to extract filename from path
+      const pathParts = url.split('/');
+      return pathParts[pathParts.length - 1].split('?')[0]; // Remove query params if any
+    }
+  };
+
+  // Handle country change
+  const handleCountryChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const countryId = e.target.value;
+    
+    // Update form data immediately to show loading state
+    setFormData(prev => ({ ...prev, country_id: countryId, city_id: '' }));
+
+    if (countryId) {
+      try {
+        // Fetch cities for the selected country
+        const { data, error } = await supabase
+          .from('cities')
+          .select('id, name, name_ar')
+          .eq('country_id', Number(countryId))
+          .order('name', { ascending: true });
+        
+        if (error) throw error;
+        
+        // Update cities and keep the form data in sync
+        setCities(data || []);
+        
+        // If there's only one city, select it automatically
+        if (data && data.length === 1) {
+          setFormData(prev => ({
+            ...prev,
+            city_id: String(data[0].id)
+          }));
+        }
+      } catch (error) {
+        console.error('Error loading cities:', error);
+        toast.error(t('common.errorLoadingCities'));
+        setCities([]);
+      }
+    } else {
+      setCities([]);
+    }
   };
 
   // Fetch dropdown data
@@ -152,17 +209,18 @@ const EditSparePartModal = ({
           .select('id, name_en, name_ar')
           .order('name_en', { ascending: true });
         
-        // Fetch cities for the current country
-      let citiesQuery = supabase
-        .from('cities')
-        .select('id, name, name_ar');
-      
-      // Only filter by country_id if currentCountry is available
-      if (currentCountry) {
-        citiesQuery = citiesQuery.eq('country_id', currentCountry.id);
-      }
-      
-      const { data: citiesData } = await citiesQuery.order('name', { ascending: true });
+        // Fetch all countries
+        const { data: countriesData } = await supabase
+          .from('countries')
+          .select('id, name, name_ar, code')
+          .order('name', { ascending: true });
+        
+        setCountries((countriesData || []).map(c => ({
+          id: c.id,
+          name: c.name,
+          name_ar: c.name_ar,
+          code: c.code
+        })));
         
         // Map data to match DropdownOption interface
         setBrands((brandsData || []).map(b => ({
@@ -177,11 +235,33 @@ const EditSparePartModal = ({
           name_ar: c.name_ar
         })));
         
-        setCities((citiesData || []).map(c => ({
-          id: c.id,
-          name: c.name,
-          name_ar: c.name_ar
-        })));
+        // If we have a spare part with city data, fetch cities for that country
+        if (sparePart?.city?.country_id) {
+          const { data: citiesData } = await supabase
+            .from('cities')
+            .select('id, name, name_ar')
+            .eq('country_id', sparePart.city.country_id)
+            .order('name', { ascending: true });
+          
+          setCities((citiesData || []).map(c => ({
+            id: c.id,
+            name: c.name,
+            name_ar: c.name_ar
+          })));
+        } else if (currentCountry) {
+          // Fallback to current country if no country is set on the spare part
+          const { data: citiesData } = await supabase
+            .from('cities')
+            .select('id, name, name_ar')
+            .eq('country_id', currentCountry.id)
+            .order('name', { ascending: true });
+          
+          setCities((citiesData || []).map(c => ({
+            id: c.id,
+            name: c.name,
+            name_ar: c.name_ar
+          })));
+        }
         
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -194,7 +274,7 @@ const EditSparePartModal = ({
     if (isOpen) {
       fetchData();
     }
-  }, [isOpen, supabase, t]);
+  }, [isOpen, supabase, t, sparePart, currentCountry]);
   
   // Filter models based on selected brand
   useEffect(() => {
@@ -227,11 +307,41 @@ const EditSparePartModal = ({
   useEffect(() => {
     if (!sparePart) return;
     
+    // Initialize form data
+    setFormData({
+      title: sparePart.title || '',
+      name_ar: sparePart.name_ar || '',
+      description: sparePart.description || '',
+      description_ar: sparePart.description_ar || '',
+      price: sparePart.price ? String(sparePart.price) : '',
+      condition: sparePart.condition || 'new',
+      part_type: sparePart.part_type || 'original',
+      brand_id: sparePart.brand_id ? String(sparePart.brand_id) : '',
+      model_id: sparePart.model_id ? String(sparePart.model_id) : '',
+      category_id: sparePart.category_id ? String(sparePart.category_id) : '',
+      city_id: sparePart.city_id ? String(sparePart.city_id) : '',
+      country_id: sparePart.country_id ? String(sparePart.country_id) : '',
+    });
+    
+    // Initialize images
+    if (sparePart.images && Array.isArray(sparePart.images)) {
+      const formattedImages = sparePart.images.map(img => ({
+        id: typeof img === 'string' ? '' : (img.id || ''),
+        url: typeof img === 'string' ? img : img.url,
+        is_primary: typeof img === 'string' ? false : (img.is_primary || false)
+      }));
+      
+      setImages(formattedImages);
+      setOriginalImages([...formattedImages]);
+    } else {
+      setImages([]);
+      setOriginalImages([]);
+    }
+    
     // First, ensure we have all the related data in our dropdowns
-    const updateDropdowns = () => {
+    const updateDropdowns = async () => {
       const updatedBrands = [...brands];
       const updatedCategories = [...categories];
-      const updatedCities = [...cities];
       
       // Add brand if it exists in sparePart but not in brands
       if (sparePart.brand && !brands.some(b => b.id === sparePart.brand_id)) {
@@ -252,18 +362,40 @@ const EditSparePartModal = ({
         });
       }
       
-      // Add city if it exists in sparePart but not in cities
-      if (sparePart.city && !cities.some(c => c.id === sparePart.city_id)) {
-        updatedCities.push({
-          id: sparePart.city.id,
-          name: sparePart.city.name,
-          name_ar: sparePart.city.name_ar
+      // Get the country ID from spare part or current country
+      const countryId = sparePart.country_id || 
+                       (sparePart.country ? sparePart.country.id : null);
+      
+      // If we have a country ID, ensure it's in the countries list and load its cities
+      if (countryId) {
+        // Add country if not in the list
+        if (sparePart.country && !countries.some(c => c.id === sparePart.country?.id)) {
+          setCountries(prev => [...prev, {
+            id: sparePart.country!.id,
+            name: sparePart.country!.name,
+            name_ar: sparePart.country!.name_ar || null,
+            code: sparePart.country!.code || ''
+          }]);
+        }
+        
+        // Always fetch cities for the country, even if we have some in state
+        const { data: citiesData } = await supabase
+          .from('cities')
+          .select('id, name, name_ar')
+          .eq('country_id', countryId)
+          .order('name', { ascending: true });
+        
+        // Merge with any existing cities to avoid losing them
+        setCities(prevCities => {
+          const existingCityIds = new Set(prevCities.map(c => c.id));
+          const newCities = citiesData?.filter(city => !existingCityIds.has(city.id)) || [];
+          return [...prevCities, ...newCities];
         });
       }
       
+      // Update brands and categories
       setBrands(updatedBrands);
       setCategories(updatedCategories);
-      setCities(updatedCities);
       
       // Set models after ensuring brand is available
       if (sparePart.model) {
@@ -281,38 +413,8 @@ const EditSparePartModal = ({
       }
     };
     
-    // Set form data with all fields from sparePart
-    const formData: FormData = {
-      title: sparePart.title ?? '',
-      name_ar: sparePart.name_ar ?? '',
-      description: sparePart.description ?? '',
-      description_ar: sparePart.description_ar ?? '',
-      price: safeString(sparePart.price) || '0',
-      condition: (sparePart.condition as 'new' | 'used' | 'refurbished') || '',
-      part_type: (sparePart.part_type as 'original' | 'aftermarket') || '',
-      brand_id: safeString(sparePart.brand_id) || '',
-      model_id: safeString(sparePart.model_id) || '',
-      category_id: safeString(sparePart.category_id) || '',
-      city_id: safeString(sparePart.city_id) || '',
-      country_id: safeString(sparePart.country_id ?? currentCountry?.id?.toString()) || '',
-    };
-    
-    setFormData(formData);
     updateDropdowns();
-    
-    // Set initial images
-    if (Array.isArray(sparePart.images)) {
-      setImages(
-        sparePart.images.map(img => ({
-          id: typeof img === 'string' ? '' : img.id || '',
-          url: typeof img === 'string' ? img : img?.url || '',
-          is_primary: typeof img === 'string' ? false : Boolean(img?.is_primary)
-        }))
-      );
-    } else {
-      setImages([]);
-    }
-  }, [sparePart]);
+  }, [sparePart, currentCountry]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -338,117 +440,257 @@ const EditSparePartModal = ({
     }
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0 || !sparePart) return;
+  const handleSetPrimary = async (imageUrl: string) => {
+    if (!supabase || !sparePart?.id) return;
     
-    setUploading(true);
-    
+    setLoading(true);
     try {
-      // Create a mutable copy of the file
-      let fileToUpload = e.target.files[0];
+      // For new images (not yet saved to the database), just update local state
+      const imageToUpdate = images.find(img => img.url === imageUrl);
       
-      // Check file type
-      if (!['image/jpeg', 'image/png', 'image/webp'].includes(fileToUpload.type)) {
-        throw new Error('Invalid file type. Please upload a JPEG, PNG, or WebP image.');
-      }
-      
-      // Check file size (max 5MB)
-      const maxSize = 5 * 1024 * 1024; // 5MB
-      if (fileToUpload.size > maxSize) {
-        // Compress the image if it's too large
-        const compressedFile = await compressImage(fileToUpload);
-        if (compressedFile.size > maxSize) {
-          throw new Error('Image is too large after compression. Please choose a smaller image.');
-        }
-        fileToUpload = compressedFile;
-      }
-      
-      const fileExt = fileToUpload.name.split('.').pop();
-      const fileName = `${sparePart.id}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
-      const filePath = `spare-parts/${sparePart.id}/${fileName}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from('spare-parts')
-        .upload(filePath, fileToUpload, {
-          cacheControl: '3600',
-          upsert: false,
-        });
+      if (imageToUpdate?.id?.startsWith('new-')) {
+        // For new images, just update local state
+        const newImages = images.map(img => ({
+          ...img,
+          is_primary: img.url === imageUrl
+        }));
         
-      if (uploadError) throw uploadError;
+        setImages(newImages);
+        setOriginalImages(newImages);
+        toast.success(t('spareParts.images.setPrimarySuccess'));
+        return;
+      }
       
-      // Get the public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('spare-parts')
-        .getPublicUrl(filePath);
+      // For existing images, update the database
+      // First, unset any existing primary images
+      await supabase
+        .from('spare_part_images')
+        .update({ is_primary: false })
+        .eq('spare_part_id', sparePart.id);
       
-      // Add the new image to the images array
-      const newImage = {
-        id: '', // Will be set after saving to the database
-        url: publicUrl,
-        is_primary: images.length === 0 // Set as primary if it's the first image
-      };
+      // Then set the selected image as primary using URL
+      const { error: updateError } = await supabase
+        .from('spare_part_images')
+        .update({ is_primary: true })
+        .eq('spare_part_id', sparePart.id)
+        .eq('url', imageUrl);
+        
+      if (updateError) throw updateError;
       
-      setImages(prev => [...prev, newImage]);
+      // Update local state for both images and originalImages
+      const updatedImages = images.map(img => ({
+        ...img,
+        is_primary: img.url === imageUrl
+      }));
       
+      setImages(updatedImages);
+      setOriginalImages(updatedImages);
+      
+      toast.success(t('spareParts.images.setPrimarySuccess'));
     } catch (error) {
-      console.error('Error uploading image:', error);
-      toast.error(t('common.errorUploadingImage'));
+      console.error('Error setting primary image:', error);
+      toast.error(t('spareParts.images.setPrimaryError'));
     } finally {
-      setUploading(false);
+      setLoading(false);
     }
   };
 
-  const handleSetPrimaryImage = (imageUrl: string) => {
-    setImages(prev => 
-      prev.map(img => ({
-        ...img,
-        is_primary: img.url === imageUrl
-      }))
-    );
-  };
-
-  const handleDeleteImage = async (imageUrl: string, imageId?: string) => {
-    if (!sparePart) return;
+  const handleDeleteImage = async (imageUrl: string) => {
+    if (!imageUrl || !supabase || !sparePart?.id) return;
     
+    setLoading(true);
     try {
-      // Delete from storage if it's not a placeholder
-      if (imageUrl.includes('spare-parts/')) {
-        const filePath = imageUrl.split('spare-parts/')[1].split('?')[0];
-        await supabase.storage
-          .from('spare-parts')
-          .remove([filePath]);
+      const imageToDelete = images.find(img => img.url === imageUrl);
+      if (!imageToDelete) return;
+      
+      // If it was a new unsaved image, just remove from state
+      if (imageToDelete.isNew) {
+        setImages(prev => prev.filter(img => img.url !== imageUrl));
+        return;
       }
       
-      // If the image has an ID, delete it from the database
-      if (imageId) {
-        await supabase
+      // Extract the file path from the URL
+      const url = new URL(imageUrl);
+      const pathParts = url.pathname.split('/');
+      const fileName = pathParts[pathParts.length - 1];
+      
+      // Delete from storage
+      const { error: storageError } = await supabase.storage
+        .from('spare-parts')
+        .remove([`${sparePart.id}/${fileName}`]);
+      
+      if (storageError) throw storageError;
+      
+      // Delete from database if it has an ID
+      if (imageToDelete.id && !imageToDelete.id.startsWith('new-')) {
+        const { error: dbError } = await supabase
           .from('spare_part_images')
           .delete()
-          .eq('id', imageId);
+          .eq('id', imageToDelete.id);
+          
+        if (dbError) throw dbError;
       }
       
       // Update local state
-      setImages(prev => prev.filter(img => img.url !== imageUrl));
+      const updatedImages = images.filter(img => img.url !== imageUrl);
+      setImages(updatedImages);
       
+      // If we deleted the primary image and there are other images, set a new primary
+      if (imageToDelete.is_primary && updatedImages.length > 0) {
+        // Find the first non-deleted image to be the new primary
+        const newPrimaryImage = updatedImages[0];
+        
+        // Update local state
+        setImages(prev => 
+          prev.map(img => ({
+            ...img,
+            is_primary: img.url === newPrimaryImage.url
+          }))
+        );
+        
+        // Update in database if it's not a new image
+        if (newPrimaryImage.id && !newPrimaryImage.isNew) {
+          // First, unset any existing primary images
+          await supabase
+            .from('spare_part_images')
+            .update({ is_primary: false })
+            .eq('spare_part_id', sparePart.id);
+            
+          // Then set the new primary image
+          await supabase
+            .from('spare_part_images')
+            .update({ is_primary: true })
+            .eq('id', newPrimaryImage.id);
+        }
+      }
+      
+      toast.success(t('spareParts.images.deleteSuccess'));
     } catch (error) {
       console.error('Error deleting image:', error);
-      toast.error(t('common.errorDeletingImage'));
+      toast.error(t('spareParts.images.deleteError'));
+      
+      // Revert state on error
+      const originalImage = originalImages.find(img => img.url === imageUrl);
+      if (originalImage) {
+        setImages(prev => [...prev, originalImage]);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0 || !supabase || !sparePart) {
+      return;
+    }
+
+    setUploading(true);
+    const files = Array.from(e.target.files);
+    
+    // Check total number of images won't exceed limit (10)
+    if (files.length + images.length > 10) {
+      toast.error(t('spareParts.add.maxImagesError', { max: 10 }));
+      setUploading(false);
+      return;
+    }
+    
+    try {
+      const newImages: SparePartImage[] = [];
+      const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      
+      for (const file of files) {
+        // Check file type
+        if (!validTypes.includes(file.type)) {
+          toast.error(t('spareParts.add.invalidFileType'));
+          continue;
+        }
+
+        try {
+          console.log('Processing file:', file.name, 'Size:', (file.size / 1024 / 1024).toFixed(2), 'MB');
+          
+          // Always compress images for consistency
+          let fileToUpload = file;
+          if (file.size > 0.95 * 1024 * 1024) { // Compress if over 950KB
+            fileToUpload = await compressImage(file);
+            
+            // Check if still too large after compression
+            if (fileToUpload.size > maxSize) {
+              console.error('File still too large after compression:', (fileToUpload.size / 1024 / 1024).toFixed(2), 'MB');
+              toast.error(t('spareParts.add.fileTooLarge'));
+              continue;
+            }
+          }
+
+          // Generate unique filename using user ID and timestamp
+          const fileExt = fileToUpload.name.split('.').pop();
+          const fileName = `${sparePart.id}/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
+          
+          // Upload to storage
+          const { error: uploadError } = await supabase.storage
+            .from('spare-parts')
+            .upload(fileName, fileToUpload);
+            
+          if (uploadError) {
+            console.error('Upload error:', uploadError);
+            throw new Error(t('spareParts.images.uploadError'));
+          }
+          
+          // Get public URL
+          const { data: { publicUrl } } = supabase.storage
+            .from('spare-parts')
+            .getPublicUrl(fileName);
+          
+          // Add to new images array
+          newImages.push({
+            id: `new-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            url: publicUrl,
+            is_primary: images.length === 0 && newImages.length === 0, // First image is primary
+            isNew: true,
+            file: fileToUpload
+          });
+          
+          console.log('Successfully uploaded file:', file.name);
+          
+        } catch (error) {
+          console.error('Error processing file:', file.name, error);
+          // Continue processing other files even if one fails
+          continue;
+        }
+      }
+      
+      if (newImages.length > 0) {
+        // Update state with all new images at once
+        setImages(prev => [...prev, ...newImages]);
+        toast.success(t('spareParts.images.uploadSuccess'));
+      }
+      
+    } catch (error) {
+      console.error('Error in handleImageUpload:', error);
+      const errorMessage = error instanceof Error ? error.message : t('spareParts.images.uploadError');
+      toast.error(errorMessage);
+    } finally {
+      setUploading(false);
+      if (e.target) e.target.value = ''; // Reset file input
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!sparePart) return;
+    if (!supabase || !sparePart || !sparePart.id) {
+      toast.error(t('common.missingRequiredFields'));
+      return;
+    }
     
     setLoading(true);
     
     try {
-      // Update the spare part
+      // 1. Update the spare part basic info
       const updateData: any = {
         title: formData.title,
-        name_ar: formData.name_ar,
-        description: formData.description,
-        description_ar: formData.description_ar,
+        name_ar: formData.name_ar || null,
+        description: formData.description || null,
+        description_ar: formData.description_ar || null,
         price: parseFloat(formData.price) || 0,
         condition: formData.condition,
         part_type: formData.part_type,
@@ -456,46 +698,145 @@ const EditSparePartModal = ({
         model_id: formData.model_id ? parseInt(formData.model_id) : null,
         category_id: formData.category_id ? parseInt(formData.category_id) : null,
         city_id: formData.city_id ? parseInt(formData.city_id) : null,
+        updated_at: new Date().toISOString()
       };
-      
-      const { data: updatedSparePart, error } = await supabase
+
+      const { error: updateError } = await supabase
         .from('spare_parts')
         .update(updateData)
-        .eq('id', sparePart.id)
-        .select()
-        .single();
+        .eq('id', sparePart.id);
         
-      if (error) throw error;
+      if (updateError) {
+        console.error('Error updating spare part:', updateError);
+        throw updateError;
+      }
       
-      // Update images in the database
+      // 2. Handle images
+      const currentImages: SparePartImage[] = [...images];
+      const originalImageUrls: string[] = originalImages.map(img => img.url);
+      
+      // 2.1. Identify new, existing, and removed images
+      const newImages: SparePartImage[] = currentImages.filter(img => !originalImageUrls.includes(img.url));
+      const existingImages: SparePartImage[] = currentImages.filter(img => 
+        originalImages.some(oi => oi.url === img.url)
+      );
+      const removedImages: SparePartImage[] = originalImages.filter(img => 
+        !currentImages.some(ci => ci.url === img.url)
+      );
+      
+      // 2.2. Insert new images
+      const insertedImages = await Promise.all(
+        newImages.map(async (img) => {
+          const { data, error: insertError } = await supabase
+            .from('spare_part_images')
+            .insert([{
+              spare_part_id: sparePart.id,
+              url: img.url,
+              is_primary: img.is_primary
+            }])
+            .select('*')
+            .single();
+            
+          if (insertError) throw insertError;
+          // Ensure the returned data matches SparePartImage type
+          const insertedImage = data as { id: string; url: string; is_primary: boolean };
+          return {
+            id: insertedImage.id,
+            url: insertedImage.url,
+            is_primary: insertedImage.is_primary
+          };
+        })
+      );
+      
+      // 2.3. Update existing images (primary status)
       await Promise.all(
-        images.map(async (img, index) => {
-          if (!img.id) {
-            // New image, insert it
-            const { error: imgError } = await supabase
+        existingImages.map(async (img) => {
+          // Only update if the image has an ID (it's in the database)
+          if (img.id && !img.id.startsWith('new-')) { // Skip temporary IDs
+            // First, unset any existing primary images if this one is being set as primary
+            if (img.is_primary) {
+              await supabase
+                .from('spare_part_images')
+                .update({ is_primary: false })
+                .eq('spare_part_id', sparePart.id)
+                .neq('id', img.id);
+            }
+            
+            // Then update this image's status
+            const { error: updateError } = await supabase
               .from('spare_part_images')
-              .insert([
-                {
-                  spare_part_id: sparePart.id,
-                  url: img.url,
-                  is_primary: img.is_primary || false
-                }
-              ]);
-              
-            if (imgError) throw imgError;
-          } else if (img.is_primary) {
-            // Update primary status if needed
-            const { error: imgError } = await supabase
-              .from('spare_part_images')
-              .update({ is_primary: true })
+              .update({ is_primary: img.is_primary })
               .eq('id', img.id);
               
-            if (imgError) throw imgError;
+            if (updateError) throw updateError;
           }
         })
       );
       
-      // Fetch the updated spare part with all relations
+      // 2.4. Delete removed images
+      await Promise.all(
+        removedImages.map(async (img) => {
+          // Delete from storage if it's a new image that was uploaded but not saved
+          if (img.url.includes('spare-parts/') && !img.id) {
+            const filePath = img.url.split('spare-parts/')[1].split('?')[0];
+            await supabase.storage
+              .from('spare-parts')
+              .remove([filePath]);
+          }
+          
+          // Delete from database if it has an ID
+          if (img.id) {
+            await supabase
+              .from('spare_part_images')
+              .delete()
+              .eq('id', img.id);
+              
+            // Also delete from storage if it exists there
+            if (img.url.includes('spare-parts/')) {
+              const filePath = img.url.split('spare-parts/')[1].split('?')[0];
+              await supabase.storage
+                .from('spare-parts')
+                .remove([filePath]);
+            }
+          }
+        })
+      );
+      
+      // 3. Ensure we have exactly one primary image
+      const allImages = [...existingImages, ...insertedImages];
+      const primaryImages = allImages.filter(img => img.is_primary);
+      
+      // If no primary image is set or multiple are set, fix it
+      if (primaryImages.length !== 1) {
+        // Find the first valid image to set as primary
+        const imageToSetAsPrimary = allImages[0];
+        
+        if (imageToSetAsPrimary) {
+          // First, unset all primary flags
+          await supabase
+            .from('spare_part_images')
+            .update({ is_primary: false })
+            .eq('spare_part_id', sparePart.id);
+          
+          // Then set the selected image as primary
+          if (imageToSetAsPrimary.id && !imageToSetAsPrimary.id.startsWith('new-')) {
+            await supabase
+              .from('spare_part_images')
+              .update({ is_primary: true })
+              .eq('id', imageToSetAsPrimary.id);
+          }
+          
+          // Update local state to reflect the change
+          setImages(prev => 
+            prev.map(img => ({
+              ...img,
+              is_primary: img.url === imageToSetAsPrimary.url
+            }))
+          );
+        }
+      }
+      
+      // 4. Fetch the complete updated spare part with all related data
       const { data: completeSparePart, error: fetchError } = await supabase
         .from('spare_parts')
         .select(`
@@ -504,22 +845,52 @@ const EditSparePartModal = ({
           model:models(*),
           category:spare_part_categories(*),
           city:cities(*),
-          country:countries(*),
+          ${formData.country_id ? 'country:countries(*),' : ''}
           images:spare_part_images(*)
         `)
         .eq('id', sparePart.id)
-        .single();
+        .single<SparePart>();
         
-      if (fetchError) throw fetchError;
+      if (fetchError) {
+        console.error('Error fetching updated spare part:', fetchError);
+        throw fetchError;
+      }
       
+      if (!completeSparePart) {
+        throw new Error('Failed to fetch updated spare part data');
+      }
+      
+      // Process images to ensure consistent format
+      const processedSparePart: SparePart = {
+        ...completeSparePart,
+        images: Array.isArray(completeSparePart.images) 
+          ? completeSparePart.images.map(img => ({
+              id: img.id || '',
+              url: img.url || '',
+              is_primary: Boolean(img.is_primary),
+              created_at: img.created_at || new Date().toISOString(),
+              spare_part_id: img.spare_part_id || sparePart.id
+            }))
+          : []
+      };
+      
+      // 5. Update UI and close modal
       toast.success(t('common.changesSaved'));
+      
+      // Trigger parent component to refresh data
       onUpdate();
-      onEditComplete(completeSparePart);
+      
+      // Call onEditComplete with processed data if it's a function
+      if (typeof onEditComplete === 'function') {
+        onEditComplete(processedSparePart);
+      }
+      
       onClose();
       
     } catch (error) {
       console.error('Error updating spare part:', error);
-      toast.error(t('common.errorSavingChanges'));
+      const errorMessage = error instanceof Error ? error.message : 'Error updating spare part';
+      toast.error(t('common.errorSavingChanges') + ': ' + errorMessage);
     } finally {
       setLoading(false);
     }
@@ -643,26 +1014,30 @@ const EditSparePartModal = ({
                           </div>
                         </div>
                         
-                        {/* Price */}
+
+                              {/* Country */}
                         <div>
-                        <label htmlFor="price" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                          {t('spareParts.add.priceLabel')} ({sparePart?.country?.currency_code}) *
-                        </label>
-                        <div className="relative rounded-md shadow-sm"> 
-                                  <input
-                            type="number"
-                            id="price"
-                            name="price"
-                            min="0"
-                            value={formData.price}
-                            onChange={handleInputChange}
-                            className={`w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-qatar-maroon focus:border-qatar-maroon dark:bg-gray-700 dark:text-white mt-1`}
-                            placeholder="0.00"
-                            dir={language === 'ar' ? 'rtl' : 'ltr'}
-                                  />
-                                </div>
-                              </div>
-                              {/* City */}
+                          <label htmlFor="country_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            {t('spareParts.add.countryLabel')} *
+                          </label>
+                          <select
+                            id="country_id"
+                            name="country_id"
+                            value={formData.country_id || (currentCountry?.id ? String(currentCountry.id) : '')}
+                            onChange={handleCountryChange}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-qatar-maroon focus:border-qatar-maroon dark:bg-gray-700 dark:text-white mt-1"
+                            required
+                          >
+                            <option value="">{t('spareParts.add.selectCountry')}</option>
+                            {countries.map((country) => (
+                              <option key={country.id} value={country.id}>
+                                {language === 'ar' && country.name_ar ? country.name_ar : country.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* City */}
                         <div>
                           <label htmlFor="city_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                             {t('spareParts.add.cityLabel')} *
@@ -674,8 +1049,11 @@ const EditSparePartModal = ({
                             onChange={handleInputChange}
                             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-qatar-maroon focus:border-qatar-maroon dark:bg-gray-700 dark:text-white mt-1"
                             required
+                            disabled={!formData.country_id && !cities.length}
                           >
-                            <option value="">{t('spareParts.add.cityLabel')}</option>
+                            <option value="">
+                              {!formData.country_id ? t('spareParts.add.selectCountryFirst') : t('spareParts.add.selectCity')}
+                            </option>
                             {cities.map((city) => (
                               <option key={city.id} value={city.id}>
                                 {language === 'ar' && city.name_ar ? city.name_ar : city.name}
@@ -728,6 +1106,26 @@ const EditSparePartModal = ({
                           </select>
                         </div>
                         
+                        {/* Price */}
+                        <div>
+                        <label htmlFor="price" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                          {t('spareParts.add.priceLabel')} ({sparePart?.country?.currency_code}) *
+                        </label>
+                        <div className="relative rounded-md shadow-sm"> 
+                                  <input
+                            type="number"
+                            id="price"
+                            name="price"
+                            min="0"
+                            value={formData.price}
+                            onChange={handleInputChange}
+                            className={`w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-qatar-maroon focus:border-qatar-maroon dark:bg-gray-700 dark:text-white mt-1`}
+                            placeholder="0.00"
+                            dir={language === 'ar' ? 'rtl' : 'ltr'}
+                                  />
+                                </div>
+                              </div>
+
                         {/* Category */}
                         <div>
                           <label htmlFor="category_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -810,15 +1208,17 @@ const EditSparePartModal = ({
                                     width={200}
                                     height={200}
                                     className="h-full w-full object-cover object-center"
+                                    style={{ width: '100%', height: 'auto' }}
+                                    priority={index < 2} // Only preload first 2 images
                                   />
                                 </div>
                                 <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                   {!image.is_primary && (
                                     <button
                                       type="button"
-                                      onClick={() => handleSetPrimaryImage(image.url)}
+                                      onClick={() => handleSetPrimary(image.url)}
                                       className="p-1 rounded-full bg-white text-qatar-maroon hover:bg-gray-100"
-                                      title={t('spareParts.add.setAsPrimary')}
+                                      title={t('spareParts.images.setAsPrimary')}
                                     >
                                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
@@ -827,7 +1227,7 @@ const EditSparePartModal = ({
                                   )}
                                   <button
                                     type="button"
-                                    onClick={() => handleDeleteImage(image.url, image.id)}
+                                    onClick={() => handleDeleteImage(image.url)}
                                     className="p-1 rounded-full bg-white text-red-600 hover:bg-gray-100"
                                     title={t('common.delete')}
                                   >

@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { format } from 'date-fns';
 import { PencilIcon, TrashIcon, EyeIcon, WrenchScrewdriverIcon, HeartIcon } from '@heroicons/react/24/outline';
 import Image from 'next/image';
@@ -7,16 +8,55 @@ import Link from 'next/link';
 import { SparePart } from '@/types/spare-parts';
 import { useCountry } from '@/contexts/CountryContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useSupabase } from '@/contexts/SupabaseContext';
 
-// Extend the SparePart type to include the country object and currency_code
-export interface ExtendedSparePart extends Omit<SparePart, 'currency_code' | 'brand'> {
-  brand: string | { id?: number; name: string; name_ar?: string };
-  brand_ar?: string;
-  currency_code?: string;
-  favorite_count?: number;
+// Extend the SparePart type to include additional properties for the table
+export interface SparePartListing extends Omit<SparePart, 'brand' | 'category'> {
+  brand: {
+    id: number;
+    name: string;
+    name_ar?: string;
+  };
+  model?: {
+    id: number;
+    name: string;
+    name_ar?: string;
+  };
+  category: {
+    id: number;
+    name: string;
+    name_ar?: string;
+  };
   country?: {
+    id: number;
+    name: string;
+    name_ar?: string;
+    code: string;
     currency_code?: string;
   };
+  city?: {
+    id: number;
+    name: string;
+    name_ar?: string;
+  };
+  featured?: boolean;
+  favorite_count?: number;
+  part_type?: string;
+  images?: Array<{
+    url: string;
+    is_primary?: boolean;
+    is_main?: boolean; // For backward compatibility
+  }>;
+}
+
+export interface SparePartsTableProps {
+  spareParts: SparePartListing[];
+  onEdit: (part: SparePartListing) => void;
+  onDelete: (id: number) => void;
+  onView: (part: SparePartListing) => void;
+  formatPrice: (price: number, currencyCode?: string) => string;
+  t: (key: string, variables?: Record<string, any>) => string;
+  language?: string;
 }
 
 export default function SparePartsTable({
@@ -26,16 +66,36 @@ export default function SparePartsTable({
   onView,
   formatPrice,
   t,
-}: {
-  spareParts: ExtendedSparePart[];
-  onEdit: (part: ExtendedSparePart) => void;
-  onDelete: (id: number) => void;
-  onView: (part: ExtendedSparePart) => void;
-  formatPrice: (price: number, currencyCode?: string) => string;
-  t: (key: string, variables?: Record<string, any>) => string;
-}) {
+  language: propLanguage,
+}: SparePartsTableProps) {
   const { currentCountry } = useCountry();
-  const { language } = useLanguage();
+  const { language: contextLanguage } = useLanguage();
+  const language = propLanguage || contextLanguage;
+  
+  const { supabase } = useSupabase();
+  // State to track image loading and error states
+  const [imageStatus, setImageStatus] = useState<Record<number, { loading: boolean; error: boolean }>>({});
+  
+  // Function to get the primary image URL
+  const getPrimaryImage = (part: SparePartListing) => {
+    const primaryImage = part.images?.find(img => img.is_primary || img.is_main);
+    return primaryImage?.url || '';
+  };
+
+  const handleImageLoad = (id: number) => {
+    setImageStatus(prev => ({
+      ...prev,
+      [id]: { ...prev[id], loading: false, error: false }
+    }));
+  };
+
+  const handleImageError = (id: number) => {
+    setImageStatus(prev => ({
+      ...prev,
+      [id]: { ...prev[id], loading: false, error: true }
+    }));
+  };
+
   const renderStatusBadge = (status: string) => {
     const statusClasses: Record<string, string> = {
       approved: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
@@ -59,7 +119,7 @@ export default function SparePartsTable({
     return (
       <div className="text-center py-12">
         <p className="text-gray-500 dark:text-gray-400">
-          No spare parts found. Add your first spare part to get started.
+        {language === 'ar' ? 'لا يوجد قطع غيار' : 'No spare parts found. Add your first spare part to get started.'}
         </p>
       </div>
     );
@@ -71,22 +131,22 @@ export default function SparePartsTable({
         <thead className="bg-gray-50 dark:bg-gray-800">
           <tr>
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-              Part
+              {language === 'ar' ? 'قطع غيار' : 'Spare Part'}
             </th>
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-              Details
+              {language === 'ar' ? 'تفاصيل' : 'Details'}
             </th>
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-              Price
+              {language === 'ar' ? 'السعر' : 'Price'}
             </th>
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-              Status
+              {language === 'ar' ? 'الحالة' : 'Status'}
             </th>
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-              Statistics
+              {language === 'ar' ? 'الإحصائيات' : 'Statistics'}
             </th>
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-              Actions
+              {language === 'ar' ? 'الإجراءات' : 'Actions'}
             </th>
           </tr>
         </thead>
@@ -95,17 +155,22 @@ export default function SparePartsTable({
             <tr key={part.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
               <td className="px-6 py-4 whitespace-nowrap">
                 <div className="flex items-center">
-                  <div className="flex-shrink-0 h-10 w-16">
-                    {part.images?.find(img => img.is_primary)?.url ? (
-                      <Image
-                        className="h-10 w-16 rounded-md object-cover"
-                        src={part.images.find(img => img.is_primary)?.url || ''}
-                        alt={language === 'ar' && part.title_ar ? part.title_ar : part.title}
-                        width={40}
-                        height={40}
-                      />
+                  <div className="flex-shrink-0 h-10 w-16 relative">
+                    {getPrimaryImage(part) ? (
+                      <div className="h-10 w-16 relative">
+                        <Image
+                          className="h-full w-full rounded-md object-cover"
+                          src={getPrimaryImage(part)}
+                          alt={language === 'ar' && part.title_ar ? part.title_ar : part.title || 'Spare part image'}
+                          width={64}
+                          height={40}
+                          onLoadingComplete={() => handleImageLoad(part.id)}
+                          onError={() => handleImageError(part.id)}
+                          loading="lazy"
+                        />
+                      </div>
                     ) : (
-                      <div className="h-10 w-10 rounded-md bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                      <div className="h-10 w-16 rounded-md bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
                         <WrenchScrewdriverIcon className="h-5 w-5 text-gray-400" />
                       </div>
                     )}

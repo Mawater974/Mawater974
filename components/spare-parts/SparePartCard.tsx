@@ -1,7 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { HeartIcon as HeartOutline } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartSolid } from '@heroicons/react/24/solid';
 import { MapPinIcon } from '@heroicons/react/24/outline';
@@ -12,7 +13,6 @@ import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabaseClient';
-import ImageCarousel from '../ImageCarousel';
 
 import { SparePart as SparePartType } from '@/types/spare-parts';
 
@@ -136,25 +136,22 @@ const SparePartCard: React.FC<SparePartCardProps> = ({
           </div>
         )}
         
-        <div className="relative aspect-[16/9]">
+        <div className="relative aspect-[16/9] bg-gray-100 dark:bg-gray-800">
           {part.images && part.images.length > 0 ? (
-            <ImageCarousel
-              images={part.images.map((image) => ({
-                ...image,
-                is_main: image.is_main || false
-              }))}
-              alt={part.title}
-              fallbackImage="/placeholder-spare-part.jpg"
+            <LazyImage 
+              src={part.images[0]?.url} 
+              alt={part.title} 
+              fallback="/placeholder-spare-part.jpg"
+              className="w-full h-full object-cover"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-800">
+            <div className="w-full h-full flex items-center justify-center">
               <span className="text-gray-400 dark:text-gray-500">
                 {t('common.noImage')}
               </span>
             </div>
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-          
         </div>
 
         <div className="p-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-white h-[180px] flex flex-col justify-between">
@@ -188,13 +185,13 @@ const SparePartCard: React.FC<SparePartCardProps> = ({
               </button>
             </div>
 
-            <div className="flex items-center gap-2 mt-1 text-sm text-gray-500 dark:text-gray-400">
+            <div className="flex items-center gap-1 mt-1 text-sm text-gray-500 dark:text-gray-400">
               {part.brand && (
                 <span>{language === 'ar' && part.brand.name_ar ? part.brand.name_ar : part.brand.name}</span>
               )}
               {part.model && (
                 <>
-                  <span>•</span>
+                <span>•</span>
                   <span>{language === 'ar' && part.model.name_ar ? part.model.name_ar : part.model.name}</span>
                 </>
               )}
@@ -210,13 +207,13 @@ const SparePartCard: React.FC<SparePartCardProps> = ({
 
             {part.category && part.category.name_en && (
               <div className="text-sm text-gray-500 dark:text-gray-400">
-                {language === 'ar' ? part.category.name_ar : part.category.name_en}
-                {part.condition && (
-                  <span className="ml-2">
-                    {t(`spareParts.condition.${part.condition}`, { 
+                {language === 'ar' ? part.category.name_ar : part.category.name_en} 
+                 {part.condition && (
+                  <span className="ml-1">
+                   <span>•</span> {t(`spareParts.condition.${part.condition}`, { 
                       defaultValue: part.condition.charAt(0).toUpperCase() + part.condition.slice(1) 
                     })}
-                  </span>
+                  </span> 
                 )}
               </div>
             )}
@@ -238,6 +235,78 @@ const SparePartCard: React.FC<SparePartCardProps> = ({
         </div>
       </div>
     </Link>
+  );
+};
+
+// LazyImage component that only loads the image when it's in the viewport
+const LazyImage = ({ 
+  src, 
+  alt, 
+  fallback, 
+  className = '',
+  width = 400,
+  height = 225
+}: {
+  src?: string;
+  alt: string;
+  fallback: string;
+  className?: string;
+  width?: number;
+  height?: number;
+}) => {
+  const [isInView, setIsInView] = useState(false);
+  const [hasError, setHasError] = useState(false);
+  const imgRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsInView(true);
+          observer.disconnect();
+        }
+      },
+      {
+        root: null,
+        rootMargin: '200px', // Start loading when within 200px of viewport
+        threshold: 0.01
+      }
+    );
+
+    if (imgRef.current) {
+      observer.observe(imgRef.current);
+    }
+
+    return () => {
+      if (imgRef.current) {
+        observer.unobserve(imgRef.current);
+      }
+    };
+  }, []);
+
+  return (
+    <div ref={imgRef} className={`w-full h-full ${className}`}>
+      {isInView && !hasError && src ? (
+        <Image
+          src={src}
+          alt={alt}
+          fill
+          className="object-cover"
+          onError={() => setHasError(true)}
+          loading="lazy"
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+        />
+      ) : (
+        <Image
+          src={fallback}
+          alt={alt}
+          fill
+          className="object-cover"
+          loading="eager"
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+        />
+      )}
+    </div>
   );
 };
 

@@ -1,6 +1,8 @@
 'use client';
 
+import { useRef, useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ExtendedCar } from '@/types/supabase';
 import { HeartIcon as HeartOutline } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartSolid } from '@heroicons/react/24/solid';
@@ -12,8 +14,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useCountry } from '../contexts/CountryContext';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
-import ImageCarousel from './ImageCarousel';
 import { useLanguage } from '../contexts/LanguageContext';
+import ImageCarousel from './ImageCarousel';
 
 
 interface CarCardProps {
@@ -71,17 +73,19 @@ export default function CarCard({
             {t('car.dealer.badge') || 'Dealer'}
           </div>
         )}
-        
-        <div className="relative aspect-[16/9]">
+
+       
+
+        <div className="relative aspect-[16/9] bg-gray-100 dark:bg-gray-800">
           <ImageCarousel
-            images={Array.isArray(car.images) ? car.images : []}
+            images={car.images || []}
             alt={`${language === 'ar' && car.brand?.name_ar ? car.brand.name_ar : car.brand?.name || 'Car'} ${language === 'ar' && car.model?.name_ar ? car.model.name_ar : car.model?.name || ''}`}
             fallbackImage="/placeholder-car.jpg"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
         </div>
 
-        <div className="p-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-white h-[180px] flex flex-col justify-between">
+        <div className="p-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-white h-[140px] flex flex-col justify-between">
           <div className="flex flex-col">
             <div className="flex items-center justify-between">
               <div className="flex items-baseline gap-2 truncate">
@@ -113,32 +117,34 @@ export default function CarCard({
             </div>
 
             <div className="flex items-center gap-2 mt-1 text-sm text-gray-500 dark:text-gray-400">
-              <span>{car.year}</span>
-              <span>•</span>
+              <span>{car.year}</span>•<div className="flex items-center gap-2 flex-1 truncate">
+              <span>{car.mileage?.toLocaleString('en-US') || '0'} {t('car.mileage.unit')}</span>
+              </div>
+              {/* <span>•</span> 
               <span>
                 {t(`car.condition.${car.condition?.toLowerCase().replace(' ', '_')}`)}
-              </span>
+              </span> */}
             </div>
           </div>
 
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col">
             <div>
               <span className="text-2xl font-semibold text-qatar-maroon">
                 {car.price.toLocaleString('en-US')} {t(`common.currency.${car.country?.currency_code}`)}
               </span>
             </div>
 
-            <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+           {/* <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
               <div className="flex items-center gap-2 flex-1 truncate">
                 <span>{car.mileage?.toLocaleString('en-US') || '0'} {t('car.mileage.unit')}</span>
-                <span>•</span>
+                 <span>•</span>
                 <span>{t(`car.fuelType.${car.fuel_type?.toLowerCase()}`) || car.fuel_type}</span>
                 <span>•</span>
                 <span>{t(`car.gearboxType.${car.gearbox_type?.toLowerCase()}`) || car.gearbox_type}</span>
               </div>
-            </div>
+            </div> */}
 
-            {(car.city || car.location || car.country) && (
+            {(car.city || car.country) && (
               <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 truncate">
                 <MapPinIcon className="h-4 w-4 mr-1 flex-shrink-0" />
                 {car.country && currentCountry && car.country.id !== currentCountry.id && (
@@ -149,7 +155,7 @@ export default function CarCard({
                 <span className="truncate">
                   {car.city 
                     ? (language === 'ar' ? car.city.name_ar : car.city.name)
-                    : car.location}
+                    : car.country.name}
                 </span>
               </div>
             )}
@@ -159,3 +165,75 @@ export default function CarCard({
     </Link>
   );
 }
+
+// LazyImage component that only loads the image when it's in the viewport
+const LazyImage = ({ 
+  src, 
+  alt, 
+  fallback, 
+  className = '',
+  width = 400,
+  height = 225
+}: {
+  src?: string;
+  alt: string;
+  fallback: string;
+  className?: string;
+  width?: number;
+  height?: number;
+}) => {
+  const [isInView, setIsInView] = useState(false);
+  const [hasError, setHasError] = useState(false);
+  const imgRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsInView(true);
+          observer.disconnect();
+        }
+      },
+      {
+        root: null,
+        rootMargin: '200px', // Start loading when within 200px of viewport
+        threshold: 0.01
+      }
+    );
+
+    if (imgRef.current) {
+      observer.observe(imgRef.current);
+    }
+
+    return () => {
+      if (imgRef.current) {
+        observer.unobserve(imgRef.current);
+      }
+    };
+  }, []);
+
+  return (
+    <div ref={imgRef} className={`w-full h-full ${className}`}>
+      {isInView && !hasError && src ? (
+        <Image
+          src={src}
+          alt={alt}
+          fill
+          className="object-cover"
+          onError={() => setHasError(true)}
+          loading="lazy"
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+        />
+      ) : (
+        <Image
+          src={fallback}
+          alt={alt}
+          fill
+          className="object-cover"
+          loading="eager"
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+        />
+      )}
+    </div>
+  );
+};

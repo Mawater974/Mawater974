@@ -141,6 +141,7 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
       price: safeString(car.price),
       color: car.color || '',
       description: car.description || '',
+      
       fuel_type: car.fuel_type || '',
       gearbox_type: car.gearbox_type || '',
       body_type: car.body_type || '',
@@ -219,7 +220,7 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
           .order('name');
         setCountries(countriesData || []);
 
-        // Set initial selected country from car data
+        // If we have city data with country_id, use that
         if (car.city?.country_id) {
           setSelectedCountry(car.city.country_id);
           
@@ -230,6 +231,26 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
             .eq('country_id', car.city.country_id)
             .order('name');
           setCities(citiesData || []);
+        } 
+        // If we only have city_id, fetch the city first to get country_id
+        else if (car.city_id) {
+          const { data: cityData } = await supabase
+            .from('cities')
+            .select('*')
+            .eq('id', car.city_id)
+            .single();
+            
+          if (cityData) {
+            setSelectedCountry(cityData.country_id);
+            
+            // Fetch cities for the country
+            const { data: citiesData } = await supabase
+              .from('cities')
+              .select('*')
+              .eq('country_id', cityData.country_id)
+              .order('name');
+            setCities(citiesData || []);
+          }
         }
 
         // If we have a brand_id, fetch models
@@ -427,31 +448,43 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
     
     setLoading(true);
     try {
+      // Prepare update data with proper type conversions
+      const updateData: Record<string, any> = {
+        brand_id: formData.brand_id ? parseInt(formData.brand_id) : null,
+        model_id: formData.model_id ? parseInt(formData.model_id) : null,
+        year: formData.year ? parseInt(formData.year.toString()) : null,
+        mileage: formData.mileage ? parseFloat(formData.mileage) : null,
+        price: formData.price ? parseFloat(formData.price) : null,
+        color: formData.color || null,
+        description: formData.description || null,
+        fuel_type: formData.fuel_type || null,
+        gearbox_type: formData.gearbox_type || null,
+        body_type: formData.body_type || null,
+        
+        condition: formData.condition || null,
+        cylinders: formData.cylinders || null,
+        doors: formData.doors || null,
+        drive_type: formData.drive_type || null,
+        warranty: formData.warranty || null,
+        warranty_months_remaining: formData.warranty_months_remaining ? 
+          parseInt(formData.warranty_months_remaining) : null,
+        exact_model: formData.exact_model || null,
+        city_id: formData.city_id ? parseInt(formData.city_id) : null,
+        is_featured: formData.is_featured || false,
+        updated_at: new Date().toISOString()
+      };
+
+      // Remove null values to avoid overwriting existing data with null
+      Object.keys(updateData).forEach(key => {
+        if (updateData[key] === null) {
+          delete updateData[key];
+        }
+      });
+
       // Update car data
       const { error } = await supabase
         .from('cars')
-        .update({
-          brand_id: formData.brand_id,
-          model_id: formData.model_id,
-          year: formData.year,
-          mileage: formData.mileage,
-          price: formData.price,
-          color: formData.color,
-          description: formData.description,
-          fuel_type: formData.fuel_type,
-          gearbox_type: formData.gearbox_type,
-          body_type: formData.body_type,
-          condition: formData.condition,
-          cylinders: formData.cylinders,
-          doors: formData.doors,
-          drive_type: formData.drive_type,
-          warranty: formData.warranty,
-          warranty_months_remaining: formData.warranty_months_remaining,
-          exact_model: formData.exact_model,
-          city_id: formData.city_id,
-          is_featured: formData.is_featured,
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', car.id);
       
       if (error) throw error;
