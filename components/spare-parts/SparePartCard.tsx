@@ -154,7 +154,7 @@ const SparePartCard: React.FC<SparePartCardProps> = ({
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
         </div>
 
-        <div className="p-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-white h-[180px] flex flex-col justify-between">
+        <div className="p-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-white h-[140px] flex flex-col justify-between">
           <div className="flex flex-col">
             <div className="flex items-center justify-between">
               <div className="flex items-baseline gap-2 truncate">
@@ -205,7 +205,7 @@ const SparePartCard: React.FC<SparePartCardProps> = ({
               </span>
             </div>
 
-            {part.category && part.category.name_en && (
+            {/*{part.category && part.category.name_en && (
               <div className="text-sm text-gray-500 dark:text-gray-400">
                 {language === 'ar' ? part.category.name_ar : part.category.name_en} 
                  {part.condition && (
@@ -216,7 +216,7 @@ const SparePartCard: React.FC<SparePartCardProps> = ({
                   </span> 
                 )}
               </div>
-            )}
+            )}*/}
 
             {(part.city || part.country) && (
               <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 truncate">
