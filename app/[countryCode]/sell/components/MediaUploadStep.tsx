@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Trash2, Upload, Image as ImageIcon, Star, Check } from 'lucide-react';
 import imageCompression from 'browser-image-compression';
+import { toast } from 'react-hot-toast';
+import heic2any from 'heic2any';
 
 import { ImageFile } from '@/types/image';
 
@@ -23,9 +25,10 @@ type MediaUploadStepProps = {
   mainPhotoIndex?: number | null;
   onSetMainPhoto: (index: number) => void;
   onRemoveExistingImage?: (id: string) => void;
+  isFeatured?: boolean;
 };
 
-export default function MediaUploadStep({
+const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
   onFilesChange,
   t,
   errors,
@@ -33,9 +36,11 @@ export default function MediaUploadStep({
   mainPhotoIndex = null,
   onSetMainPhoto,
   onRemoveExistingImage,
-}: MediaUploadStepProps) {
+  isFeatured = false,
+}) => {
   const [files, setFiles] = useState<ImageFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
   const objectUrls = useRef<Set<string>>(new Set());
@@ -155,76 +160,251 @@ export default function MediaUploadStep({
     }
   }, [initialFiles]);
 
-  // Compress image with better error handling
+  // Image upload limits
+  const MAX_IMAGES = isFeatured ? 15 : 10;
+  
+  // Supported image MIME types
+  const SUPPORTED_IMAGE_TYPES = [
+    'image/jpeg',
+    'image/jpg',
+    'image/png',
+    'image/webp',
+    'image/gif',
+    'image/bmp',
+    'image/tiff',
+    'image/svg+xml',
+    'image/avif',
+    'image/apng',
+    'image/heic',
+    'image/heif',
+    'image/heic-sequence',
+    'image/heif-sequence',
+    'image/x-heic',
+    'image/x-heif'
+  ];
+
+  // Get file extension from MIME type
+  const getFileExtension = (mimeType: string): string => {
+    const extensionMap: Record<string, string> = {
+      'image/jpeg': 'jpg',
+      'image/jpg': 'jpg',
+      'image/png': 'png',
+      'image/webp': 'webp',
+      'image/gif': 'gif',
+      'image/bmp': 'bmp',
+      'image/tiff': 'tiff',
+      'image/svg+xml': 'svg',
+      'image/avif': 'avif',
+      'image/apng': 'apng',
+      'image/heic': 'heic',
+      'image/heif': 'heif',
+      'image/heic-sequence': 'heic',
+      'image/heif-sequence': 'heif',
+      'image/x-heic': 'heic',
+      'image/x-heif': 'heif'
+    };
+    return extensionMap[mimeType.toLowerCase()] || 'jpg';
+  };
+
+  // Convert HEIC/HEIF to JPEG for better compatibility
+  const convertHeicToJpeg = async (file: File): Promise<File> => {
+    try {
+      const jpegBlob = await heic2any({
+        blob: file,
+        toType: 'image/jpeg',
+        quality: 0.9
+      }) as Blob;
+      
+      return new File(
+        [jpegBlob],
+        file.name.replace(/\.[^/.]+$/, '.jpg'),
+        { type: 'image/jpeg', lastModified: Date.now() }
+      );
+    } catch (error) {
+      console.error('Error converting HEIC/HEIF to JPEG:', error);
+      return file; // Return original if conversion fails
+    }
+  };
+
+  // Compress image with optimized settings
   const compressImage = async (file: File): Promise<File> => {
-    if (!file.type.startsWith('image/')) {
+    const fileType = file.type.toLowerCase();
+    
+    // Skip non-image files or unsupported image types
+    if (!fileType.startsWith('image/') || !SUPPORTED_IMAGE_TYPES.includes(fileType)) {
+      console.warn(`Unsupported file type: ${fileType}. File will be uploaded as-is.`);
       return file;
     }
+    
+    // Convert HEIC/HEIF to JPEG first
+    let processedFile = file;
+    if (fileType.includes('heic') || fileType.includes('heif')) {
+      processedFile = await convertHeicToJpeg(file);
+    }
+    
+    // Get isFeatured from component props or fallback to URL check
+    const isFeaturedListing = isFeatured || 
+                            window.location.pathname.includes('featured') || 
+                            new URLSearchParams(window.location.search).has('featured');
 
     try {
-      const options = {
-        maxSizeMB: 0.5,
+      const options = isFeaturedListing ? {
+        // Higher quality settings for featured listings
+        maxSizeMB: 1.0, // Larger max size for better quality
+        maxWidthOrHeight: 2560, // Higher resolution for featured
+        useWebWorker: true,
+        maxIteration: 15,
+        fileType: 'image/webp', // Convert to WebP for better compression (except SVGs)
+        initialQuality: 0.95, // Higher quality for featured
+        alwaysKeepResolution: true,
+        onProgress: (progress: number) => {
+          console.log(`Featured image compression progress: ${Math.round(progress)}%`);
+        },
+        preserveExif: false,
+      } : {
+        // Standard compression for regular listings
+        maxSizeMB: 0.6,
         maxWidthOrHeight: 1920,
         useWebWorker: true,
-        maxIteration: 10,
-        fileType: file.type,
+        maxIteration: 15,
+        fileType: 'image/webp', // Convert to WebP for better compression (except SVGs)
+        initialQuality: 0.90,
+        alwaysKeepResolution: true,
+        onProgress: (progress: number) => {
+          console.log(`Standard image compression progress: ${Math.round(progress)}%`);
+        },
+        preserveExif: false,
       };
       
-      const compressedFile = await imageCompression(file, options);
-      return compressedFile as File;
+      console.log('Original file name:', file.name);
+      console.log('Original file type:', file.type);
+      console.log('Original file size:', (file.size / 1024 / 1024).toFixed(2), 'MB');
+      
+      const compressedBlob = await imageCompression(processedFile, options) as Blob;
+      
+      // Determine output format (convert all to webp for better compression, except for SVG)
+      const outputFormat = fileType === 'image/svg+xml' ? 'image/svg+xml' : 'image/webp';
+      const extension = getFileExtension(outputFormat);
+      
+      // Create a new File object with the correct MIME type and extension
+      const compressedFile = new File(
+        [compressedBlob],
+        `${file.name.replace(/\.[^/.]+$/, '')}.${extension}`, // Preserve original name, update extension
+        { 
+          type: outputFormat,
+          lastModified: Date.now()
+        }
+      );
+      
+      console.log('Compressed file type:', compressedFile.type);
+      console.log('Compressed file size:', (compressedFile.size / 1024 / 1024).toFixed(2), 'MB');
+      console.log('Compression ratio:', ((file.size - compressedFile.size) / file.size * 100).toFixed(2) + '%');
+      
+      return compressedFile;
     } catch (error) {
       console.error('Error compressing image:', error);
+      // In case of error, return the original file
       return file;
     }
   };
 
+  // Helper function to process files with proper error handling
+
   // Handle file selection
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(e.target.files || []);
     if (selectedFiles.length === 0) return;
 
-    const availableSlots = 10 - (files.length);
-    if (availableSlots <= 0) return;
+    // Reset the input value to allow selecting the same file again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
 
-    const filesToProcess = selectedFiles.slice(0, availableSlots);
+    const maxAllowed = isFeatured ? 15 : 10;
+    const currentFileCount = selectedFiles.length + files.length;
     
-    // Process files synchronously to avoid race conditions
-    const processedFiles: ImageFile[] = [];
-    
-    for (const file of filesToProcess) {
-      try {
-        // Skip non-image files
-        if (!file.type.startsWith('image/')) continue;
-        
-        // Create a preview URL and track it
-        const previewUrl = URL.createObjectURL(file);
-        objectUrls.current.add(previewUrl);
-        
-        // Create the ImageFile object with all necessary properties
-        const imageFile: ImageFile = {
-          preview: previewUrl,
-          isMain: false,
-          id: `new-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          type: 'new',
-          raw: file,
-          name: file.name,
-          size: file.size,
-          lastModified: file.lastModified
-        };
-        
-        processedFiles.push(imageFile);
-      } catch (error) {
-        console.error('Error processing file:', file.name, error);
+    if (files.length >= maxAllowed) {
+      toast.error(t('sell.images.maxReached', { max: maxAllowed }), {
+        duration: 3000,
+        position: 'top-center',
+      });
+      return;
+    }
+
+    if (currentFileCount > maxAllowed) {
+      const canAdd = maxAllowed - files.length;
+      toast.error(t('sell.images.tooMany', { 
+        max: maxAllowed,
+        current: files.length,
+        canAdd: canAdd,
+        s: canAdd === 1 ? '' : 's' // For pluralization
+      }), {
+        duration: 4000,
+        position: 'top-center',
+      });
+      
+      // If we can still add some files, adjust the selection
+      if (canAdd > 0) {
+        await processFiles(selectedFiles.slice(0, canAdd));
       }
+      return;
+    }
+
+    await processFiles(selectedFiles);
+    
+    // Process files asynchronously
+    setIsLoading(true);
+    
+    try {
+      const processedFiles = await Promise.all(
+        filesToProcess.map(async (file) => {
+          try {
+            // Skip non-image files
+            if (!file.type.startsWith('image/')) return null;
+            
+            // Compress the image first
+            const compressedFile = await compressImage(file);
+            
+            // Create a preview URL from the compressed file
+            const previewUrl = URL.createObjectURL(compressedFile);
+            objectUrls.current.add(previewUrl);
+            
+            // Create the ImageFile object with the compressed file
+            const imageFile: ImageFile = {
+              preview: previewUrl,
+              isMain: false,
+              id: `new-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              type: 'new',
+              raw: compressedFile,
+              name: compressedFile.name,
+              size: compressedFile.size,
+              lastModified: compressedFile.lastModified
+            };
+            
+            return imageFile;
+          } catch (error) {
+            console.error('Error processing file:', file.name, error);
+            return null;
+          }
+        })
+      );
+      
+      // Filter out any null values from failed processing
+      const validFiles = processedFiles.filter((file): file is ImageFile => file !== null);
+      
+      if (validFiles.length > 0) {
+        const updatedFiles = [...files, ...validFiles];
+        setFiles(updatedFiles);
+        onFilesChange(updatedFiles);
+      }
+    } catch (error) {
+      console.error('Error processing files:', error);
+      toast.error('Error processing files. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
     
-    if (processedFiles.length > 0) {
-      const updatedFiles = [...files, ...processedFiles];
-      setFiles(updatedFiles);
-      onFilesChange(updatedFiles);
-    }
-    
-    // Reset the file input to allow selecting the same file again
+    // Reset the input value to allow selecting the same file again
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -239,56 +419,103 @@ export default function MediaUploadStep({
 
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
-    e.stopPropagation();
     setIsDragging(false);
   };
 
-  // Handle drag and drop
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
-
+    
     const droppedFiles = Array.from(e.dataTransfer.files);
     if (droppedFiles.length === 0) return;
 
-    const availableSlots = 10 - (files.length);
-    if (availableSlots <= 0) return;
-
-    const filesToProcess = droppedFiles.slice(0, availableSlots);
-    const processedFiles: ImageFile[] = [];
+    const maxAllowed = isFeatured ? 15 : 10;
+    const currentFileCount = droppedFiles.length + files.length;
     
-    for (const file of filesToProcess) {
-      try {
-        // Skip non-image files
-        if (!file.type.startsWith('image/')) continue;
-        
-        // Create a preview URL and track it
-        const previewUrl = URL.createObjectURL(file);
-        objectUrls.current.add(previewUrl);
-        
-        // Create the ImageFile object with all necessary properties
-        const imageFile: ImageFile = {
-          preview: previewUrl,
-          isMain: false,
-          id: `new-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          type: 'new',
-          raw: file,
-          name: file.name,
-          size: file.size,
-          lastModified: file.lastModified
-        };
-        
-        processedFiles.push(imageFile);
-      } catch (error) {
-        console.error('Error processing dropped file:', file.name, error);
-      }
+    if (files.length >= maxAllowed) {
+      toast.error(t('sell.images.maxReached', { max: maxAllowed }), {
+        duration: 3000,
+        position: 'top-center',
+      });
+      return;
     }
+
+    if (currentFileCount > maxAllowed) {
+      const canAdd = maxAllowed - files.length;
+      toast.error(t('sell.images.tooMany', { 
+        max: maxAllowed,
+        current: files.length,
+        canAdd: canAdd,
+        s: canAdd === 1 ? '' : 's' // For pluralization
+      }), {
+        duration: 4000,
+        position: 'top-center',
+      });
+      
+      // If we can still add some files, adjust the selection
+      if (canAdd > 0) {
+        await processFiles(droppedFiles.slice(0, canAdd));
+      }
+      return;
+    }
+
+    await processFiles(droppedFiles);
+  };
+
+  // Helper function to process files with proper error handling
+  const processFiles = async (filesToProcess: File[]) => {
+    if (filesToProcess.length === 0) return;
     
-    if (processedFiles.length > 0) {
-      const updatedFiles = [...files, ...processedFiles];
-      setFiles(updatedFiles);
-      onFilesChange(updatedFiles);
+    setIsLoading(true);
+    
+    try {
+      const processedFiles = await Promise.all(
+        filesToProcess.map(async (file) => {
+          try {
+            // Skip non-image files
+            if (!file.type.startsWith('image/')) return null;
+            
+            // Compress the image first
+            const compressedFile = await compressImage(file);
+            
+            // Create a preview URL from the compressed file
+            const previewUrl = URL.createObjectURL(compressedFile);
+            objectUrls.current.add(previewUrl);
+            
+            // Create the ImageFile object with the compressed file
+            const imageFile: ImageFile = {
+              preview: previewUrl,
+              isMain: false,
+              id: `new-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              type: 'new',
+              raw: compressedFile,
+              name: compressedFile.name,
+              size: compressedFile.size,
+              lastModified: compressedFile.lastModified
+            };
+            
+            return imageFile;
+          } catch (error) {
+            console.error('Error processing dropped file:', file.name, error);
+            return null;
+          }
+        })
+      );
+      
+      // Filter out any null values from failed processing
+      const validFiles = processedFiles.filter((file): file is ImageFile => file !== null);
+      
+      if (validFiles.length > 0) {
+        const updatedFiles = [...files, ...validFiles];
+        setFiles(updatedFiles);
+        onFilesChange(updatedFiles);
+      }
+    } catch (error) {
+      console.error('Error processing dropped files:', error);
+      toast.error('Error processing dropped files. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -341,7 +568,7 @@ export default function MediaUploadStep({
   }, [allImages.length, mainPhotoIndex, onSetMainPhoto]);
 
   // Check if we can add more images
-  const canAddMore = allImages.length < 10;
+  const canAddMore = allImages.length < MAX_IMAGES;
 
   // Get number suffix for main photo position (1st, 2nd, 3rd, etc.)
   const getNumberSuffix = (number: number) => {
@@ -513,7 +740,15 @@ export default function MediaUploadStep({
 
       {/* Photo Count */}
       <div className="text-center text-sm text-gray-400 mt-2">
-        {t('sell.images.count', { current: allImages.length, max: 10 })}
+        {t('sell.images.count', { 
+          current: allImages.length, 
+          max: isFeatured ? 15 : 10 
+        })}
+        {allImages.length > (isFeatured ? 15 : 10) && (
+          <span className="text-red-500 ml-2">
+            {t('sell.images.exceeded', { max: isFeatured ? 15 : 10 })}
+          </span>
+        )}
       </div>
 
       {/* Error Message */}
@@ -524,4 +759,6 @@ export default function MediaUploadStep({
       )}
     </div>
   );
-}
+};
+
+export default MediaUploadStep;

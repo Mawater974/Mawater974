@@ -53,8 +53,8 @@ export type FormData = {
 
 const initialFormData: FormData = {
   plan: 'free',
-  brand_id: '5',
-  model_id: '1001',
+  brand_id: '',
+  model_id: '',
   exact_model: '',
   year: '2024',
   mileage: '123',
@@ -196,7 +196,7 @@ export default function NewSellPage() {
     },
     { 
       id: 'basic-info', 
-      title: t('sell.basicInfo.title'),
+      title: t('sell.basic.title'),
       component: (
         <BasicInfoStep 
           formData={formData}
@@ -211,7 +211,7 @@ export default function NewSellPage() {
     },
     { 
       id: 'detailed-info', 
-      title: t('sell.detailedInfo.title'),
+      title: t('sell.details.title'),
       component: (
         <DetailedInfoStep 
           formData={formData}
@@ -253,7 +253,7 @@ export default function NewSellPage() {
     },
     { 
       id: 'media', 
-      title: t('sell.media.title'),
+      title: t('sell.steps.images'),
       component: (
         <MediaUploadStep 
           onFilesChange={(files) => setFormData(prev => ({ ...prev, images: files }))}
@@ -267,12 +267,13 @@ export default function NewSellPage() {
           onRemoveExistingImage={(id) => {
             // Handle removal of existing images if needed
           }}
+          isFeatured={formData.plan === 'featured'}
         />
       )
     },
     { 
       id: 'preview', 
-      title: t('sell.preview.title'),
+      title: t('sell.steps.review'),
       component: (
         <PreviewStep 
           formData={formData}
@@ -488,7 +489,7 @@ export default function NewSellPage() {
       
       // Show success message and redirect
       toast.success(t('sell.listing_created'));
-      router.push(`/listings/${listing.id}`);
+      router.push(`/`);
       
     } catch (error: any) {
       console.error('Error creating listing:', error);
@@ -768,15 +769,12 @@ export default function NewSellPage() {
         {/* Current Step Content */}
         <div className="mx-auto max-w-6xl w-full">
           <div className="mb-6 text-center">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              {visibleSteps[currentStep].title}
-            </h1>
             <p className="mt-2 text-gray-600 dark:text-gray-300">
               {visibleSteps[currentStep].description}
             </p>
           </div>
           
-          <div className="rounded-lg bg-white dark:bg-gray-900 p-6 shadow dark:bg-gray-800">
+          <div className="rounded-lg bg-white dark:bg-gray-900 p-6 shadow dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
             {visibleSteps[currentStep].component}
           </div>
           

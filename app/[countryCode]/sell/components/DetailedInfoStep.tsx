@@ -225,11 +225,11 @@ export function DetailedInfoStep({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-          {t('sell.detailed_info')}
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white text-center">
+          {t('sell.details.title')}
         </h2>
-        <p className="mt-1 text-gray-600 dark:text-gray-300">
-          {t('sell.detailed_info_description')}
+        <p className="mt-1 text-gray-600 dark:text-gray-300 text-center">
+          {t('sell.details.subtitle')}
         </p>
       </div>
       

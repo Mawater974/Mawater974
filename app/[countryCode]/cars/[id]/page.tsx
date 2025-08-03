@@ -1156,7 +1156,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
                 <p className="text-gray-900 dark:text-white font-semibold">
                   {carCity 
                     ? (currentLanguage === 'ar' && carCity.name_ar ? carCity.name_ar : carCity.name)
-                    : (car?.location ? car.location : t('common.notSpecified'))}
+                    : (car?.city?.name || t('common.notSpecified'))}
                 </p>
               </div>
 

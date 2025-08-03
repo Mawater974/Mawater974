@@ -253,7 +253,7 @@ export default function PreviewStep({
           ) : (
             <>
               <CheckCircle2 className="mr-2 h-4 w-4" />
-              {t('sell.submit_listing')}
+              {t('common.submit')}
             </>
           )}
         </Button>

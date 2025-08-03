@@ -172,22 +172,22 @@ export function BasicInfoStep({
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white text-center">
-          {t('sell.basic_info')}
+          {t('sell.basic.title')}
         </h2>
         <p className="mt-1 text-gray-600 dark:text-gray-300 text-center">
-          {t('sell.basic_info_description')}
+          {t('sell.basic.subtitle')}
         </p>
       </div>
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         {/* Brand */}
         <div className="space-y-2">
-          <Label htmlFor="brand" required>{t('sell.brand')}</Label>
+          <Label htmlFor="brand" required>{t('sell.basic.brand')}</Label>
           <Select
             id="brand"
             value={formData.brand_id || ''}
             onChange={(e) => handleBrandChange(e.target.value)}
-            placeholder={t('sell.select_brand')}
+            placeholder={t('sell.basic.brand.select')}
             error={!!errors.brand_id}
           >
             {brands.map((brand) => (
@@ -203,13 +203,13 @@ export function BasicInfoStep({
 
         {/* Model */}
         <div className="space-y-2">
-          <Label htmlFor="model" required>{t('sell.model')}</Label>
+          <Label htmlFor="model" required>{t('sell.basic.model')}</Label>
           <Select
             id="model"
             value={formData.model_id || ''}
             onChange={handleInputChange('model_id')}
             disabled={!formData.brand_id}
-            placeholder={formData.brand_id ? t('sell.select_model') : t('sell.select_brand_first')}
+            placeholder={formData.brand_id ? t('sell.basic.model.select') : t('sell.basic.select.brand.first')}
             error={!!errors.model_id}
           >
             {availableModels.map((model) => (
@@ -225,13 +225,13 @@ export function BasicInfoStep({
 
         {/* Exact Model */}
         <div className="space-y-2">
-          <Label htmlFor="exact_model">{t('sell.exact_model')}</Label>
+          <Label htmlFor="exact_model">{t('sell.basic.exactModel')}</Label>
           <Input
             id="exact_model"
             type="text"
             value={formData.exact_model || ''}
             onChange={handleInputChange('exact_model')}
-            placeholder={t('sell.enter_exact_model')}
+            placeholder={t('sell.basic.exactModel.placeholder')}
             error={!!errors.exact_model}
           />
           {errors.exact_model && (
@@ -241,12 +241,12 @@ export function BasicInfoStep({
 
         {/* Year */}
         <div className="space-y-2">
-          <Label htmlFor="year" required>{t('sell.year')}</Label>
+          <Label htmlFor="year" required>{t('sell.basic.year')}</Label>
           <Select
             id="year"
             value={formData.year || ''}
             onChange={handleInputChange('year')}
-            placeholder={t('sell.select_year')}
+            placeholder={t('sell.basic.year.select')}
             error={!!errors.year}
           >
             {years.map((year) => (
@@ -262,7 +262,7 @@ export function BasicInfoStep({
 
         {/* Mileage */}
         <div className="space-y-2">
-          <Label htmlFor="mileage" required>{t('sell.mileage')} (km)</Label>
+          <Label htmlFor="mileage" required>{t('sell.basic.mileage')} (km)</Label>
           <div className="relative">
             <Input
               id="mileage"
@@ -285,7 +285,7 @@ export function BasicInfoStep({
 
         {/* Price */}
         <div className="space-y-2">
-          <Label htmlFor="price" required>{t('sell.price')} (QAR)</Label>
+          <Label htmlFor="price" required>{t('sell.basic.price')} (QAR)</Label>
           <div className="relative">
             <Input
               id="price"
