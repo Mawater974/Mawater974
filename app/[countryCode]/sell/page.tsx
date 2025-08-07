@@ -245,7 +245,6 @@ export default function NewSellPage() {
     { 
       id: 'plan', 
       title: t('sell.plan.title'),
-      description: t('sell.plan.description'),
       component: (
         <PlanSelection 
           onSelectPlan={(isFeatured) => {
@@ -260,12 +259,11 @@ export default function NewSellPage() {
     { 
       id: 'payment', 
       title: t('sell.payment.title'),
-      description: t('sell.payment.description'),
       condition: () => formData.is_featured === true && !paymentCompleted,
       component: (
         <div className="space-y-6">
-          <h2 className="text-2xl font-bold">{t('sell.payment.title')}</h2>
-          <p className="text-gray-600">{t('sell.payment.description')}</p>
+          <h2 className="text-2xl font-bold text-center text-black dark:text-white">{t('sell.payment.title')}</h2>
+          <p className="text-gray-600 text-center text-black dark:text-white">{t('sell.payment.description')}</p>
           
           <PaymentStep 
             formData={formData}
@@ -295,27 +293,13 @@ export default function NewSellPage() {
             onContinue={() => setPaymentCompleted(true)}
           />
           
-          <div className="flex justify-between mt-6">
-            <Button 
-              variant="outline"
-              onClick={() => setCurrentStep(prev => prev - 1)}
-            >
-              {t('common.back')}
-            </Button>
-            <Button 
-              variant="outline"
-              onClick={() => setCurrentStep(prev => prev + 1)}
-            >
-              {t('common.skip')}
-            </Button>
-          </div>
+          
         </div>
       )
     },
     { 
       id: 'basic-info', 
       title: t('sell.basic.title'),
-      description: t('sell.basic.description'),
       component: (
         <BasicInfoStep 
           formData={formData}
@@ -331,7 +315,6 @@ export default function NewSellPage() {
     { 
       id: 'detailed-info', 
       title: t('sell.details.title'),
-      description: t('sell.details.description'),
       component: (
         <DetailedInfoStep 
           formData={formData}
@@ -374,7 +357,6 @@ export default function NewSellPage() {
     { 
       id: 'media', 
       title: t('sell.steps.images'),
-      description: t('sell.steps.imagesDescription'),
       component: (
         <MediaUploadStep 
           onFilesChange={(files) => setFormData(prev => ({ ...prev, images: files }))}
@@ -395,7 +377,6 @@ export default function NewSellPage() {
     { 
       id: 'preview', 
       title: t('sell.steps.review'),
-      description: t('sell.steps.reviewDescription'),
       component: (
         <PreviewStep 
           formData={formData}
@@ -1009,21 +990,14 @@ export default function NewSellPage() {
               >
                 {t('common.back')}
               </Button>
-              {/* Navigation Buttons */}
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setCurrentStep(prev => prev - 1)}
-                disabled={currentStep === 0 || isSubmitting}
-              >
-                {t('common.back')}
-              </Button>
+            
               
               {currentStep < visibleSteps.length - 1 ? (
                 <Button
                   type="button"
                   onClick={() => setCurrentStep(prev => prev + 1)}
                   disabled={isSubmitting}
+                  className="bg-qatar-maroon text-white hover:bg-qatar-maroon/90"
                 >
                   {t('common.next')}
                 </Button>

@@ -198,8 +198,8 @@ const PaymentForm = ({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="p-4 bg-white rounded-lg shadow">
-        <h2 className="text-xl font-semibold mb-4">{t('sell.payment.title')}</h2>
+      <div className="p-4 bg-white rounded-lg border-black border shadow">
+        <h2 className="text-xl font-semibold mb-4 text-black">{t('sell.payment.title')}</h2>
         <div className="space-y-4">
           {!paymentSuccess ? (
             <>
@@ -226,9 +226,9 @@ const PaymentForm = ({
                 ) : pricingError ? (
                   <div className="text-red-500 text-sm">{pricingError}</div>
                 ) : pricing ? (
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600">{t('sell.payment.amount')}:</span>
-                    <span className="font-semibold">
+                  <div className="flex justify-between items-center border-b border-black pb-2">
+                    <span className="text-black">{t('sell.payment.amount')}:</span>
+                    <span className="font-semibold text-black">
                       {pricing.currency} {pricing.price.toFixed(2)}
                     </span>
                   </div>
@@ -236,15 +236,16 @@ const PaymentForm = ({
               </div>
               <Button
                 type="submit"
-                className="w-full"
+                className="w-full bg-qatar-maroon text-white hover:bg-qatar-maroon/90"
                 disabled={loading || loadingPricing || !pricing || !!pricingError}
+               
               >
                 {loading || loadingPricing ? t('common.loading') : t('sell.payment.pay_now')}
               </Button>
             </>
           ) : (
             <div className="text-center space-y-4">
-              <div className="bg-green-100 text-green-700 p-4 rounded-lg">
+              <div className="bg-green-100 text-green-700 p-4 rounded-lg border">
                 <svg className="w-12 h-12 mx-auto mb-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
                 </svg>
@@ -258,9 +259,6 @@ const PaymentForm = ({
                 <p className="text-sm text-green-600 mt-2">
                   {t('sell.payment.continue_message') || 'You can now continue with your car listing.'}
                 </p>
-                <Button className="mt-4" onClick={onContinue} type="button">
-                  {t('common.continue') || 'Continue'}
-                </Button>
               </div>
             </div>
           )}

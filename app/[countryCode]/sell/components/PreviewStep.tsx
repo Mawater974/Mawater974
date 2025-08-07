@@ -48,8 +48,6 @@ export default function PreviewStep({
 
   const previewItems = [
     { label: t('sell.basic.brand'), value: selectedBrand?.name },
-    { label: t('sell.payment.status'), value: formData.payment_status || t('sell.payment.pending') },
-    { label: t('sell.payment.isFeatured'), value: formData.is_featured ? t('sell.payment.featured') : t('sell.payment.standard') },
     { label: t('sell.basic.model'), value: selectedModel?.name },
     { label: t('sell.basic.exactModel') || 'Exact Model', value: formData.exact_model || null },
     { label: t('sell.basic.year'), value: formData.year },
@@ -133,10 +131,7 @@ export default function PreviewStep({
 
       {/* Car Details */}
       <div className="overflow-hidden rounded-lg bg-white shadow dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-        <div className="bg-gray-50 dark:bg-gray-900 px-4 py-3 sm:px-6">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-            {t('sell.review.carDetails')}
-          </h3>
+        <div className="bg-gray-50 dark:bg-gray-900 px-4 sm:px-6">
         </div>
         <dl>
           {previewItems.map((item, index) => (
@@ -158,16 +153,18 @@ export default function PreviewStep({
       </div>
 
       {/* Payment Information */}
-      <div className="mt-6">
+      <div className="mt-6 overflow-hidden rounded-lg bg-white shadow dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
         <div className="bg-gray-50 dark:bg-gray-900 px-4 py-3 sm:px-6">
           <h3 className="text-lg font-medium text-gray-900 dark:text-white">
             {t('sell.review.paymentInfo')}
           </h3>
         </div>
         <dl>
-          {previewItems
-            .filter(item => item.label === t('sell.payment.status') || item.label === t('sell.payment.isFeatured'))
-            .map((item, index) => (
+          {[
+            { label: t('sell.payment.status'), value: formData.payment_status || t('sell.payment.pending') },
+            { label: t('sell.payment.isFeatured'), value: formData.is_featured ? t('sell.payment.featured') : t('sell.payment.standard') },
+            { label: t('sell.payment.amount'), value: formData.payment_amount ? `${formData.payment_currency} ${formData.payment_amount.toFixed(2)}` : t('sell.payment.notPaid') }
+          ].map((item, index) => (
               <div 
                 key={item.label} 
                 className={`${
@@ -186,11 +183,13 @@ export default function PreviewStep({
       </div>
 
       {/* Photo Preview */}
-      <div className="mt-6">
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+      <div className="mt-6 overflow-hidden rounded-lg bg-white shadow dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+        <div className="bg-gray-50 dark:bg-gray-900 px-4 py-3 sm:px-6">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white">
           {t('sell.media.photos')}
         </h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4">
           {photos.map((image, index) => (
             <div 
               key={image.id}
@@ -199,11 +198,11 @@ export default function PreviewStep({
               <img
                 src={image.preview}
                 alt={t('sell.media.photoPreview')}
-                className="w-full h-48 object-cover rounded-lg"
+                className="w-full h-48 object-cover rounded-lg border border-gray-200 dark:border-gray-700"
               />
               {formData.mainPhotoIndex === index && (
-                <div className="absolute top-2 right-2 bg-yellow-500 text-white px-2 py-1 rounded-full text-sm">
-                  <Star className="w-4 h-4 inline-block" />
+                <div className="absolute top-2 right-2 bg-qatar-maroon text-white px-2 py-1 rounded-full text-sm">
+                  {t('sell.images.mainPhoto')}
                 </div>
               )}
 
@@ -214,7 +213,7 @@ export default function PreviewStep({
 
       {/* Confirmation Checkbox */}
       <div className="mt-6 mb-4">
-        <div className="flex items-start">
+        <div className="flex items-start border border-gray-200 dark:border-gray-700 rounded-lg p-4">
           <div className="flex items-center h-5">
             <input
               id="confirm"

@@ -52,13 +52,17 @@ export function PlanSelection({ onSelectPlan, onContinue, t, currentPlan }: Plan
       try {
         if (currentCountry?.id) {
           const { data } = await supabase
-            .from('featured_prices')
-            .select('price')
+            .from('featured_ad_pricing')
+            .select('price, currency_code')
             .eq('country_id', currentCountry.id)
             .single();
           
           if (data) {
-            setFeaturedPrice(data.price);
+            const formattedPrice = new Intl.NumberFormat('en-US', {
+              style: 'currency',
+              currency: data.currency_code
+            }).format(data.price);
+            setFeaturedPrice(formattedPrice);
           }
         }
       } catch (error) {
@@ -117,44 +121,41 @@ export function PlanSelection({ onSelectPlan, onContinue, t, currentPlan }: Plan
     <div className="w-full">
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="space-y-8">
-          <div className="space-y-4 sm:space-y-0 sm:grid sm:grid-cols-2 sm:gap-8 w-full">
+          <div className="space-y-4 sm:space-y-0 sm:grid sm:grid-cols-2 sm:gap-6 lg:max-w-4xl lg:mx-auto xl:max-w-none xl:mx-0">
           {/* Free Plan */}
           <div 
             className={`rounded-lg shadow-sm divide-y divide-gray-200 dark:divide-gray-700 ${
               selectedPlan === 'free' 
-                ? 'ring-2 ring-blue-500 dark:ring-blue-400' 
+                ? 'border-2 border-qatar-maroon dark:border-qatar-maroon' 
                 : 'border border-gray-200 dark:border-gray-700'
             }`}
             onClick={() => handleSelectPlan('free')}
           >
             <div className="p-6">
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                {t('sell.plans.free.title')}
+                {t('sell.plan.free.title')}
               </h3>
               <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
-                {t('sell.plans.free.description')}
+                {t('sell.plan.free.description')}
               </p>
               <div className="mt-8">
                 <p className="text-4xl font-extrabold text-gray-900 dark:text-white">
-                  {t('sell.plans.free.price')}
-                </p>
-                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                  {t('sell.plans.free.duration')}
+                  {t('sell.plan.free.price')}
                 </p>
               </div>
               <div className="mt-8 block w-full">
-                <span className={`inline-flex items-center justify-center w-full rounded-md py-2 px-3 text-sm font-semibold ${
+                <span className={`mt-8 block w-full py-2 px-3 text-sm font-semibold rounded-md text-center border-2 transition-all duration-300  ${
                   selectedPlan === 'free'
-                    ? 'bg-blue-600 text-white hover:bg-blue-700'
-                    : 'bg-gray-50 text-gray-900 hover:bg-gray-100 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700'
+                    ? 'bg-qatar-maroon text-white border-qatar-maroon hover:bg-qatar-maroon/90'
+                    : 'bg-qatar-maroon/10 text-qatar-maroon border-qatar-maroon/50 hover:bg-qatar-maroon/20 hover:border-qatar-maroon'
                 }`}>
-                  {selectedPlan === 'free' ? t('common.selected') : t('common.select')}
+                  {selectedPlan === 'free' ? t('sell.plan.free.selected') : t('sell.plan.free.select')}
                 </span>
               </div>
             </div>
             <div className="px-6 pt-6 pb-8">
               <h4 className="text-xs font-medium text-gray-900 dark:text-white uppercase tracking-wide">
-                {t('sell.whatsIncluded')}
+                {t('sell.plan.free.includes')}
               </h4>
               <ul className="mt-6 space-y-4">
                 {features.free.map((feature, index) => (
@@ -173,7 +174,7 @@ export function PlanSelection({ onSelectPlan, onContinue, t, currentPlan }: Plan
           <div 
             className={`rounded-lg shadow-sm divide-y divide-gray-200 dark:divide-gray-700 ${
               selectedPlan === 'featured'
-                ? 'ring-2 ring-blue-500 dark:ring-blue-400'
+                ? 'border-2 border-qatar-maroon dark:border-qatar-maroon'
                 : 'border border-gray-200 dark:border-gray-700'
             }`}
             onClick={() => handleSelectPlan('featured')}
@@ -181,36 +182,30 @@ export function PlanSelection({ onSelectPlan, onContinue, t, currentPlan }: Plan
             <div className="p-6">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                  {t('sell.plans.featured.title')}
+                  {t('sell.plan.featured.title')}
                 </h3>
-                <span className="inline-flex items-center px-3 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100">
-                  {t('common.popular')}
-                </span>
               </div>
               <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
-                {t('sell.plans.featured.description')}
+                {t('sell.plan.featured.description')}
               </p>
               <div className="mt-8">
                 <p className="text-4xl font-extrabold text-gray-900 dark:text-white">
-                  {loading ? '...' : `${featuredPrice} ${currentCountry?.currency || ''}`}
-                </p>
-                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                  {t('sell.plans.featured.duration')}
+                  {loading ? '...' : featuredPrice}
                 </p>
               </div>
               <div className="mt-8 block w-full">
-                <span className={`inline-flex items-center justify-center w-full rounded-md py-2 px-3 text-sm font-semibold ${
+                <span className={`mt-8 block w-full py-2 px-3 text-sm font-semibold rounded-md text-center border-2 transition-all duration-300 ${
                   selectedPlan === 'featured'
-                    ? 'bg-blue-600 text-white hover:bg-blue-700'
-                    : 'bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-800/50'
+                    ? 'bg-qatar-maroon text-white border-qatar-maroon hover:bg-qatar-maroon/90'
+                    : 'bg-qatar-maroon/10 text-qatar-maroon border-qatar-maroon/50 hover:bg-qatar-maroon/20 hover:border-qatar-maroon'
                 }`}>
-                  {selectedPlan === 'featured' ? t('common.selected') : t('common.select')}
+                  {selectedPlan === 'featured' ? t('sell.plan.featured.selected') : t('sell.plan.featured.select')}
                 </span>
               </div>
             </div>
             <div className="px-6 pt-6 pb-8">
               <h4 className="text-xs font-medium text-gray-900 dark:text-white uppercase tracking-wide">
-                {t('sell.whatsIncluded')}
+                {t('sell.plan.featured.includes')}
               </h4>
               <ul className="mt-6 space-y-4">
                 {features.featured.map((feature, index) => (
@@ -227,14 +222,18 @@ export function PlanSelection({ onSelectPlan, onContinue, t, currentPlan }: Plan
           
           </div>
           
-          <div className="flex justify-end mt-8">
-            <Button 
-              onClick={handleContinue}
-              disabled={selectedPlan === null}
-              className="px-8 py-3 text-lg"
-            >
-              {t('common.continue')}
-            </Button>
+          <div className="mt-8 text-center">
+              <button
+                onClick={handleContinue}
+                disabled={!selectedPlan}
+                className={`inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-qatar-maroon hover:bg-qatar-maroon/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                {selectedPlan 
+                  ? selectedPlan === 'free' 
+                    ? t('sell.plan.continueToFree')
+                    : t('sell.plan.continueToFeatured')
+                  : t('sell.plan.selectPlan')}
+              </button>
           </div>
         </div>
       </div>
