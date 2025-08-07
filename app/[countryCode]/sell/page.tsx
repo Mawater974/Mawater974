@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { PlanSelection } from './components/PlanSelection';
 import { PaymentStep } from './components/PaymentStep';
-import { BasicInfoStep } from './components/BasicInfoStep';
+import BasicInfoStep from './components/BasicInfoStep';
 import { DetailedInfoStep } from './components/DetailedInfoStep';
 import MediaUploadStep from './components/MediaUploadStep';
 import PreviewStep from './components/PreviewStep';
@@ -26,9 +26,9 @@ type City = Database['public']['Tables']['cities']['Row'];
 import { ImageFile } from '@/types/image';
 
 export type FormData = {
-  plan: 'free' | 'featured';
-  payment_intent_id?: string;
+  is_featured?: boolean | null;
   brand_id: string;
+  brand?: string;
   model_id: string;
   exact_model: string;
   year: string;
@@ -38,6 +38,7 @@ export type FormData = {
   images: ImageFile[];
   country_id: number | null;
   city_id: string | null;
+  city: string;
   fuel_type: string;
   gearbox_type: string;
   body_type: string;
@@ -49,31 +50,65 @@ export type FormData = {
   warranty: string;
   warranty_months_remaining: string;
   mainPhotoIndex: number;
+  payment_status?: string;
+  payment_amount?: number;
+  payment_currency?: string;
+  payment_intent_id?: string | null;
+  payment_method_id?: string | null;
+  payment_session_id?: string | null;
+  payment_metadata?: Record<string, any> | null;
+  payment_method?: {
+    id: string;
+    email: string;
+    name: string;
+    created: string;
+    card: {
+      brand: string;
+      last4: string;
+      exp_month: number;
+      exp_year: number;
+    },
+    client_attrabution_metadata:{
+    client_session_id: string;
+     
+    }
+  }
+
+    
+
+    
 };
 
 const initialFormData: FormData = {
-  plan: 'free',
   brand_id: '',
   model_id: '',
   exact_model: '',
-  year: '2024',
-  mileage: '123',
-  price: '123',
-  description: '123',
+  year: '2025',
+  mileage: '10000',
+  price: '10001',
+  description: 'asd',
   images: [],
   country_id: null,
-  city_id: '1',
+  city_id: '40',
+  city: '', 
   fuel_type: 'Petrol',
-  gearbox_type: 'Manual',
+  gearbox_type: 'Automatic',
   body_type: 'Sedan',
   condition: 'New',
-  color: 'Black',
+  color: 'Red',
   cylinders: '4',
-  doors: '2',
+  doors: '4',
   drive_type: 'FWD',
   warranty: 'Yes',
   warranty_months_remaining: '12',
+  mainPhotoIndex: 0, 
   payment_intent_id: '',
+  payment_method_id: '',
+  payment_status: '',
+  payment_amount: 0,
+  payment_currency: '',
+  payment_session_id: '',
+  payment_metadata: {},
 };
 
 const cylinderOptions = ['Electric', '3', '4', '5', '6', '8', '10', '12', '16'];
@@ -90,7 +125,7 @@ export default function NewSellPage() {
   const { user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const editId = searchParams.get('edit');
+  const stepParam = searchParams.get('step');
   const { t, currentLanguage } = useLanguage();
   const { currentCountry } = useCountry();
   
@@ -103,8 +138,43 @@ export default function NewSellPage() {
   // Main photo state
   const [mainPhotoIndex, setMainPhotoIndex] = useState<number | null>(null);
   
-  // UI state
+  // State for tracking payment completion
+  const [paymentCompleted, setPaymentCompleted] = useState(false);
+  const [paymentData, setPaymentData] = useState<any>(null);
+  
+  // Check if current step is complete
+  const isStepComplete = (stepIndex: number) => {
+    const step = steps[stepIndex];
+    if (!step) return false;
+    
+    // Special handling for payment step
+    if (step.id === 'payment') {
+      return paymentCompleted;
+    }
+    
+    // Default validation for other steps
+    return true;
+  };
+  
+  // Handle next step
+  const handleNext = () => {
+    if (currentStep < steps.length - 1) {
+      setCurrentStep(prev => prev + 1);
+    }
+  };
+  
+  // UI state - Initialize with step from URL if provided
   const [currentStep, setCurrentStep] = useState(0);
+  
+  // Handle step parameter from URL
+  useEffect(() => {
+    if (stepParam) {
+      const stepIndex = steps.findIndex(step => step.id === stepParam);
+      if (stepIndex !== -1) {
+        setCurrentStep(stepIndex);
+      }
+    }
+  }, [stepParam]);
   const [loading, setLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -163,40 +233,89 @@ export default function NewSellPage() {
     }
   };
   
+  // Function to handle moving to the next step
+  const goToNextStep = () => {
+    if (currentStep < steps.length - 1) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
   // Steps configuration
   const steps = [
     { 
       id: 'plan', 
       title: t('sell.plan.title'),
+      description: t('sell.plan.description'),
       component: (
         <PlanSelection 
-          onSelectPlan={(plan) => {
-            setFormData(prev => ({ ...prev, plan: plan as 'free' | 'featured' }));
-            setCurrentStep(prev => prev + 1);
-          }} 
+          onSelectPlan={(isFeatured) => {
+            setFormData(prev => ({ ...prev, is_featured: isFeatured }));
+          }}
+          onContinue={goToNextStep}
           t={t}
-          currentPlan={formData.plan}
+          currentPlan={formData.is_featured === true ? 'featured' : formData.is_featured === false ? 'free' : null}
         />
       )
     },
     { 
       id: 'payment', 
       title: t('sell.payment.title'),
-      condition: () => formData.plan === 'featured' && !formData.payment_intent_id,
+      description: t('sell.payment.description'),
+      condition: () => formData.is_featured === true && !paymentCompleted,
       component: (
-        <PaymentStep 
-          onPaymentSuccess={(paymentIntentId) => {
-            setFormData(prev => ({ ...prev, payment_intent_id: paymentIntentId }));
-            setCurrentStep(prev => prev + 1);
-          }}
-          onBack={() => setCurrentStep(prev => prev - 1)}
-          t={t}
-        />
+        <div className="space-y-6">
+          <h2 className="text-2xl font-bold">{t('sell.payment.title')}</h2>
+          <p className="text-gray-600">{t('sell.payment.description')}</p>
+          
+          <PaymentStep 
+            formData={formData}
+            onPaymentSuccess={(data) => {
+              // Update form data with payment details
+              setFormData(prev => ({
+                ...prev,
+                payment_status: data.payment_status,
+                payment_amount: data.payment_amount,
+                payment_currency: data.payment_currency,
+                payment_intent_id: data.payment_intent_id || null,
+                payment_method_id: data.payment_method_id || null,
+                payment_session_id: data.payment_session_id || null,
+                payment_metadata: data.payment_metadata || null,
+                
+                is_featured: data.is_featured
+              }));
+              // Store payment data (but do NOT mark as completed yet)
+              setPaymentData(data);
+              // Show success message
+              toast.success(t('sell.payment.success') || 'Payment successful!');
+            }}
+            onPaymentError={(error) => {
+              console.error('Payment error:', error);
+              toast.error(t('sell.payment.error') || `Payment failed: ${error}`);
+            }}
+            onContinue={() => setPaymentCompleted(true)}
+          />
+          
+          <div className="flex justify-between mt-6">
+            <Button 
+              variant="outline"
+              onClick={() => setCurrentStep(prev => prev - 1)}
+            >
+              {t('common.back')}
+            </Button>
+            <Button 
+              variant="outline"
+              onClick={() => setCurrentStep(prev => prev + 1)}
+            >
+              {t('common.skip')}
+            </Button>
+          </div>
+        </div>
       )
     },
     { 
       id: 'basic-info', 
       title: t('sell.basic.title'),
+      description: t('sell.basic.description'),
       component: (
         <BasicInfoStep 
           formData={formData}
@@ -205,13 +324,14 @@ export default function NewSellPage() {
           errors={{}}
           brands={brands}
           onBrandChange={handleBrandChange}
-          currentCountryId={currentCountry?.id || null}
+          currentCountry={currentCountry}
         />
       )
     },
     { 
       id: 'detailed-info', 
       title: t('sell.details.title'),
+      description: t('sell.details.description'),
       component: (
         <DetailedInfoStep 
           formData={formData}
@@ -222,15 +342,15 @@ export default function NewSellPage() {
           currentLanguage={currentLanguage}
           fields={[
             // Car Details
-            { id: 'fuel_type', name: t('sell.details.fuelType'), type: 'select', options: ['Petrol', 'Diesel', 'Hybrid', 'Electric'], required: true },
-            { id: 'gearbox_type', name: t('sell.details.gearboxType'), type: 'select', options: ['Manual', 'Automatic'], required: true },
-            { id: 'body_type', name: t('sell.details.bodyType'), type: 'select', options: ['Sedan', 'SUV', 'Hatchback', 'Coupe', 'Truck', 'Van', 'Wagon', 'Convertible', 'Other'], required: true },
-            { id: 'color', name: t('sell.details.color'), type: 'select', options: ['White', 'Black', 'Silver', 'Gray', 'Red', 'Blue', 'Green', 'Yellow', 'Orange', 'Brown', 'Purple', 'Gold', 'Beige', 'Maroon', 'Navy', 'Bronze', 'Other'], required: true },
-            { id: 'condition', name: t('sell.details.condition'), type: 'select', options: ['New', 'Excellent', 'Good', 'Not Working'], required: true },
-            { id: 'cylinders', name: t('sell.details.cylinders'), type: 'select', options: ['Electric', '3', '4', '5', '6', '8', '10', '12', '16'], required: true },
-            { id: 'doors', name: t('sell.details.doors'), type: 'select', options: ['2', '3', '4', '5', '6+'], required: true },
-            { id: 'drive_type', name: t('sell.details.driveType'), type: 'select', options: ['FWD', 'RWD', 'AWD', '4WD'], required: true },
-            { id: 'warranty', name: t('sell.details.warranty'), type: 'select', options: ['Yes', 'No'], required: true },
+            { id: 'fuel_type', name: t('sell.details.fuelType'), type: 'select', options: fuelTypes.map(type => t(`car.fuelType.${type.toLowerCase()}`)), required: true },
+            { id: 'gearbox_type', name: t('sell.details.gearboxType'), type: 'select', options: gearboxTypes.map(type => t(`car.gearboxType.${type.toLowerCase()}`)), required: true },
+            { id: 'body_type', name: t('sell.details.bodyType'), type: 'select', options: bodyTypes.map(type => t(`car.bodyType.${type.toLowerCase()}`)), required: true },
+            { id: 'color', name: t('sell.details.color'), type: 'select', options: colors.map(type => t(`car.color.${type.toLowerCase()}`)), required: true },
+            { id: 'condition', name: t('sell.details.condition'), type: 'select', options:conditions.map(type => t(`car.condition.${type.toLowerCase().replace(' ', '_')}`)), required: true }, 
+            { id: 'cylinders', name: t('sell.details.cylinders'), type: 'select', options: cylinderOptions.map(type => t(`car.cylinders.${type.toLowerCase()}`)), required: true },
+            { id: 'doors', name: t('sell.details.doors'), type: 'select', options: doorOptions.map(type => t(`car.doors.${type.toLowerCase()}`)), required: true },
+            { id: 'drive_type', name: t('sell.details.driveType'), type: 'select', options: driveTypeOptions.map(type => t(`car.driveType.${type.toLowerCase()}`)), required: true },
+            { id: 'warranty', name: t('sell.details.warranty'), type: 'select', options: warrantyOptions.map(type => t(`car.warranty.${type.toLowerCase()}`)), required: true },
             { 
               id: 'city_id', 
               name: t('sell.details.city'), 
@@ -254,6 +374,7 @@ export default function NewSellPage() {
     { 
       id: 'media', 
       title: t('sell.steps.images'),
+      description: t('sell.steps.imagesDescription'),
       component: (
         <MediaUploadStep 
           onFilesChange={(files) => setFormData(prev => ({ ...prev, images: files }))}
@@ -267,13 +388,14 @@ export default function NewSellPage() {
           onRemoveExistingImage={(id) => {
             // Handle removal of existing images if needed
           }}
-          isFeatured={formData.plan === 'featured'}
+          isFeatured={formData.is_featured === true}
         />
       )
     },
     { 
       id: 'preview', 
       title: t('sell.steps.review'),
+      description: t('sell.steps.reviewDescription'),
       component: (
         <PreviewStep 
           formData={formData}
@@ -299,7 +421,7 @@ export default function NewSellPage() {
       if (step.condition === undefined) return true;
       return step.condition();
     });
-  }, [steps, formData.plan, formData.payment_intent_id]);
+  }, [steps, formData.is_featured, formData.payment_intent_id, formData.payment_session_id]);
 
   // Handle form submission
   async function handleSubmit() {
@@ -341,53 +463,75 @@ export default function NewSellPage() {
         description: formData.description || '',
         country_id: formData.country_id || currentCountry?.id,
         city_id: formData.city_id || null,
-        fuel_type: formData.fuel_type || 'Petrol',
-        gearbox_type: formData.gearbox_type || 'Manual',
-        body_type: formData.body_type || 'Sedan',
-        condition: formData.condition || 'Excellent',
-        color: formData.color || 'White',
-        cylinders: formData.cylinders || '4',
-        doors: formData.doors || '4',
-        drive_type: formData.drive_type || 'FWD',
-        warranty: formData.warranty || 'No',
-        is_featured: formData.plan === 'featured',
+        fuel_type: formData.fuel_type || '',
+        gearbox_type: formData.gearbox_type || '',
+        body_type: formData.body_type || '',
+        condition: formData.condition || '',
+        color: formData.color || '',
+        cylinders: formData.cylinders || '',
+        doors: formData.doors || '',
+        drive_type: formData.drive_type || '',
+        warranty: formData.warranty || '',
+        is_featured: formData.is_featured || false,
+        payment_intent_id: formData.payment_intent_id || null,
+        payment_method_id: formData.payment_method_id || null,
+        payment_status: formData.payment_status || null,
+        payment_amount: formData.payment_amount || null,
+        payment_currency: formData.payment_currency || null,
+        payment_session_id: formData.payment_session_id || null,
+        payment_metadata: formData.payment_metadata || { payment_method: '', listing_type: '' },
         status: 'pending',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
       
       // Save listing to database first to get the car ID
+      // Ensure is_featured is included in the initial listing data
+      const listingDataWithFeatured = {
+        ...listingData,
+        is_featured: formData.is_featured || false,
+        status: 'pending'
+      };
+
       const { data: listing, error: listingError } = await supabase
         .from('cars')
-        .insert([listingData])
+        .insert([listingDataWithFeatured])
         .select()
         .single();
         
       if (listingError) throw listingError;
       
-      // If this is a featured listing, create a payment record
-      if (formData.plan === 'featured' && formData.payment_intent_id) {
+      // If this is a featured listing, update the car record with payment information
+      if (formData.is_featured && formData.payment_intent_id && formData.payment_method_id) {
         const paymentData = {
-          user_id: user?.id,
-          car_id: listing.id,
-          payment_type: 'car_listing',
+          payment_status: 'succeeded',
           payment_intent_id: formData.payment_intent_id,
-          amount: formData.price ? parseFloat(formData.price.toString()) : 0,
-          currency: currentCountry?.currency_code,
-          status: 'succeeded',
-          payment_method: 'stripe',
-          metadata: {
-            listing_type: 'car'
-          }
+          payment_method_id: formData.payment_method_id,
+          payment_amount: formData.payment_amount,
+          payment_currency: formData.payment_currency,
+          payment_session_id: formData.payment_session_id,
+          payment_metadata: {
+            payment_method: 'stripe',
+            listing_type: 'car',
+            payment_amount: formData.payment_amount,
+            payment_currency: formData.payment_currency,
+            payment_intent: formData.payment_intent_id,
+            payment_method_id: formData.payment_method_id,
+            payment_session_id: formData.payment_session_id,
+            payment_metadata: formData.payment_metadata,
+          },
+          is_featured: true,
+          status: 'pending'
         };
 
-        const { error: paymentError } = await supabase
-          .from('payments')
-          .insert([paymentData]);
+        const { error: updateError } = await supabase
+          .from('cars')
+          .update(paymentData)
+          .eq('id', listing.id);
 
-        if (paymentError) {
-          console.error('Error creating payment record:', paymentError);
-          throw paymentError;
+        if (updateError) {
+          console.error('Error updating car with payment information:', updateError);
+          throw updateError;
         }
       }
       
@@ -500,6 +644,127 @@ export default function NewSellPage() {
     }
   }
   
+  // Handle move to next step event from PaymentStep
+  useEffect(() => {
+    const handleMoveToNextStep = () => {
+      setCurrentStep(prev => {
+        const nextStep = Math.min(prev + 1, steps.length - 1);
+        // Update URL to reflect the current step
+        const url = new URL(window.location.href);
+        url.searchParams.set('step', steps[nextStep]?.id || 'plan');
+        window.history.pushState({}, '', url.toString());
+        return nextStep;
+      });
+    };
+
+    window.addEventListener('moveToNextStep', handleMoveToNextStep);
+    
+    // Clean up event listener
+    return () => {
+      window.removeEventListener('moveToNextStep', handleMoveToNextStep);
+    };
+  }, [steps]);
+
+  // On mount, sync step and featured state from URL if redirected from Stripe payment
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const stepParam = urlParams.get('step');
+    const paymentSuccess = urlParams.get('payment_success');
+
+    // If redirected from Stripe and on payment step
+    if (stepParam === 'payment' && paymentSuccess === 'true') {
+      // Extract payment data from URL
+      const sessionId = urlParams.get('session_id');
+      const paymentIntent = urlParams.get('payment_intent');
+      const paymentIntentId = paymentIntent || sessionId;
+      const paymentMethodId = urlParams.get('payment_method_id');
+      // Save payment info to formData
+      setFormData(prev => ({
+        ...prev,
+        is_featured: true,
+        payment_intent_id: paymentIntentId || undefined,
+        payment_status: 'succeeded',
+        payment_method_id: paymentMethodId || undefined,
+        payment_session_id: sessionId || undefined,
+      }));
+      // Move to payment step
+      const paymentStepIndex = steps.findIndex(step => step.id === 'payment');
+      if (paymentStepIndex !== -1) {
+        setCurrentStep(paymentStepIndex);
+      }
+      // Clean up payment params from URL
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.delete('payment_success');
+      newUrl.searchParams.delete('session_id');
+      newUrl.searchParams.delete('payment_intent');
+      newUrl.searchParams.delete('payment_intent_client_secret');
+      newUrl.searchParams.delete('redirect_status');
+      window.history.replaceState({}, '', newUrl.toString());
+    }
+  }, [steps]);
+
+  // Check for successful payment in localStorage when component mounts
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const checkPaymentStatus = () => {
+      const paymentSuccess = localStorage.getItem('paymentSuccess');
+      if (!paymentSuccess) return;
+
+      try {
+        const paymentData = JSON.parse(paymentSuccess);
+        
+        // Check if the payment was recent (within last 30 minutes)
+        const paymentTime = new Date(paymentData.timestamp).getTime();
+        const currentTime = new Date().getTime();
+        const thirtyMinutes = 30 * 60 * 1000; // 30 minutes in milliseconds
+        
+        if (currentTime - paymentTime < thirtyMinutes) {
+          // Update form data with payment details
+          setFormData(prev => ({
+            ...prev,
+            ...paymentData,
+            is_featured: true,
+            payment_status: 'succeeded',
+            payment_method_id: paymentData.payment_method_id,
+          }));
+          
+          // Move to the next step
+          const currentStepIndex = steps.findIndex(step => step.id === 'payment');
+          if (currentStepIndex !== -1) {
+            setCurrentStep(Math.min(currentStepIndex + 1, steps.length - 1));
+          }
+          
+          // Clean up
+          localStorage.removeItem('paymentSuccess');
+        } else {
+          // Payment data is too old, clean it up
+          localStorage.removeItem('paymentSuccess');
+        }
+      } catch (error) {
+        console.error('Error processing payment success data:', error);
+        localStorage.removeItem('paymentSuccess');
+      }
+    };
+    
+    checkPaymentStatus();
+    
+    // Also check when the page becomes visible again (in case of mobile browser tab switching)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        checkPaymentStatus();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [steps]);
+
   // Fetch initial data
   useEffect(() => {
     async function fetchData() {
@@ -541,7 +806,7 @@ export default function NewSellPage() {
   // Fetch models when brand changes
   useEffect(() => {
     async function fetchModels() {
-      if (!formData.brand) return;
+      if (!formData.brand_id) return;
       
       try {
         setLoading(true);
@@ -565,51 +830,6 @@ export default function NewSellPage() {
     
     fetchModels();
   }, [formData.brand, t]);
-  
-  // Handle edit mode
-  useEffect(() => {
-    if (!editId) return;
-    
-    async function fetchListing() {
-      try {
-        setLoading(true);
-        
-        const { data: listing, error } = await supabase
-          .from('listings')
-          .select('*')
-          .eq('id', editId)
-          .single();
-          
-        if (error) throw error;
-        
-        // Update form data with existing listing
-        setFormData(prev => ({
-          ...prev,
-          title: listing.title,
-          description: listing.description,
-          price: listing.price.toString(),
-          category_id: listing.category_id,
-          condition: listing.condition,
-          specifications: listing.specifications || {},
-          city_id: listing.city,
-          country_id: listing.country_id,
-          plan: listing.is_featured ? 'featured' : 'free',
-          payment_intent_id: listing.payment_intent_id,
-        }));
-        
-        // Skip to basic info step for editing
-        setCurrentStep(2);
-        
-      } catch (error) {
-        console.error('Error fetching listing:', error);
-        toast.error(t('errors.loading_listing'));
-      } finally {
-        setLoading(false);
-      }
-    }
-    
-    fetchListing();
-  }, [editId, t]);
   
   // Render loading state
   if (loading) {
@@ -774,13 +994,22 @@ export default function NewSellPage() {
             </p>
           </div>
           
-          <div className="rounded-lg bg-white dark:bg-gray-900 p-6 shadow dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+          <div className="rounded-lg bg-white dark:bg-gray-900 p-6 shadow-lg   dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
             {visibleSteps[currentStep].component}
           </div>
           
           {/* Navigation Buttons */}
           {currentStep > 0 && (
             <div className="mt-6 flex justify-between">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setCurrentStep(prev => prev - 1)}
+                disabled={currentStep === 0 || isSubmitting}
+              >
+                {t('common.back')}
+              </Button>
+              {/* Navigation Buttons */}
               <Button
                 type="button"
                 variant="outline"

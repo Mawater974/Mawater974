@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Database } from "@/types/supabase";
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 // Simple form input components with consistent styling
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
@@ -108,29 +109,27 @@ type FormData = {
 
 interface BasicInfoStepProps {
   formData: FormData;
-  onFormChange: <K extends keyof FormData>(
-    field: K,
-    value: FormData[K]
-  ) => void;
-  t: (key: string, values?: Record<string, any>) => string;
-  errors: Partial<Record<keyof FormData, string>>;
+  onFormChange: (field: string, value: string | number | undefined) => void;
+  t: (key: string) => string;
+  errors: { [key: string]: string };
   brands: Brand[];
-  onBrandChange?: (brandId: string) => void | Promise<void>;
-  currentCountryId?: number | null;
+  onBrandChange: (brandId: string) => void;
+  currentCountry: { id: number; currency_code: string; } | null;
 }
 
-export function BasicInfoStep({ 
-  formData, 
-  onFormChange, 
-  t, 
+export default function BasicInfoStep({
+  formData,
+  onFormChange,
+  t,
   errors,
   brands,
   onBrandChange,
-  currentCountryId
+  currentCountry
 }: BasicInfoStepProps) {
   const [availableModels, setAvailableModels] = useState<Model[]>([]);
   const supabase = createClientComponentClient<Database>();
   const currentYear = new Date().getFullYear();
+  const { currentLanguage } = useLanguage();
   const years = Array.from({ length: 30 }, (_, i) => (currentYear - i).toString());
 
   const handleBrandChange = async (value: string) => {
@@ -192,7 +191,7 @@ export function BasicInfoStep({
           >
             {brands.map((brand) => (
               <option key={brand.id} value={brand.id}>
-                {brand.name}
+                {currentLanguage === 'ar' && brand.name_ar ? brand.name_ar : brand.name}
               </option>
             ))}
           </Select>
@@ -214,7 +213,7 @@ export function BasicInfoStep({
           >
             {availableModels.map((model) => (
               <option key={model.id} value={model.id}>
-                {model.name}
+                {currentLanguage === 'ar' && model.name_ar ? model.name_ar : model.name}
               </option>
             ))}
           </Select>
@@ -285,7 +284,7 @@ export function BasicInfoStep({
 
         {/* Price */}
         <div className="space-y-2">
-          <Label htmlFor="price" required>{t('sell.basic.price')} (QAR)</Label>
+          <Label htmlFor="price" required>{t('sell.basic.price')} ({currentCountry?.currency_code})</Label>
           <div className="relative">
             <Input
               id="price"
@@ -298,7 +297,7 @@ export function BasicInfoStep({
               error={!!errors.price}
             />
             <span className="absolute right-3 top-2.5 text-gray-500 text-sm">
-              QAR
+              {currentCountry?.currency_code}
             </span>
           </div>
           {errors.price && (

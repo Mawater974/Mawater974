@@ -4,6 +4,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Button } from "@/components/ui/button"
 import { CheckCircle2, ChevronLeft, Edit2, Star, Image as ImageIcon } from 'lucide-react';
 import { ImageFile } from '@/types/image';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useCountry } from '@/contexts/CountryContext';
 
 interface PreviewStepProps {
   formData: any;
@@ -31,12 +33,12 @@ export default function PreviewStep({
   brands = [],
   models = [],
   cities = [] as Array<{ id: string | number; name: string; name_ar?: string }>,
-  currentLanguage = 'en',
-  currentCountry = { currency_code: 'QAR' },
   mainPhotoIndex = 0,
   images = []
 }: PreviewStepProps) {
   const [isConfirmed, setIsConfirmed] = useState(false);
+  const { currentLanguage } = useLanguage();
+  const { currentCountry } = useCountry();
   
   // Use formData.images if images prop is not provided
   const photos = images.length > 0 ? images : formData.images || [];
@@ -46,6 +48,8 @@ export default function PreviewStep({
 
   const previewItems = [
     { label: t('sell.basic.brand'), value: selectedBrand?.name },
+    { label: t('sell.payment.status'), value: formData.payment_status || t('sell.payment.pending') },
+    { label: t('sell.payment.isFeatured'), value: formData.is_featured ? t('sell.payment.featured') : t('sell.payment.standard') },
     { label: t('sell.basic.model'), value: selectedModel?.name },
     { label: t('sell.basic.exactModel') || 'Exact Model', value: formData.exact_model || null },
     { label: t('sell.basic.year'), value: formData.year },
@@ -129,6 +133,11 @@ export default function PreviewStep({
 
       {/* Car Details */}
       <div className="overflow-hidden rounded-lg bg-white shadow dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+        <div className="bg-gray-50 dark:bg-gray-900 px-4 py-3 sm:px-6">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+            {t('sell.review.carDetails')}
+          </h3>
+        </div>
         <dl>
           {previewItems.map((item, index) => (
             <div 
@@ -145,6 +154,34 @@ export default function PreviewStep({
               </dd>
             </div>
           ))}
+        </dl>
+      </div>
+
+      {/* Payment Information */}
+      <div className="mt-6">
+        <div className="bg-gray-50 dark:bg-gray-900 px-4 py-3 sm:px-6">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+            {t('sell.review.paymentInfo')}
+          </h3>
+        </div>
+        <dl>
+          {previewItems
+            .filter(item => item.label === t('sell.payment.status') || item.label === t('sell.payment.isFeatured'))
+            .map((item, index) => (
+              <div 
+                key={item.label} 
+                className={`${
+                  index % 2 === 0 ? 'bg-gray-50 dark:bg-gray-900' : 'bg-white dark:bg-gray-800'
+                } px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6`}
+              >
+                <dt className="text-sm font-medium text-gray-900 dark:text-white">
+                  {item.label}
+                </dt>
+                <dd className="mt-1 text-sm text-gray-900 dark:text-white sm:mt-0 sm:col-span-2">
+                  {item.value}
+                </dd>
+              </div>
+            ))}
         </dl>
       </div>
 

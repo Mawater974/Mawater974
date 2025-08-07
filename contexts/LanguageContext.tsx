@@ -115,10 +115,10 @@ const translations = {
     'car.warranty.yes': 'Yes',
     'car.warranty.no': 'No',
     'car.driveType.label': 'Drive Type',
-    'car.driveType.fwd': 'Front-Wheel Drive',
-    'car.driveType.rwd': 'Rear-Wheel Drive',
-    'car.driveType.awd': 'All-Wheel Drive',
-    'car.driveType.4wd': 'Four-Wheel Drive',
+    'car.driveType.fwd': 'FWD',
+    'car.driveType.rwd': 'RWD',
+    'car.driveType.awd': 'AWD',
+    'car.driveType.4wd': '4WD',
     'car.warranty.label': 'Warranty',
     'car.warranty.Yes': 'Yes',
     'car.warranty.No': 'No',
@@ -1617,6 +1617,19 @@ const translations = {
     'cars.status': 'Status',
     'cars.statistics': 'Statistics',
     'cars.actions': 'Actions',
+
+    'payment.order_summary': 'Order Summary',
+    'payment.featured_listing': 'Featured Listing',
+    'payment.total': 'Total',
+    'payment.success_message': 'Payment successful!',
+    'payment.error_processing': 'Error processing payment',
+    'payment.error_checking_status': 'Error checking payment status',
+    'payment.unknown_error': 'Unknown error',
+
+
+
+
+
   },
   ar: {
     // Navigation
@@ -1708,8 +1721,8 @@ const translations = {
     'car.driveType.label': 'نوع الدفع',
     'car.driveType.fwd': 'دفع أمامي',
     'car.driveType.rwd': 'دفع خلفي',
-    'car.driveType.awd': 'دفع رباعي دائم',
-    'car.driveType.4wd': 'دفع رباعي',
+    'car.driveType.awd': 'دفع رباعي',
+    'car.driveType.4wd': 'دفع رباعي دائم',
     'car.warranty.label': 'الضمان',
     'car.warranty.yes': 'نعم',
     'car.warranty.no': 'لا',

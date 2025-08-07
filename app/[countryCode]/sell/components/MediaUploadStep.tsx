@@ -8,7 +8,7 @@ import { Trash2, Upload, Image as ImageIcon, Star, Check } from 'lucide-react';
 import imageCompression from 'browser-image-compression';
 import { toast } from 'react-hot-toast';
 import heic2any from 'heic2any';
-
+import { useCountry } from '@/contexts/CountryContext';
 import { ImageFile } from '@/types/image';
 
 interface ExistingImage {
@@ -43,6 +43,7 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
+  const { currentCountry } = useCountry();
   const objectUrls = useRef<Set<string>>(new Set());
 
   // Use a ref to track if we've initialized the files
@@ -687,14 +688,14 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
       {allImages.length === 0 && (
         <div 
           onClick={() => fileInputRef.current?.click()}
-          className="cursor-pointer flex flex-col items-center justify-center w-full h-64 border-2 border-dashed border-gray-600 rounded-lg bg-[#2a3441] hover:bg-[#323d4d] transition-colors group"
+          className="cursor-pointer flex flex-col items-center justify-center w-full h-64 border-2 border-dashed border-gray-600 rounded-lg bg-white dark:bg-[#2a3441] hover:bg-[white] dark:hover:bg-[#323d4d] transition-colors group"
         >
           <div className="flex flex-col items-center justify-center pt-5 pb-6">
             <Upload className="h-12 w-12 mb-4 text-gray-400 group-hover:text-qatar-maroon transition-colors" />
             <p className="mb-2 text-sm text-gray-400 group-hover:text-white transition-colors">
-              <span className="font-semibold group-hover:text-qatar-maroon">{t('sell.images.drag')}</span>
+              <span className="font-semibold group-hover:text-qatar-maroon transition-colors">{t('sell.images.drag')}</span>
             </p>
-            <p className="text-xs text-gray-500 group-hover:text-gray-300 transition-colors">
+            <p className="text-xs text-gray-500 group-hover:text-qatar-maroon transition-colors">
               {t('sell.images.formats')}
             </p>
           </div>

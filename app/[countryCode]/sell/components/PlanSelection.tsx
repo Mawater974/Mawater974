@@ -1,8 +1,9 @@
-import { Button } from "@/components/ui/button"
-import { useRouter } from "next/navigation"
-import { useState } from 'react';
-import { useLanguage } from "@/contexts/LanguageContext"
-import { useCountry } from "@/contexts/CountryContext"
+import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
+import { useState, useEffect } from 'react';
+import { useLanguage } from "@/contexts/LanguageContext";
+import { useCountry } from "@/contexts/CountryContext";
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 // Check icon component
 function CheckIcon(props: React.SVGProps<SVGSVGElement>) {
@@ -30,23 +31,66 @@ type Plan = {
   isPopular?: boolean
 }
 
+type PlanType = 'free' | 'featured' | null;
+
 type PlanSelectionProps = {
-  onSelectPlan: (plan: 'free' | 'featured') => void
+  onSelectPlan: (isFeatured: boolean | null) => void
+  onContinue?: () => void
   t: (key: string) => string
-  currentPlan: 'free' | 'featured' | null
+  currentPlan: PlanType
 }
 
-export function PlanSelection({ onSelectPlan, t, currentPlan }: PlanSelectionProps) {
+export function PlanSelection({ onSelectPlan, onContinue, t, currentPlan }: PlanSelectionProps) {
   const { currentCountry } = useCountry()
-  // Initialize with null to have no plan selected by default
-  const [selectedPlan, setSelectedPlan] = useState<'free' | 'featured' | null>(null)
+  const supabase = createClientComponentClient()
+  const [featuredPrice, setFeaturedPrice] = useState<string>('')
+  const [loading, setLoading] = useState(true)
+  const [selectedPlan, setSelectedPlan] = useState<PlanType>(currentPlan || null);
 
-  const handleSelectPlan = (plan: 'free' | 'featured') => {
-    setSelectedPlan(plan)
-    // Removed onSelectPlan call here to prevent auto-navigation
-  }
+  useEffect(() => {
+    const fetchFeaturedPrice = async () => {
+      try {
+        if (currentCountry?.id) {
+          const { data } = await supabase
+            .from('featured_prices')
+            .select('price')
+            .eq('country_id', currentCountry.id)
+            .single();
+          
+          if (data) {
+            setFeaturedPrice(data.price);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching featured price:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  // Features for each plan
+    if (currentCountry?.id) {
+      fetchFeaturedPrice();
+    }
+  }, [currentCountry?.id]);
+
+  useEffect(() => {
+    setSelectedPlan(currentPlan || null);
+  }, [currentPlan]);
+
+  const handleSelectPlan = (planType: PlanType) => {
+    const newPlan = selectedPlan === planType ? null : planType;
+    setSelectedPlan(newPlan);
+  };
+
+  const handleContinue = () => {
+    if (selectedPlan !== null) {
+      onSelectPlan(selectedPlan === 'featured');
+      if (onContinue) {
+        onContinue();
+      }
+    }
+  };
+
   const features = {
     free: [
         t('sell.features.basic.visibility'),
@@ -67,51 +111,58 @@ export function PlanSelection({ onSelectPlan, t, currentPlan }: PlanSelectionPro
         t('sell.features.featured.social'),
         t('sell.features.featured.analytics')
     ]
-  }
+  } as const;
 
   return (
-    <div className=" w-full">
+    <div className="w-full">
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="space-y-4 sm:space-y-0 sm:grid sm:grid-cols-2 sm:gap-8 w-full">
+        <div className="space-y-8">
+          <div className="space-y-4 sm:space-y-0 sm:grid sm:grid-cols-2 sm:gap-8 w-full">
           {/* Free Plan */}
-          <div className={`rounded-lg shadow-sm divide-y divide-gray-200 dark:divide-gray-700 ${
-            selectedPlan === 'free' 
-              ? 'border-2 border-qatar-maroon' 
-              : 'border border-gray-200 dark:border-gray-700'
-          }`}>
-            <div className="p-6 bg-white dark:bg-gray-900 rounded-lg">
-              <h2 className="text-2xl font-semibold leading-6 text-gray-900 dark:text-white">
-                {t('sell.plan.free.title')}
-              </h2>
-              <p className="mt-4 text-sm text-gray-500 dark:text-gray-300">
-                {t('sell.plan.free.description')}
-              </p>
-              <p className="mt-8">
-                <span className="text-4xl font-extrabold text-gray-900 dark:text-white">
-                  {t('sell.plan.free.price')}
-                </span>
-              </p>
-              <button
-                type="button"
-                onClick={() => handleSelectPlan('free')}
-                className={`mt-8 block w-full py-2 px-3 text-sm font-semibold rounded-md text-center border-2 transition-all duration-300 ${
-                  selectedPlan === 'free'
-                    ? 'bg-qatar-maroon text-white border-qatar-maroon hover:bg-qatar-maroon/90'
-                    : 'bg-qatar-maroon/10 text-qatar-maroon border-qatar-maroon/50 hover:bg-qatar-maroon/20 hover:border-qatar-maroon'
-                }`}
-              >
-                {t('sell.plan.free.select')}
-              </button>
-            </div>
-            <div className="pt-6 pb-8 px-6">
-              <h3 className="text-sm font-medium text-gray-900 dark:text-white tracking-wide uppercase">
-                {t('sell.plan.free.includes')}
+          <div 
+            className={`rounded-lg shadow-sm divide-y divide-gray-200 dark:divide-gray-700 ${
+              selectedPlan === 'free' 
+                ? 'ring-2 ring-blue-500 dark:ring-blue-400' 
+                : 'border border-gray-200 dark:border-gray-700'
+            }`}
+            onClick={() => handleSelectPlan('free')}
+          >
+            <div className="p-6">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                {t('sell.plans.free.title')}
               </h3>
-              <ul role="list" className="mt-4 space-y-3">
-                {features.free.map((feature) => (
-                  <li key={feature} className="flex space-x-3">
-                    <CheckIcon className="flex-shrink-0 h-5 w-5 text-green-500" aria-hidden="true" />
-                    <span className="text-sm text-gray-500 dark:text-gray-300">{feature}</span>
+              <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
+                {t('sell.plans.free.description')}
+              </p>
+              <div className="mt-8">
+                <p className="text-4xl font-extrabold text-gray-900 dark:text-white">
+                  {t('sell.plans.free.price')}
+                </p>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  {t('sell.plans.free.duration')}
+                </p>
+              </div>
+              <div className="mt-8 block w-full">
+                <span className={`inline-flex items-center justify-center w-full rounded-md py-2 px-3 text-sm font-semibold ${
+                  selectedPlan === 'free'
+                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                    : 'bg-gray-50 text-gray-900 hover:bg-gray-100 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700'
+                }`}>
+                  {selectedPlan === 'free' ? t('common.selected') : t('common.select')}
+                </span>
+              </div>
+            </div>
+            <div className="px-6 pt-6 pb-8">
+              <h4 className="text-xs font-medium text-gray-900 dark:text-white uppercase tracking-wide">
+                {t('sell.whatsIncluded')}
+              </h4>
+              <ul className="mt-6 space-y-4">
+                {features.free.map((feature, index) => (
+                  <li key={index} className="flex">
+                    <CheckIcon className="h-5 w-5 text-green-500 flex-shrink-0" />
+                    <span className="ml-3 text-sm text-gray-700 dark:text-gray-300">
+                      {feature}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -119,82 +170,71 @@ export function PlanSelection({ onSelectPlan, t, currentPlan }: PlanSelectionPro
           </div>
 
           {/* Featured Plan */}
-          <div className={`rounded-lg shadow-sm divide-y divide-gray-200 dark:divide-gray-700 ${
-            selectedPlan === 'featured' 
-              ? 'border-2 border-qatar-maroon' 
-              : 'border border-gray-200 dark:border-gray-700'
-          }`}>
+          <div 
+            className={`rounded-lg shadow-sm divide-y divide-gray-200 dark:divide-gray-700 ${
+              selectedPlan === 'featured'
+                ? 'ring-2 ring-blue-500 dark:ring-blue-400'
+                : 'border border-gray-200 dark:border-gray-700'
+            }`}
+            onClick={() => handleSelectPlan('featured')}
+          >
             <div className="p-6">
-              <h2 className="text-2xl font-semibold leading-6 text-gray-900 dark:text-white">
-                {t('sell.plan.featured.title')}
-              </h2>
-              <p className="mt-4 text-sm text-gray-500 dark:text-gray-300">
-                {t('sell.plan.featured.description')}
-              </p>
-              <p className="mt-8">
-                <span className="text-4xl font-extrabold text-gray-900 dark:text-white">
-                  {t(`sell.plan.featured.price.${currentCountry?.code?.toLowerCase() || '00'}`)} {t(`common.currency.${currentCountry?.currency_code}`)}
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                  {t('sell.plans.featured.title')}
+                </h3>
+                <span className="inline-flex items-center px-3 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100">
+                  {t('common.popular')}
                 </span>
-                <span className="text-base font-medium text-gray-500 dark:text-gray-400">
-                  {t('sell.plan.featured.period')}
-                </span>
+              </div>
+              <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
+                {t('sell.plans.featured.description')}
               </p>
-              <button
-                type="button"
-                onClick={() => handleSelectPlan('featured')}
-                className={`mt-8 block w-full py-2 px-3 text-sm font-semibold rounded-md text-center border-2 transition-all duration-300 ${
+              <div className="mt-8">
+                <p className="text-4xl font-extrabold text-gray-900 dark:text-white">
+                  {loading ? '...' : `${featuredPrice} ${currentCountry?.currency || ''}`}
+                </p>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  {t('sell.plans.featured.duration')}
+                </p>
+              </div>
+              <div className="mt-8 block w-full">
+                <span className={`inline-flex items-center justify-center w-full rounded-md py-2 px-3 text-sm font-semibold ${
                   selectedPlan === 'featured'
-                    ? 'bg-qatar-maroon text-white border-qatar-maroon hover:bg-qatar-maroon/90'
-                    : 'bg-qatar-maroon/10 text-qatar-maroon border-qatar-maroon/50 hover:bg-qatar-maroon/20 hover:border-qatar-maroon'
-                }`}
-              >
-                {t('sell.plan.featured.select')}
-              </button>
+                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                    : 'bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-800/50'
+                }`}>
+                  {selectedPlan === 'featured' ? t('common.selected') : t('common.select')}
+                </span>
+              </div>
             </div>
-            <div className="pt-6 pb-8 px-6">
-              <h3 className="text-sm font-medium text-gray-900 dark:text-white tracking-wide uppercase">
-                {t('sell.plan.featured.includes')}
-              </h3>
-              <ul role="list" className="mt-4 space-y-3">
-                {features.featured.map((feature) => (
-                  <li key={feature} className="flex space-x-3">
-                    <CheckIcon className="flex-shrink-0 h-5 w-5 text-green-500" aria-hidden="true" />
-                    <span className="text-sm text-gray-500 dark:text-gray-300">{feature}</span>
+            <div className="px-6 pt-6 pb-8">
+              <h4 className="text-xs font-medium text-gray-900 dark:text-white uppercase tracking-wide">
+                {t('sell.whatsIncluded')}
+              </h4>
+              <ul className="mt-6 space-y-4">
+                {features.featured.map((feature, index) => (
+                  <li key={index} className="flex">
+                    <CheckIcon className="h-5 w-5 text-green-500 flex-shrink-0" />
+                    <span className="ml-3 text-sm text-gray-700 dark:text-gray-300">
+                      {feature}
+                    </span>
                   </li>
                 ))}
               </ul>
             </div>
           </div>
-
-          <div className="mt-8 text-center col-span-2">
-            <button
-              onClick={() => selectedPlan && onSelectPlan(selectedPlan)}
-              disabled={!selectedPlan}
-              className={`inline-flex items-center justify-center w-full sm:w-auto px-8 py-3.5 border border-transparent text-base font-medium rounded-md shadow-sm text-white ${
-                selectedPlan === 'featured' 
-                  ? 'bg-qatar-maroon hover:bg-qatar-maroon/90' 
-                  : 'bg-qatar-maroon hover:bg-qatar-maroon/90'
-              } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-105`}
+          
+          </div>
+          
+          <div className="flex justify-end mt-8">
+            <Button 
+              onClick={handleContinue}
+              disabled={selectedPlan === null}
+              className="px-8 py-3 text-lg"
             >
-              {selectedPlan 
-                ? `${t('sell.plan.continue')} ${selectedPlan === 'free' ? t('sell.plan.free.title') : t('sell.plan.featured.title')}`
-                : t('sell.plan.selectPlan')}
-                
-              <svg 
-                className="ml-2 mr-1 w-5 h-5" 
-                xmlns="http://www.w3.org/2000/svg" 
-                viewBox="0 0 20 20" 
-                fill="currentColor"
-              >
-                <path 
-                  fillRule="evenodd" 
-                  d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" 
-                  clipRule="evenodd" 
-                />
-              </svg>
-            </button>
-            
-           
+              {t('common.continue')}
+            </Button>
           </div>
         </div>
       </div>
