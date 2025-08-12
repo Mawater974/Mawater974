@@ -30,7 +30,6 @@ interface Car {
   doors?: string;
   drive_type?: string;
   warranty?: string;
-  warranty_months_remaining?: string;
   exact_model?: string;
   city_id?: string | number;
   is_featured?: boolean;
@@ -80,7 +79,6 @@ interface FormData {
   doors: string;
   drive_type: string;
   warranty: string;
-  warranty_months_remaining: string;
   exact_model: string;
   city_id: string;
   is_featured: boolean;
@@ -116,7 +114,6 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
     doors: '',
     drive_type: '',
     warranty: '',
-    warranty_months_remaining: '',
     exact_model: '',
     city_id: '',
     is_featured: false,
@@ -150,7 +147,6 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
       doors: car.doors || '',
       drive_type: car.drive_type || '',
       warranty: car.warranty || '',
-      warranty_months_remaining: car.warranty_months_remaining || '',
       exact_model: car.exact_model || '',
       city_id: safeString(car.city_id),
       is_featured: car.is_featured || false,
@@ -183,7 +179,6 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
       doors: car.doors || '',
       drive_type: car.drive_type || '',
       warranty: car.warranty || '',
-      warranty_months_remaining: car.warranty_months_remaining || '',
       exact_model: car.exact_model || '',
       city_id: safeString(car.city_id),
       is_featured: car.is_featured || false,
@@ -466,8 +461,6 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
         doors: formData.doors || null,
         drive_type: formData.drive_type || null,
         warranty: formData.warranty || null,
-        warranty_months_remaining: formData.warranty_months_remaining ? 
-          parseInt(formData.warranty_months_remaining) : null,
         exact_model: formData.exact_model || null,
         city_id: formData.city_id ? parseInt(formData.city_id) : null,
         is_featured: formData.is_featured || false,
@@ -889,19 +882,7 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
                       </select>
                     </div>
                     <div>
-                      <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-                        {t('car.warrantyMonthsRemaining')}
-                      </label>
-                      <input
-                        type="number"
-                        value={formData.warranty_months_remaining}
-                        onChange={(e) => setFormData(prev => ({ ...prev, warranty_months_remaining: e.target.value }))}
-                        className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-qatar-maroon focus:border-qatar-maroon sm:text-sm bg-white dark:bg-gray-700 transition-colors duration-200"
-                        
-                      />
-                    </div>
-                    <div>
-                      <label className="w-full mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+                      <label className="w-full col-span-2 mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
                         {t('car.description')}
                       </label>
                       <textarea

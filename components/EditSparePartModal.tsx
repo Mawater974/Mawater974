@@ -235,12 +235,13 @@ const EditSparePartModal = ({
           name_ar: c.name_ar
         })));
         
-        // If we have a spare part with city data, fetch cities for that country
-        if (sparePart?.city?.country_id) {
+        // Load cities for the spare part's country
+        const countryId = sparePart?.country_id || currentCountry?.id;
+        if (countryId) {
           const { data: citiesData } = await supabase
             .from('cities')
             .select('id, name, name_ar')
-            .eq('country_id', sparePart.city.country_id)
+            .eq('country_id', Number(countryId))
             .order('name', { ascending: true });
           
           setCities((citiesData || []).map(c => ({
@@ -302,7 +303,9 @@ const EditSparePartModal = ({
     
     fetchModels();
   }, [formData.brand_id, supabase, t]);
-  
+
+
+
   // Initialize form data and images when sparePart changes
   useEffect(() => {
     if (!sparePart) return;
