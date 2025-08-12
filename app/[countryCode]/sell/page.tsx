@@ -122,12 +122,83 @@ const conditions = ['New', 'Excellent', 'Good', 'Not Working'];
 const colors =['White', 'Black', 'Silver', 'Gray', 'Red', 'Blue', 'Green', 'Yellow', 'Orange', 'Brown', 'Purple', 'Gold', 'Beige', 'Maroon', 'Navy', 'Bronze', 'Other'];
 
 export default function NewSellPage() {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const stepParam = searchParams.get('step');
   const { t, currentLanguage } = useLanguage();
   const { currentCountry } = useCountry();
+
+
+  // Show loading state while checking auth
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  // Show login/signup prompt if not authenticated
+  if (!user) {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 text-center">
+          <h1 className="text-2xl font-bold mb-4">{t('sell.sellCar')}</h1>
+          <div className="mb-6">
+            <p className="mb-4">{t('sell.pleaseLoginToSell')}</p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button 
+                onClick={() => {
+                  const redirectUrl = currentCountry ? `/login` : `/login`;
+                  router.push(redirectUrl);
+                }}
+                className="bg-primary hover:bg-primary/90 text-white font-medium py-2 px-6 rounded-md transition-colors"
+              >
+                {t('common.login')}
+              </Button>
+              <Button 
+                onClick={() => {
+                  const redirectUrl = currentCountry ? `/signup` : `/signup`;
+                  router.push(redirectUrl);
+                }}
+                variant="outline"
+                className="border-primary text-primary hover:bg-primary/10 font-medium py-2 px-6 rounded-md transition-colors"
+              >
+                {t('auth.signup')}
+              </Button>
+            </div>
+          </div>
+          <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+            <h3 className="text-lg font-medium mb-4">{t('sell.whyCreateAccount')}</h3>
+            <div className="grid md:grid-cols-3 gap-6">
+              <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-3 mx-auto">
+                  <FontAwesomeIcon icon={faSearch} className="text-primary w-5 h-5" />
+                </div>
+                <h4 className="font-medium mb-1">{t('sell.manageListings')}</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-300">{t('sell.manageListingsDesc')}</p>
+              </div>
+              <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-3 mx-auto">
+                  <FontAwesomeIcon icon={faChartLine} className="text-primary w-5 h-5" />
+                </div>
+                <h4 className="font-medium mb-1">{t('sell.trackPerformance')}</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-300">{t('sell.trackPerformanceDesc')}</p>
+              </div>
+              <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-3 mx-auto">
+                  <FontAwesomeIcon icon={faHeadset} className="text-primary w-5 h-5" />
+                </div>
+                <h4 className="font-medium mb-1">{t('sell.getSupport')}</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-300">{t('sell.getSupportDesc')}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
   
   // Form state
   const [formData, setFormData] = useState<FormData>({
