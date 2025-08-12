@@ -726,6 +726,15 @@ const translations = {
     'sell.payment.standard': 'Free Plan',
     'sell.payment.notPaid': 'Not Paid',
     'sell.payment.complete_payment_first': 'Please complete the payment first',
+    'sell.sellCar': 'Sell Car',
+    'sell.pleaseLoginToSell': 'Please login to sell',
+    'sell.whyCreateAccount': 'Why Create Account',
+    'sell.manageListings': 'Manage Listings',
+    'sell.manageListingsDesc': 'Manage your car listings and track their status',
+    'sell.trackPerformance': 'Track Performance',
+    'sell.trackPerformanceDesc': 'Track your car listings performance and get insights into your listings',
+    'sell.getSupport': 'Get Support',
+    'sell.getSupportDesc': 'Get support from our team and get help with your car listings',
 
     // My Ads Page
     'myAds.title': 'My Car Listings',
@@ -2300,6 +2309,16 @@ const translations = {
     'sell.payment.standard': 'إعلان مجاني',
     'sell.payment.notPaid': 'غير مدفوع',
     'sell.payment.complete_payment_first': 'يرجى إكمال عملية الدفع أولاً',
+    'sell.sellCar': 'بع سيارتك',
+    'sell.pleaseLoginToSell': 'يرجى تسجيل الدخول لإضافة إعلان سيارتك',
+    'sell.whyCreateAccount': 'لماذا تنشئ حساباً',
+    'sell.manageListings': 'إدارة الإعلانات',
+    'sell.manageListingsDesc': 'إدارة إعلانات سياراتك ورصد حالتها',
+    'sell.trackPerformance': 'رصد الأداء',
+    'sell.trackPerformanceDesc': 'رصد أداء إعلانات سياراتك وحصل على معلومات حول إعلاناتك',
+    'sell.getSupport': 'الدعم',
+    'sell.getSupportDesc': 'الدعم من فريقنا ومساعدتك في إعلانات سياراتك',
+
     // My Ads Page
     'myAds.title': 'إعلاناتي',
     'myAds.subtitle': 'إدارة إعلانات سياراتك وتتبع حالتها',
