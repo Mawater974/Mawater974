@@ -83,19 +83,19 @@ const initialFormData: FormData = {
   brand_id: '',
   model_id: '',
   exact_model: '',
-  year: '2025',
-  mileage: '10000',
-  price: '10001',
-  description: 'asd',
+  year: '2024',
+  mileage: '21323',
+  price: '210000',
+  description: 'test',
   images: [],
   country_id: null,
-  city_id: '40',
+  city_id: '',
   city: '', 
   fuel_type: 'Petrol',
   gearbox_type: 'Automatic',
   body_type: 'Sedan',
   condition: 'New',
-  color: 'Red',
+  color: 'Black',
   cylinders: '4',
   doors: '4',
   drive_type: 'FWD',
@@ -178,6 +178,7 @@ export default function NewSellPage() {
   const [loading, setLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isPaymentCompleted, setIsPaymentCompleted] = useState(false);
   
   // Data
   const [brands, setBrands] = useState<Brand[]>([]);
@@ -278,13 +279,15 @@ export default function NewSellPage() {
                 payment_method_id: data.payment_method_id || null,
                 payment_session_id: data.payment_session_id || null,
                 payment_metadata: data.payment_metadata || null,
-                
                 is_featured: data.is_featured
               }));
-              // Store payment data (but do NOT mark as completed yet)
+              // Store payment data and mark payment as completed
               setPaymentData(data);
+              setIsPaymentCompleted(true);
               // Show success message
               toast.success(t('sell.payment.success') || 'Payment successful!');
+              // Just show success message, don't auto-navigate
+              // User will need to click next to proceed
             }}
             onPaymentError={(error) => {
               console.error('Payment error:', error);
@@ -304,6 +307,8 @@ export default function NewSellPage() {
         <BasicInfoStep 
           formData={formData}
           onFormChange={(field, value) => setFormData(prev => ({ ...prev, [field]: value }))}
+          onNext={goToNextStep}
+          onBack={() => setCurrentStep(prev => prev - 1)}
           t={t}
           errors={{}}
           brands={brands}
@@ -319,6 +324,8 @@ export default function NewSellPage() {
         <DetailedInfoStep 
           formData={formData}
           onFormChange={(field, value) => setFormData(prev => ({ ...prev, [field]: value }))}
+          onNext={goToNextStep}
+          onBack={() => setCurrentStep(prev => prev - 1)}
           t={t}
           errors={{}}
           cities={cities}
@@ -331,9 +338,9 @@ export default function NewSellPage() {
             { id: 'color', name: t('sell.details.color'), type: 'select', options: colors.map(type => t(`car.color.${type.toLowerCase()}`)), required: true },
             { id: 'condition', name: t('sell.details.condition'), type: 'select', options:conditions.map(type => t(`car.condition.${type.toLowerCase().replace(' ', '_')}`)), required: true }, 
             { id: 'cylinders', name: t('sell.details.cylinders'), type: 'select', options: cylinderOptions.map(type => t(`car.cylinders.${type.toLowerCase()}`)), required: true },
-            { id: 'doors', name: t('sell.details.doors'), type: 'select', options: doorOptions.map(type => t(`car.doors.${type.toLowerCase()}`)), required: true },
+            { id: 'doors', name: t('sell.details.doors'), type: 'select', options: doorOptions.map(type => t(`car.doors.${type.toLowerCase()}`)), required: false },
             { id: 'drive_type', name: t('sell.details.driveType'), type: 'select', options: driveTypeOptions.map(type => t(`car.driveType.${type.toLowerCase()}`)), required: true },
-            { id: 'warranty', name: t('sell.details.warranty'), type: 'select', options: warrantyOptions.map(type => t(`car.warranty.${type.toLowerCase()}`)), required: true },
+            { id: 'warranty', name: t('sell.details.warranty'), type: 'select', options: warrantyOptions.map(type => t(`car.warranty.${type.toLowerCase()}`)), required: false },
             { 
               id: 'city_id', 
               name: t('sell.details.city'), 
@@ -343,12 +350,12 @@ export default function NewSellPage() {
               optionLabelKey: currentLanguage === 'ar' ? 'name_ar' : 'name',
               required: true 
             },
-            ...(formData.warranty === 'Yes' ? [{
+            /*}...(formData.warranty === 'Yes' ? [{
               id: 'warranty_months_remaining',
               name: t('sell.details.warrantyMonthsRemaining'),
               type: 'number',
-              required: true
-            }] : []),
+              required: false
+            }] : []),*/
             { id: 'description', name: t('sell.details.description'), type: 'textarea', required: true, colSpan: 2 },
           ]}
         />
@@ -360,6 +367,8 @@ export default function NewSellPage() {
       component: (
         <MediaUploadStep 
           onFilesChange={(files) => setFormData(prev => ({ ...prev, images: files }))}
+          onNext={goToNextStep}
+          onBack={() => setCurrentStep(prev => prev - 1)}
           t={t}
           errors={{}}
           initialFiles={formData.images}
@@ -610,6 +619,35 @@ export default function NewSellPage() {
 
         // Wait for all image uploads to complete
         await Promise.all(imagePromises);
+      }
+      
+      // Create notification for the user
+      if (user) {
+        // Get brand and model names from the form data
+        const brandId = parseInt(formData.brand_id);
+        const modelId = parseInt(formData.model_id);
+        const brandName = brands.find(b => b.id === brandId)?.name || formData.brand_id;
+        const modelName = models.find(m => m.id === modelId)?.name || formData.model_id;
+        
+        try {
+          await supabase.from('notifications').insert({
+            user_id: user.id,
+            type: 'carSubmitted',
+            title_en: t('notifications.carSubmitted.title_en'),
+            title_ar: t('notifications.carSubmitted.title_ar'),
+            message_en: t('notifications.carSubmitted.message_en', {
+              brand: brandName,
+              model: modelName
+            }),
+            message_ar: t('notifications.carSubmitted.message_ar', {
+              brand: brandName,
+              model: modelName
+            })
+          });
+        } catch (err) {
+          console.error('Error creating notification:', err);
+          // Don't fail the whole submission if notification fails
+        }
       }
       
       // Show success message and redirect
@@ -971,7 +1009,7 @@ export default function NewSellPage() {
         <div className="mx-auto max-w-6xl w-full">
           <div className="mb-6 text-center">
             <p className="mt-2 text-gray-600 dark:text-gray-300">
-              {visibleSteps[currentStep].description}
+              {visibleSteps[currentStep].description || ''}
             </p>
           </div>
           
@@ -979,29 +1017,38 @@ export default function NewSellPage() {
             {visibleSteps[currentStep].component}
           </div>
           
-          {/* Navigation Buttons */}
-          {currentStep > 0 && (
+          {/* Navigation Buttons - Only show for steps that don't have their own navigation */}
+          {currentStep > 0 && !['basic-info', 'detailed-info', 'media'].includes(visibleSteps[currentStep].id) && (
             <div className="mt-6 flex justify-between">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setCurrentStep(prev => prev - 1)}
                 disabled={currentStep === 0 || isSubmitting}
+                className="hover:shadow-md"
               >
                 {t('common.back')}
               </Button>
             
-              
-              {currentStep < visibleSteps.length - 1 ? (
+              {currentStep < visibleSteps.length - 1 && !['basic-info', 'detailed-info', 'media', 'preview'].includes(visibleSteps[currentStep].id) && (
                 <Button
                   type="button"
-                  onClick={() => setCurrentStep(prev => prev + 1)}
-                  disabled={isSubmitting}
-                  className="bg-qatar-maroon text-white hover:bg-qatar-maroon/90"
+                  onClick={() => {
+                    // If we're on the payment step, check if payment is completed
+                    if (visibleSteps[currentStep].id === 'payment' && !isPaymentCompleted) {
+                      toast.error(t('sell.payment.complete_payment_first') || 'Please complete the payment first');
+                      return;
+                    }
+                    setCurrentStep(prev => prev + 1);
+                  }}
+                  disabled={isSubmitting || (visibleSteps[currentStep].id === 'payment' && !isPaymentCompleted)}
+                  className={`bg-qatar-maroon text-white hover:bg-qatar-maroon/90 hover:shadow-md ${
+                    visibleSteps[currentStep].id === 'payment' && !isPaymentCompleted ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
                 >
                   {t('common.next')}
                 </Button>
-              ) : null}
+              )}
             </div>
           )}
           

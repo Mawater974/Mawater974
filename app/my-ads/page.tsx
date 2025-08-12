@@ -322,7 +322,7 @@ const CarsTab = ({
               >
                 {renewingCarId === car.id ? (
                   <>
-                    <LoadingSpinner className="h-4 w-4 mr-2" />
+                    <LoadingSpinner className="h-4 w-4 mr-2 ml-2" />
                     {t('common.renewing')}
                   </>
                 ) : (
@@ -475,7 +475,7 @@ const SparePartsTab = ({
               >
                 {renewingSparePartId === part.id ? (
                   <>
-                    <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></span>
+                    <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2 ml-2"></span>
                     {t('common.renewing')}
                   </>
                 ) : (
@@ -974,14 +974,14 @@ const handleRenewSparePart = async (sparePartId: string) => {
               href={`/${currentCountry?.code.toLowerCase()}/spare-parts/add`}
               className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-qatar-maroon hover:bg-qatar-maroon/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon"
             >
-              <PlusCircleIcon className="mr-2 h-5 w-5" />
+              <PlusCircleIcon className="mr-2 ml-1 h-5 w-5" />
               {t('spareParts.addSparePart')}
             </Link>
             <Link
               href={`/${currentCountry?.code.toLowerCase()}/sell`}
               className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-qatar-maroon hover:bg-qatar-maroon/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon"
             >
-              <PlusCircleIcon className="mr-2 h-5 w-5" />
+              <PlusCircleIcon className="mr-2 ml-1 h-5 w-5" />
               {t('myAds.addNewCarAd')}
             </Link>
           </div>
@@ -1039,7 +1039,7 @@ const handleRenewSparePart = async (sparePartId: string) => {
               onClick={() => setShowSortOptions(!showSortOptions)}
               className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon"
             >
-              <FunnelIcon className="h-4 w-4 mr-2" />
+              <FunnelIcon className="h-4 w-4 mr-2 ml-1" />
               {language === 'en' ? sortOption.name : sortOption.name_ar}
               {sortOption.order === 'asc' ? (
                 <ArrowUpIcon className="ml-2 h-4 w-4" />

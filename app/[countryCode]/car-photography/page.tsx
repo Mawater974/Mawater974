@@ -81,25 +81,25 @@ export default function CountrySpecificCarPhotographyPage() {
             <h3 className="text-2xl font-semibold mb-4 text-gray-900 dark:text-white">{t('photography.standard.title')}</h3>
             <ul className="space-y-3 mb-8 text-gray-600 dark:text-gray-300">
               <li className="flex items-center">
-                <svg className="w-5 h-5 mr-2 text-qatar-maroon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-5 h-5 mr-2 ml-2 text-qatar-maroon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
                 {t('photography.standard.features.photos')}
               </li>
               <li className="flex items-center">
-                <svg className="w-5 h-5 mr-2 text-qatar-maroon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-5 h-5 mr-2 ml-2 text-qatar-maroon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
                 {t('photography.standard.features.editing')}
               </li>
               <li className="flex items-center">
-                <svg className="w-5 h-5 mr-2 text-qatar-maroon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-5 h-5 mr-2 ml-2 text-qatar-maroon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
                 {t('photography.standard.features.angles')}
               </li>
               <li className="flex items-center">
-                <svg className="w-5 h-5 mr-2 text-qatar-maroon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-5 h-5 mr-2 ml-2 text-qatar-maroon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
                 {t('photography.standard.features.delivery')}
@@ -120,25 +120,25 @@ export default function CountrySpecificCarPhotographyPage() {
             <h3 className="text-2xl font-semibold mb-4 text-gray-900 dark:text-white">{t('photography.premium.title')}</h3>
             <ul className="space-y-3 mb-8 text-gray-600 dark:text-gray-300">
               <li className="flex items-center">
-                <svg className="w-5 h-5 mr-2 text-qatar-maroon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-5 h-5 mr-2 ml-2 text-qatar-maroon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
                 {t('photography.premium.features.photos')}
               </li>
               <li className="flex items-center">
-                <svg className="w-5 h-5 mr-2 text-qatar-maroon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-5 h-5 mr-2 ml-2 text-qatar-maroon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
                 {t('photography.premium.features.editing')}
               </li>
               <li className="flex items-center">
-                <svg className="w-5 h-5 mr-2 text-qatar-maroon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-5 h-5 mr-2 ml-2 text-qatar-maroon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
                 {t('photography.premium.features.angles')}
               </li>
               <li className="flex items-center">
-                <svg className="w-5 h-5 mr-2 text-qatar-maroon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-5 h-5 mr-2 ml-2 text-qatar-maroon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
                 {t('photography.premium.features.delivery')}
@@ -159,25 +159,25 @@ export default function CountrySpecificCarPhotographyPage() {
             <h3 className="text-2xl font-semibold mb-4 text-gray-900 dark:text-white">{t('photography.professional.title')}</h3>
             <ul className="space-y-3 mb-8 text-gray-600 dark:text-gray-300">
               <li className="flex items-center">
-                <svg className="w-5 h-5 mr-2 text-qatar-maroon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-5 h-5 mr-2 ml-2 text-qatar-maroon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
                 {t('photography.professional.features.photos')}
               </li>
               <li className="flex items-center">
-                <svg className="w-5 h-5 mr-2 text-qatar-maroon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-5 h-5 mr-2 ml-2 text-qatar-maroon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
                 {t('photography.professional.features.editing')}
               </li>
               <li className="flex items-center">
-                <svg className="w-5 h-5 mr-2 text-qatar-maroon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-5 h-5 mr-2 ml-2 text-qatar-maroon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
                 {t('photography.professional.features.angles')}
               </li>
               <li className="flex items-center">
-                <svg className="w-5 h-5 mr-2 text-qatar-maroon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-5 h-5 mr-2 ml-2 text-qatar-maroon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
                 {t('photography.professional.features.delivery')}

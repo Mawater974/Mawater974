@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Button } from "@/components/ui/button";
 import { Database } from "@/types/supabase";
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { scrollToTop } from '@/utils/scrollToTop';
 
 // Simple form input components with consistent styling
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
@@ -94,8 +97,13 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
 );
 Select.displayName = 'Select';
 
-type Brand = Database['public']['Tables']['brands']['Row']
-type Model = Database['public']['Tables']['models']['Row']
+type Brand = Database['public']['Tables']['brands']['Row'] & {
+  name_ar?: string;
+};
+
+type Model = Database['public']['Tables']['models']['Row'] & {
+  name_ar?: string;
+};
 
 // Use the same FormData type as in page.tsx
 type FormData = {
@@ -110,6 +118,8 @@ type FormData = {
 interface BasicInfoStepProps {
   formData: FormData;
   onFormChange: (field: string, value: string | number | undefined) => void;
+  onNext: () => void;
+  onBack?: () => void; // Add onBack prop
   t: (key: string) => string;
   errors: { [key: string]: string };
   brands: Brand[];
@@ -120,12 +130,56 @@ interface BasicInfoStepProps {
 export default function BasicInfoStep({
   formData,
   onFormChange,
+  onNext,
+  onBack,
   t,
-  errors,
+  errors: propErrors,
   brands,
   onBrandChange,
   currentCountry
 }: BasicInfoStepProps) {
+  const [errors, setErrors] = useState<{[key: string]: string}>(propErrors || {});
+  const [showErrors, setShowErrors] = useState(false);
+  
+  const validateFields = () => {
+    const newErrors: {[key: string]: string} = {};
+    
+    if (!formData.brand_id) {
+      newErrors.brand_id = t('errors.brand_required');
+    }
+    if (!formData.model_id) {
+      newErrors.model_id = t('errors.model_required');
+    }
+    if (!formData.year) {
+      newErrors.year = t('errors.year_required');
+    }
+    if (!formData.mileage) {
+      newErrors.mileage = t('errors.mileage_required');
+    }
+    if (!formData.price) {
+      newErrors.price = t('errors.price_required');
+    }
+    
+    setErrors(newErrors);
+    setShowErrors(Object.keys(newErrors).length > 0);
+    
+    return Object.keys(newErrors).length === 0;
+  };
+  
+  const handleNext = (e: React.FormEvent) => {
+    e.preventDefault(); // Prevent default form submission
+    if (validateFields()) {
+      onNext();
+      scrollToTop();
+    } else {
+      scrollToTop();
+    }
+  };
+  
+  // Scroll to top on component mount
+  useEffect(() => {
+    scrollToTop();
+  }, []);
   const [availableModels, setAvailableModels] = useState<Model[]>([]);
   const supabase = createClientComponentClient<Database>();
   const currentYear = new Date().getFullYear();
@@ -136,6 +190,15 @@ export default function BasicInfoStep({
     const brandId = value;
     onFormChange('brand_id', brandId);
     onFormChange('model_id', ''); // Reset model when brand changes
+    
+    // Clear brand_id error when user selects a brand
+    if (errors.brand_id) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.brand_id;
+        return newErrors;
+      });
+    }
     
     // Call the onBrandChange prop if provided
     if (onBrandChange) {
@@ -165,10 +228,19 @@ export default function BasicInfoStep({
   const handleInputChange = <K extends keyof FormData>(field: K) => 
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
       onFormChange(field, e.target.value as FormData[K]);
+      
+      // Clear error for the current field when user types/selects
+      if (errors[field]) {
+        setErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors[field];
+          return newErrors;
+        });
+      }
     };
 
   return (
-    <div className="space-y-6">
+    <form onSubmit={handleNext} className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white text-center">
           {t('sell.basic.title')}
@@ -177,6 +249,32 @@ export default function BasicInfoStep({
           {t('sell.basic.subtitle')}
         </p>
       </div>
+      
+      {showErrors && (
+        <div className="bg-red-50 dark:bg-red-900/30 border-l-4 border-red-500 p-4 rounded-md">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-red-700 dark:text-red-200 font-medium">
+                {t('errors.required_fields')}
+              </p>
+              <ul className="list-disc pl-5 mt-1 text-sm text-red-700 dark:text-red-200">
+                {Object.values(errors).map((error, index) => (
+                  <li key={index}>{error}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         {/* Brand */}
@@ -304,9 +402,31 @@ export default function BasicInfoStep({
             <p className="text-red-500 text-sm mt-1">{errors.price}</p>
           )}
         </div>
-
-
       </div>
-    </div>
+      
+
+      
+      <div className="flex justify-between">
+        {onBack && (
+          <Button 
+            type="button"
+            variant="outline"
+            onClick={() => {
+              onBack();
+              scrollToTop();
+            }}
+            className="flex items-center gap-2 hover:shadow-md"
+          >
+            {t('common.back')}
+          </Button>
+        )}
+        <Button 
+          type="submit"
+          className="bg-qatar-maroon hover:bg-qatar-maroon/90 text-white ml-auto hover:shadow-md"
+        >
+          {t('common.next')}
+        </Button>
+      </div>
+    </form>
   );
 }

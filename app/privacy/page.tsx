@@ -164,11 +164,11 @@ export default function PrivacyPolicyPage() {
             href="/"
             className="inline-flex items-center text-qatar-maroon hover:text-qatar-maroon/80 mb-4 transition-colors"
           >
-            <ArrowLeftIcon className="h-5 w-5 mr-2" />
+            <ArrowLeftIcon className="h-5 w-5 mr-1 ml-1 rtl:rotate-180" />
             {t('common.backToHome')}
           </Link>
           
-          <div className="absolute top-0 right-0">
+          <div className="absolute top-0 ltr:right-0 rtl:left-0">
             <ShieldCheckIcon className="h-24 w-24 text-qatar-maroon" />
           </div>
 

@@ -6,6 +6,8 @@ import { CheckCircle2, ChevronLeft, Edit2, Star, Image as ImageIcon } from 'luci
 import { ImageFile } from '@/types/image';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCountry } from '@/contexts/CountryContext';
+import { scrollToTop } from '@/utils/scrollToTop';
+import { toast } from 'sonner';
 
 interface PreviewStepProps {
   formData: any;
@@ -40,6 +42,11 @@ export default function PreviewStep({
   const { currentLanguage } = useLanguage();
   const { currentCountry } = useCountry();
   
+  // Scroll to top on component mount
+  useEffect(() => {
+    scrollToTop();
+  }, []);
+  
   // Use formData.images if images prop is not provided
   const photos = images.length > 0 ? images : formData.images || [];
   
@@ -47,61 +54,61 @@ export default function PreviewStep({
   const selectedModel = models.find(m => m.id.toString() === formData.model_id?.toString());
 
   const previewItems = [
-    { label: t('sell.basic.brand'), value: selectedBrand?.name },
-    { label: t('sell.basic.model'), value: selectedModel?.name },
-    { label: t('sell.basic.exactModel') || 'Exact Model', value: formData.exact_model || null },
-    { label: t('sell.basic.year'), value: formData.year },
+    { label: t('sell.basic.brand'), value: selectedBrand?.name || t('sell.review.notSpecified') },
+    { label: t('sell.basic.model'), value: selectedModel?.name || t('sell.review.notSpecified') },
+    { label: t('sell.basic.exactModel') || 'Exact Model', value: formData.exact_model || t('sell.review.notSpecified') },
+    { label: t('sell.basic.year'), value: formData.year ? `${formData.year}` : t('sell.review.notSpecified') },
     { 
       label: t('sell.basic.price'), 
-      value: formData.price ? `${formData.price} ${t(`common.currency.${currentCountry?.currency_code}`)}` : null 
+      value: formData.price ? `${formData.price} ${t(`common.currency.${currentCountry?.currency_code}`)}` : t('sell.review.notSpecified') 
     },
     { 
       label: t('sell.details.mileage'), 
-      value: formData.mileage ? `${formData.mileage} ${t('car.km')}` : null 
+      value: formData.mileage ? `${formData.mileage} ${t('car.km')}` : t('sell.review.notSpecified') 
     },
     { 
       label: t('sell.details.fuelType'), 
-      value: formData.fuel_type ? t(`car.fuelType.${formData.fuel_type.toLowerCase()}`) : null 
+      value: formData.fuel_type ? t(`car.fuelType.${formData.fuel_type.toLowerCase()}`) : t('sell.review.notSpecified') 
     },
     { 
       label: t('sell.details.gearboxType'), 
-      value: formData.gearbox_type ? t(`car.gearboxType.${formData.gearbox_type.toLowerCase()}`) : null 
+      value: formData.gearbox_type ? t(`car.gearboxType.${formData.gearbox_type.toLowerCase()}`) : t('sell.review.notSpecified') 
     },
     { 
       label: t('sell.details.bodyType'), 
-      value: formData.body_type ? t(`car.bodyType.${formData.body_type.toLowerCase()}`) : null 
+      value: formData.body_type ? t(`car.bodyType.${formData.body_type.toLowerCase()}`) : t('sell.review.notSpecified') 
     },
     { 
       label: t('sell.details.condition'), 
-      value: formData.condition ? t(`car.condition.${formData.condition.toLowerCase().replace(' ', '_')}`) : null 
+      value: formData.condition ? t(`car.condition.${formData.condition.toLowerCase().replace(' ', '_')}`) : t('sell.review.notSpecified') 
     },
     { 
       label: t('sell.details.color'), 
-      value: formData.color ? t(`car.color.${formData.color.toLowerCase()}`) : null 
+      value: formData.color ? t(`car.color.${formData.color.toLowerCase()}`) : t('sell.review.notSpecified') 
     },
     { 
       label: t('sell.details.doors'), 
-      value: formData.doors ? t(`car.doors.${formData.doors.toLowerCase()}`) : null 
+      value: formData.doors ? t(`car.doors.${formData.doors.toLowerCase()}`) : t('sell.review.notSpecified') 
     },
     { 
       label: t('sell.details.driveType'), 
-      value: formData.drive_type ? t(`car.driveType.${formData.drive_type.toLowerCase()}`) : null 
+      value: formData.drive_type ? t(`car.driveType.${formData.drive_type.toLowerCase()}`) : t('sell.review.notSpecified') 
     },
     { 
       label: t('sell.details.warranty'), 
-      value: formData.warranty ? t(`car.warranty.${formData.warranty.toLowerCase()}`) : null 
+      value: formData.warranty ? t(`car.warranty.${formData.warranty.toLowerCase()}`) : t('sell.review.notSpecified') 
     },
-    { 
+    /*{ 
       label: t('sell.details.warrantyMonthsRemaining'), 
-      value: formData.warranty_months_remaining ? t('car.warrantyMonths').replace('{count}', formData.warranty_months_remaining) : null 
-    },
+      value: formData.warranty_months_remaining ? t('car.warrantyMonths').replace('{count}', formData.warranty_months_remaining) : t('sell.review.notSpecified') 
+    },*/
     { 
       label: t('sell.details.cylinders'), 
       value: formData.cylinders ? 
         (formData.cylinders === 'Electric' ? 
           t('sell.details.cylinders.electric') : 
           t('sell.details.cylinders.count').replace('{count}', formData.cylinders)) : 
-        null 
+        t('sell.review.notSpecified') 
     },
     { 
       label: t('sell.details.city'), 
@@ -109,11 +116,11 @@ export default function PreviewStep({
         (currentLanguage === 'ar' ? 
           cities.find(c => c.id.toString() === formData.city_id?.toString())?.name_ar : 
           cities.find(c => c.id.toString() === formData.city_id?.toString())?.name) : 
-        null 
+        t('sell.review.notSpecified') 
     },
     { 
       label: t('sell.details.description'), 
-      value: formData.description 
+      value: formData.description || t('sell.review.notSpecified') 
     },
   ].filter(item => item.value !== undefined && item.value !== null);
 
@@ -161,9 +168,11 @@ export default function PreviewStep({
         </div>
         <dl>
           {[
-            { label: t('sell.payment.status'), value: formData.payment_status || t('sell.payment.pending') },
-            { label: t('sell.payment.isFeatured'), value: formData.is_featured ? t('sell.payment.featured') : t('sell.payment.standard') },
-            { label: t('sell.payment.amount'), value: formData.payment_amount ? `${formData.payment_currency} ${formData.payment_amount.toFixed(2)}` : t('sell.payment.notPaid') }
+            { label: t('sell.payment.listingplan'), value: formData.is_featured ? t('sell.payment.featured') : t('sell.payment.standard') },
+            ...(formData.is_featured ? [
+              { label: t('sell.payment.status'), value: formData.payment_status || t('sell.payment.pending') },
+              { label: t('sell.payment.amount'), value: formData.payment_amount ? `${formData.payment_currency} ${formData.payment_amount.toFixed(2)}` : t('sell.payment.notPaid') }
+            ] : [])
           ].map((item, index) => (
               <div 
                 key={item.label} 
@@ -189,26 +198,36 @@ export default function PreviewStep({
           {t('sell.media.photos')}
         </h3>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4">
-          {photos.map((image, index) => (
-            <div 
-              key={image.id}
-              className="relative group"
-            >
-              <img
-                src={image.preview}
-                alt={t('sell.media.photoPreview')}
-                className="w-full h-48 object-cover rounded-lg border border-gray-200 dark:border-gray-700"
-              />
-              {formData.mainPhotoIndex === index && (
-                <div className="absolute top-2 right-2 bg-qatar-maroon text-white px-2 py-1 rounded-full text-sm">
-                  {t('sell.images.mainPhoto')}
-                </div>
-              )}
-
+        {photos.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4">
+            {photos.map((image, index) => (
+              <div 
+                key={image.id}
+                className="relative group"
+              >
+                <img
+                  src={image.preview}
+                  alt={t('sell.media.photoPreview')}
+                  className="w-full h-48 object-cover rounded-lg border border-gray-200 dark:border-gray-700"
+                />
+                {formData.mainPhotoIndex === index && (
+                  <div className="absolute top-2 right-2 bg-qatar-maroon text-white px-2 py-1 rounded-full text-sm">
+                    {t('sell.images.mainPhoto')}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="p-8 text-center">
+            <div className="flex flex-col items-center justify-center">
+              <ImageIcon className="h-12 w-12 text-gray-400" />
+              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                {t('sell.review.noPhotos')}
+              </p>
             </div>
-          ))}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Confirmation Checkbox */}
@@ -224,7 +243,7 @@ export default function PreviewStep({
               className="focus:ring-qatar-maroon h-4 w-4 text-qatar-maroon border-gray-300 rounded"
             />
           </div>
-          <div className="ml-3 text-sm">
+          <div className="ml-3 mr-3 text-sm">
             <label htmlFor="confirm" className="font-medium text-gray-700 dark:text-gray-200">
               {t('sell.review.confirm.label')}
             </label>
@@ -256,11 +275,22 @@ export default function PreviewStep({
 
       {/* Navigation Buttons */}
       <div className="flex justify-between space-x-4">
-        <Button variant="outline" onClick={onBack} className="w-1/2">
-          <ChevronLeft className="w-4 h-4 mr-2" />
+        <Button variant="outline" onClick={onBack} className="w-1/2 hover:shadow-md">
+          <ChevronLeft className="w-4 h-4 mr-2 ml-2 rtl:rotate-180" />
           {t('common.back')}
         </Button>
-        <Button onClick={onSubmit} className="w-1/2">
+        <Button 
+          onClick={(e) => {
+            e.preventDefault();
+            if (isConfirmed) {
+              onSubmit();
+            } else {
+              toast.error(t('sell.review.confirm_terms') || 'Please confirm the terms and conditions');
+            }
+          }}
+          className={`w-1/2 hover:shadow-md ${!isConfirmed ? 'opacity-50 cursor-not-allowed' : ''}`}
+          disabled={!isConfirmed}
+        >
           {isSubmitting ? (
             <>
               <svg
@@ -284,12 +314,12 @@ export default function PreviewStep({
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                 />
               </svg>
-              {t('common.submitting')}
+              <div className="text-white">{t('common.submitting')}</div>
             </>
           ) : (
             <>
-              <CheckCircle2 className="mr-2 h-4 w-4" />
-              {t('common.submit')}
+              <CheckCircle2 className="mr-2 ml-2 h-4 w-4 text-white" />
+              <div className="text-white">{t('common.submit')}</div>
             </>
           )}
         </Button>

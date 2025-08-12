@@ -10,6 +10,7 @@ import { toast } from 'react-hot-toast';
 import heic2any from 'heic2any';
 import { useCountry } from '@/contexts/CountryContext';
 import { ImageFile } from '@/types/image';
+import { scrollToTop } from '@/utils/scrollToTop';
 
 interface ExistingImage {
   url: string;
@@ -19,6 +20,8 @@ interface ExistingImage {
 
 type MediaUploadStepProps = {
   onFilesChange: (files: ImageFile[]) => void;
+  onNext: () => void;
+  onBack?: () => void; // Add onBack prop
   t: any;
   errors: Record<string, string>;
   initialFiles?: ImageFile[];
@@ -30,14 +33,18 @@ type MediaUploadStepProps = {
 
 const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
   onFilesChange,
+  onNext,
+  onBack,
   t,
-  errors,
+  errors: propErrors,
   initialFiles = [],
   mainPhotoIndex = null,
   onSetMainPhoto,
   onRemoveExistingImage,
   isFeatured = false,
 }) => {
+  const [errors, setErrors] = useState<Record<string, string>>(propErrors || {});
+  const [showErrors, setShowErrors] = useState(false);
   const [files, setFiles] = useState<ImageFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -311,10 +318,48 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
 
   // Helper function to process files with proper error handling
 
+  const validateFields = () => {
+    const newErrors: Record<string, string> = {};
+    
+    if (files.length === 0) {
+      newErrors.images = t('errors.images_required');
+    }
+    
+    setErrors(newErrors);
+    setShowErrors(Object.keys(newErrors).length > 0);
+    
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleNext = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (validateFields()) {
+      onNext();
+      scrollToTop();
+    } else {
+      scrollToTop();
+    }
+  };
+  
+  // Scroll to top on component mount
+  useEffect(() => {
+    scrollToTop();
+  }, []);
+
   // Handle file selection
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(e.target.files || []);
     if (selectedFiles.length === 0) return;
+    
+    // Clear any existing errors when new files are selected
+    if (errors.images) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.images;
+        return newErrors;
+      });
+      setShowErrors(false);
+    }
 
     // Reset the input value to allow selecting the same file again
     if (fileInputRef.current) {
@@ -589,7 +634,7 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <form onSubmit={handleNext} className="space-y-6">
       <div className="text-center">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
           {t('sell.images.title')}
@@ -719,7 +764,7 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
               onClick={() => fileInputRef.current?.click()}
               className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-qatar-maroon hover:bg-qatar-maroon/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 ml-2" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
               </svg>
               {t('sell.images.addMore')}
@@ -758,7 +803,53 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
           {errors.images}
         </p>
       )}
-    </div>
+      {/* Error Message */}
+      {showErrors && Object.keys(errors).length > 0 && (
+        <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-md">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-red-800">
+                {t('errors.required_fields')}
+              </h3>
+              <div className="mt-2 text-sm text-red-700">
+                <ul className="list-disc pl-5 space-y-1">
+                  {Object.values(errors).map((error, index) => (
+                    <li key={index}>{error}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="flex justify-between">
+        {onBack && (
+          <Button 
+            type="button"
+            variant="outline"
+            onClick={() => {
+              onBack();
+              scrollToTop();
+            }}
+            className="flex items-center gap-2 hover:shadow-md"
+          >
+            {t('common.back')}
+          </Button>
+        )}
+        <Button 
+          type="submit"
+          className="bg-qatar-maroon hover:bg-qatar-maroon/90 text-white ml-auto hover:shadow-md"
+        >
+          {t('common.next')}
+        </Button>
+      </div>
+    </form>
   );
 };
 

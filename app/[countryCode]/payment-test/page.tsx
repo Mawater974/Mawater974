@@ -61,7 +61,7 @@ export default function PaymentTestPage() {
         >
           {loading ? (
             <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Loader2 className="mr-2 ml-2 h-4 w-4 animate-spin" />
               Processing...
             </>
           ) : (

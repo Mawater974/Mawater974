@@ -16,6 +16,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCountry } from '@/contexts/CountryContext';
 import { getFeaturedPricing } from '@/lib/featuredPricing';
+import { scrollToTop } from '@/utils/scrollToTop';
 
 // Make sure to call `loadStripe` outside of a component’s render to avoid
 // recreating the `Stripe` object on every render.
@@ -196,6 +197,23 @@ const PaymentForm = ({
     }
   };
 
+  const handleNext = () => {
+    if (!paymentSuccess) {
+      toast.error(t('sell.payment.complete_payment_first') || 'Please complete the payment first');
+      scrollToTop();
+      return;
+    }
+    if (onContinue) {
+      onContinue();
+      scrollToTop();
+    }
+  };
+
+  // Scroll to top on component mount
+  useEffect(() => {
+    scrollToTop();
+  }, []);
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="p-4 bg-white rounded-lg border-black border shadow">
@@ -209,9 +227,9 @@ const PaymentForm = ({
                     style: {
                       base: {
                         fontSize: '16px',
-                        color: '#424770',
+                        color: 'text-black', 
                         '::placeholder': {
-                          color: '#aab7c4',
+                          color: 'text-black',
                         },
                       },
                       invalid: {
@@ -227,9 +245,9 @@ const PaymentForm = ({
                   <div className="text-red-500 text-sm">{pricingError}</div>
                 ) : pricing ? (
                   <div className="flex justify-between items-center border-b border-black pb-2">
-                    <span className="text-black">{t('sell.payment.amount')}:</span>
+                    {/*<span className="text-black">{t('sell.payment.amount')}: {pricing.currency} {pricing.price.toFixed(2)}</span>*/}
                     <span className="font-semibold text-black">
-                      {pricing.currency} {pricing.price.toFixed(2)}
+                    {t('sell.payment.amount')}: {pricing.currency} {pricing.price.toFixed(2)}
                     </span>
                   </div>
                 ) : null}
@@ -264,6 +282,7 @@ const PaymentForm = ({
           )}
         </div>
       </div>
+      
     </form>
   );
 };

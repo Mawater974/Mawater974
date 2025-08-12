@@ -119,7 +119,7 @@ export function PlanSelection({ onSelectPlan, onContinue, t, currentPlan }: Plan
 
   return (
     <div className="w-full">
-      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-7xl mx-auto ">
         <div className="space-y-8">
           <div className="space-y-4 sm:space-y-0 sm:grid sm:grid-cols-2 sm:gap-6 lg:max-w-4xl lg:mx-auto xl:max-w-none xl:mx-0">
           {/* Free Plan */}
@@ -190,7 +190,7 @@ export function PlanSelection({ onSelectPlan, onContinue, t, currentPlan }: Plan
               </p>
               <div className="mt-8">
                 <p className="text-4xl font-extrabold text-gray-900 dark:text-white">
-                  {loading ? '...' : featuredPrice}
+                  {loading ? '...' : featuredPrice || '...'}
                 </p>
               </div>
               <div className="mt-8 block w-full">
