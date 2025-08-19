@@ -68,7 +68,37 @@ const SparePartCard: React.FC<SparePartCardProps> = ({
   featured = false,
 }) => {
   const { user } = useAuth();
-  const { formatPrice, currentCountry } = useCountry();
+  const { formatPrice: defaultFormatPrice, currentCountry } = useCountry();
+  
+  // Format price using the spare part's country currency if available
+  const formatPrice = (price: number, lang?: string) => {
+    if (!part.country?.currency_code) {
+      return defaultFormatPrice(price, lang);
+    }
+    
+    // Create a temporary country object with the spare part's currency
+    const tempCountry = {
+      ...(currentCountry || {}),
+      currency_code: part.country.currency_code
+    };
+    
+    // Format the number according to the language
+    const formattedNumber = price.toLocaleString(
+      lang === 'ar' ? 'ar' : 'en'
+    );
+    
+    // Get translated currency code
+    const currencyKey = `currency.${tempCountry.currency_code.toLowerCase()}`;
+    const translatedCurrency = t(currencyKey);
+    
+    // For Arabic, place the currency code after the number
+    if (lang === 'ar') {
+      return `${formattedNumber} ${translatedCurrency}`;
+    }
+    
+    // For English, place the currency code before the number
+    return `${translatedCurrency} ${formattedNumber}`;
+  };
   const router = useRouter();
   const { t, language, currentLanguage } = useLanguage();
 
@@ -201,7 +231,7 @@ const SparePartCard: React.FC<SparePartCardProps> = ({
           <div className="flex flex-col gap-2">
             <div>
               <span className="text-2xl font-semibold text-qatar-maroon">
-                {formatPrice(part.price, part.currency_code || part.country?.currency_code)}
+                {formatPrice(part.price, language)}
               </span>
             </div>
 
