@@ -24,7 +24,7 @@ export default function CountrySpecificCarPhotographyPage() {
     }
   }, [countryCode, countries, setCurrentCountry]);
 
-  useEffect(() => {
+  /*useEffect(() => {
     if (currentCountry?.code) {
       const trackPageView = async () => {
         try {
@@ -51,7 +51,7 @@ export default function CountrySpecificCarPhotographyPage() {
   
       trackPageView();
     }
-  }, [currentCountry?.code, user?.id]);
+  }, [currentCountry?.code, user?.id]);*/
 
   return (
     <div className="min-h-screen">

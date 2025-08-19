@@ -362,7 +362,7 @@ export default function ShowroomPage() {
   };
 
   // Track page view when component mounts
-  useEffect(() => {
+  /*useEffect(() => {
     if (currentCountry?.code && showroom) {
       const trackPageView = async () => {
         try {
@@ -412,7 +412,7 @@ export default function ShowroomPage() {
 
       trackPageView();
     }
-  }, [currentCountry?.code, showroom, user?.id]);
+  }, [currentCountry?.code, showroom, user?.id]);*/
 
   if (isLoading) {
     return (

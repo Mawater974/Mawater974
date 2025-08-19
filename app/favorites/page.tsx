@@ -181,7 +181,7 @@ export default function FavoritesPage() {
   };
 
  // Track page view
- useEffect(() => {
+ /*useEffect(() => {
   const trackPageView = async () => {
     try {
       const response = await fetch('/api/analytics/page-view', {
@@ -205,7 +205,7 @@ export default function FavoritesPage() {
   };
 
   trackPageView();
-}, [user?.id]);
+}, [user?.id]);*/
 
   if (loading) {
     return (

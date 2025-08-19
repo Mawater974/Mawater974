@@ -810,7 +810,7 @@ export default function DealerDashboard() {
   };
 
   // Track page view
-  useEffect(() => {
+  /*useEffect(() => {
     const trackPageView = async () => {
       try {
         const response = await fetch('/api/analytics/page-view', {
@@ -834,7 +834,7 @@ export default function DealerDashboard() {
     };
 
     trackPageView();
-  }, [user?.id]);
+  }, [user?.id]); */
 
   const filteredListings = selectedStatus === 'all' 
     ? carListings 

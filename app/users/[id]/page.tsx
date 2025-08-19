@@ -7,8 +7,16 @@ import { Database } from '@/types/supabase';
 import Image from 'next/image';
 import { MapPinIcon, EnvelopeIcon, CalendarIcon, TruckIcon, PhoneIcon } from '@heroicons/react/24/outline';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useCountry } from '@/contexts/CountryContext';
+import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 import { format } from 'date-fns';
+import dynamic from 'next/dynamic';
+import toast from 'react-hot-toast';
+
+// Dynamically import the card components with no SSR to avoid hydration issues
+const CarCard = dynamic(() => import('@/components/CarCard'), { ssr: false });
+const SparePartCard = dynamic(() => import('@/components/spare-parts/SparePartCard'), { ssr: false });
 
 type Profile = Database['public']['Tables']['profiles']['Row'] & {
   countries?: {
@@ -17,13 +25,66 @@ type Profile = Database['public']['Tables']['profiles']['Row'] & {
 };
 
 type CarListing = Database['public']['Tables']['cars']['Row'] & {
-  brand: { name: string };
-  model: { name: string };
-  car_images: Array<{ image_url: string }>;
+  brand: { 
+    id: number;
+    name: string;
+    name_ar?: string | null;
+  };
+  model: { 
+    id: number;
+    name: string;
+    name_ar?: string | null;
+  };
+  city: {
+    id: number;
+    name: string;
+    name_ar?: string | null;
+  };
+  country: {
+    id: number;
+    name: string;
+    name_ar?: string | null;
+    code: string;
+    currency_code: string;
+  };
+  images: Array<{ 
+    url: string; 
+    is_main?: boolean;
+  }>;
+  is_featured?: boolean;
+  created_at: string;
+  updated_at: string;
 };
 
 type SparePartListing = Database['public']['Tables']['spare_parts']['Row'] & {
   images: Array<{ url: string; is_main?: boolean }>;
+  brand?: {
+    id: number;
+    name: string;
+    name_ar: string | null;
+  } | null;
+  model?: {
+    id: number;
+    name: string;
+    name_ar: string | null;
+  } | null;
+  category?: {
+    id: number;
+    name_en: string;
+    name_ar: string;
+  } | null;
+  city?: {
+    id: number;
+    name: string;
+    name_ar: string | null;
+  } | null;
+  country?: {
+    id: number;
+    name: string;
+    name_ar: string | null;
+    code: string;
+    currency_code: string;
+  } | null;
 };
 
 export default function UserProfile() {
@@ -36,6 +97,7 @@ export default function UserProfile() {
   const [sparePartListings, setSparePartListings] = useState<SparePartListing[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingSpareParts, setLoadingSpareParts] = useState(false);
+  const { user } = useAuth();
   const { t } = useLanguage();
 
   // Alias TruckIcon as CarIcon for better semantics
@@ -65,21 +127,45 @@ export default function UserProfile() {
 
         setProfile(profileData);
 
-        // Fetch user's car listings
-        const { data: carListingsData, error: carListingsError } = await supabase
-          .from('cars')
-          .select(`
-            *,
-            brand:brands (name),
-            model:car_models (name),
-            car_images (image_url)
-          `)
-          .eq('user_id', id)
-          .eq('status', 'approved')
-          .order('created_at', { ascending: false });
 
-        if (carListingsError) throw carListingsError;
-        setCarListings(carListingsData || []);
+        // Fetch user's car listings
+        const fetchCarListings = async () => {
+          try {
+            const { data: carListingsData, error: carListingsError } = await supabase
+              .from('cars')
+              .select(`
+                *, 
+                brand:brands(*), 
+                model:models(*), 
+                city:cities(*), 
+                country:countries(*), 
+                images:car_images!car_id(url, is_main)
+              `)
+              .eq('user_id', id)
+              .eq('status', 'approved')
+              .order('created_at', { ascending: false });
+
+            if (carListingsError) throw carListingsError;
+
+            // Process the data to ensure images is always an array and handle null relationships
+            const processedCars = (carListingsData || []).map(car => ({
+              ...car,
+              images: Array.isArray(car.images) ? car.images : [],
+              brand: car.brand || { name: 'Unknown Brand' },
+              model: car.model || { name: 'Unknown Model' },
+              city: car.city || { name: 'Unknown City' },
+              country: car.country || { name: 'Unknown Country' },
+            }));
+
+            setCarListings(processedCars);
+          } catch (error) {
+            console.error('Error fetching car listings:', error);
+          }
+        };
+
+        if (id) {
+          fetchCarListings();
+        }
       } catch (error) {
         console.error('Error fetching profile:', error);
       } finally {
@@ -92,6 +178,8 @@ export default function UserProfile() {
     }
   }, [id, supabase]);
 
+ 
+
   // Fetch spare parts when the tab is active and not already loaded
   useEffect(() => {
     const fetchSpareParts = async () => {
@@ -100,13 +188,38 @@ export default function UserProfile() {
           setLoadingSpareParts(true);
           const { data, error } = await supabase
             .from('spare_parts')
-            .select('*')
+            .select(`
+              *,
+              brand:brands(*),
+              model:models(*),
+              category:spare_part_categories(*),
+              city:cities(*),
+              country:countries(*),
+              images:spare_part_images!spare_part_id(url, is_primary)
+            `)
             .eq('user_id', id)
-            .eq('status', 'Approved')
+            .eq('status', 'approved')
             .order('created_at', { ascending: false });
 
           if (error) throw error;
-          setSparePartListings(data || []);
+
+          // Process the data to ensure consistent structure and handle null relationships
+          const processedParts = (data || []).map(part => ({
+            ...part,
+            images: Array.isArray(part.images) ? part.images : [],
+            brand: part.brand || { name: 'Unknown Brand', name_ar: null },
+            model: part.model || { name: 'Unknown Model', name_ar: null },
+            category: part.category || { name_en: 'Uncategorized', name_ar: 'غير مصنف' },
+            city: part.city || { name: 'Unknown City', name_ar: null },
+            country: part.country || { 
+              name: 'Unknown Country', 
+              name_ar: null,
+              code: 'qa',
+              currency_code: 'QAR'
+            },
+          }));
+
+          setSparePartListings(processedParts);
         } catch (error) {
           console.error('Error fetching spare parts:', error);
         } finally {
@@ -116,7 +229,7 @@ export default function UserProfile() {
     };
 
     fetchSpareParts();
-  }, [id, supabase]);
+  }, [id, supabase, activeTab]);
 
   if (loading) {
     return (
@@ -202,11 +315,11 @@ export default function UserProfile() {
                       {t('profile.memberSince')} {format(new Date(profile.created_at), 'MMMM yyyy')}
                     </span>
                   </div>
-                  {profile.country_id && (
+                  {profile.countries && (
                     <div className="flex items-center mt-1 text-gray-600 dark:text-gray-300">
-                      <MapPinIcon className="h-4 w-4 mr-1" />
+                      <MapPinIcon className="h-4 w-4 mr-1 flex-shrink-0" />
                       <span className="text-sm">
-                        {profile.countries?.name}
+                        {profile.countries.name}
                       </span>
                     </div>
                   )}
@@ -224,13 +337,13 @@ export default function UserProfile() {
                     </a>
                   )}
                   {profile.email && (
-                    <button 
-                      onClick={() => window.location.href = `mailto:${profile.email}`}
+                    <a
+                      href={`mailto:${profile.email}`}
                       className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                     >
                       <EnvelopeIcon className="h-4 w-4 mr-2" />
-                      {t('profile.email')}
-                    </button>
+                      {t('profile.contact')}
+                    </a>
                   )}
                 </div>
               </div>
@@ -250,142 +363,106 @@ export default function UserProfile() {
         {/* Listings Section with Tabs */}
         <div className="mb-8">
           <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
-            <nav className="-mb-px flex space-x-8">
+            <div className="flex space-x-4 mb-6">
               <button
                 onClick={() => setActiveTab('cars')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
                   activeTab === 'cars'
-                    ? 'border-blue-500 text-blue-600 dark:text-blue-400 dark:border-blue-400'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200'
+                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-100'
+                    : 'text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
                 }`}
               >
                 {t('profile.cars')} ({carListings.length})
               </button>
               <button
                 onClick={() => setActiveTab('spareParts')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
                   activeTab === 'spareParts'
-                    ? 'border-blue-500 text-blue-600 dark:text-blue-400 dark:border-blue-400'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200'
+                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-100'
+                    : 'text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
                 }`}
               >
-                {t('profile.spareParts')} {activeTab === 'spareParts' ? `(${sparePartListings.length})` : ''}
+                {t('profile.spareParts')} ({sparePartListings.length})
               </button>
-            </nav>
+            </div>
           </div>
 
           {activeTab === 'cars' ? (
-            <>
+            <div className="space-y-6">
               {carListings.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {carListings.map((listing) => (
-                    <Link 
-                      key={listing.id} 
-                      href={`/cars/${listing.id}`}
-                      className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden hover:shadow-lg transition-shadow duration-300"
-                    >
-                      <div className="relative h-48">
-                        {listing.car_images && listing.car_images.length > 0 ? (
-                          <Image
-                            src={listing.car_images[0].image_url}
-                            alt={`${listing.brand?.name} ${listing.model?.name}`}
-                            fill
-                            className="object-cover"
-                          />
-                        ) : (
-                          <div className="h-full w-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                            <CarIcon className="h-12 w-12 text-gray-400" />
-                          </div>
-                        )}
-                        <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
-                          {listing.year}
-                        </div>
+                  {carListings
+                    .sort((a, b) => {
+                      // Sort featured cars first, then by creation date
+                      if (a.is_featured && !b.is_featured) return -1;
+                      if (!a.is_featured && b.is_featured) return 1;
+                      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+                    })
+                    .map((car) => (
+                      <div key={car.id} className="h-full">
+                        <CarCard 
+                          car={{
+                            ...car,
+                            brand: car.brand,
+                            model: car.model,
+                            images: car.images,
+                            city: car.city,
+                            country: car.country,
+                          }}
+                          featured={car.is_featured}
+                        />
                       </div>
-                      <div className="p-4">
-                        <h3 className="font-medium text-gray-900 dark:text-white">
-                          {listing.brand?.name} {listing.model?.name}
-                        </h3>
-                        <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
-                          {listing.mileage?.toLocaleString()} km • {listing.fuel_type}
-                        </p>
-                        <p className="mt-2 text-lg font-bold text-blue-600 dark:text-blue-400">
-                          ${listing.price?.toLocaleString()}
-                        </p>
-                      </div>
-                    </Link>
-                  ))}
+                    ))}
                 </div>
               ) : (
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
+                <div className="text-center py-12">
                   <CarIcon className="mx-auto h-12 w-12 text-gray-400" />
-                  <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
-                    {t('profile.noCarListings')}
+                  <h3 className="mt-2 text-lg font-medium text-gray-900 dark:text-white">
+                    {t('profile.noCars')}
                   </h3>
                   <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    {t('profile.noCarListingsDescription')}
+                    {t('profile.noCarsDescription')}
                   </p>
                 </div>
               )}
-            </>
+            </div>
           ) : (
-            <>
+            <div className="space-y-6">
               {loadingSpareParts ? (
-                <div className="flex justify-center items-center h-64">
+                <div className="flex justify-center py-12">
                   <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
                 </div>
               ) : sparePartListings.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {sparePartListings.map((item) => {
-                    const mainImage = item.images?.find(img => img.is_main)?.url || 
-                                    (item.images && item.images.length > 0 ? item.images[0].url : null);
-                    
-                    return (
-                      <Link 
-                        key={item.id} 
-                        href={`/spare-parts/${item.id}`}
-                        className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden hover:shadow-lg transition-shadow duration-300"
-                      >
-                        <div className="relative h-48">
-                          {mainImage ? (
-                            <Image
-                              src={mainImage}
-                              alt={item.title}
-                              fill
-                              className="object-cover"
-                            />
-                          ) : (
-                            <div className="h-full w-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                              <TruckIcon className="h-12 w-12 text-gray-400" />
-                            </div>
-                          )}
-                        </div>
-                        <div className="p-4">
-                          <h3 className="font-medium text-gray-900 dark:text-white">
-                            {item.title}
-                          </h3>
-                          <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
-                            {item.brand} • {item.condition}
-                          </p>
-                          <p className="mt-2 text-lg font-bold text-blue-600 dark:text-blue-400">
-                            ${item.price?.toLocaleString()}
-                          </p>
-                        </div>
-                      </Link>
-                    );
-                  })}
+                  {sparePartListings
+                    .sort((a, b) => {
+                      // Sort featured parts first, then by creation date
+                      if (a.is_featured && !b.is_featured) return -1;
+                      if (!a.is_featured && b.is_featured) return 1;
+                      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+                    })
+                    .map((part) => (
+                      <div key={part.id} className="h-full">
+                        <SparePartCard
+                          part={part}
+                          countryCode={part.country?.code || 'qa'}
+                          featured={part.is_featured}
+                        />
+                      </div>
+                    ))}
                 </div>
               ) : (
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
+                <div className="text-center py-12">
                   <TruckIcon className="mx-auto h-12 w-12 text-gray-400" />
-                  <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
-                    {t('profile.noSparePartsListings')}
+                  <h3 className="mt-2 text-lg font-medium text-gray-900 dark:text-white">
+                    {t('profile.noSpareParts')}
                   </h3>
-                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    {t('profile.noSparePartsListingsDescription')}
+                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-300">
+                    {t('profile.noSparePartsDescription')}
                   </p>
                 </div>
               )}
-            </>
+            </div>
           )}
         </div>
       </div>

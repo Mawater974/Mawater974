@@ -73,7 +73,7 @@ export default function SpareParts() {
   });
   
   // Track page view
-  useEffect(() => {
+  /*useEffect(() => {
     const trackPageView = async () => {
       try {
         const response = await fetch('/api/analytics/page-view', {
@@ -100,7 +100,7 @@ export default function SpareParts() {
     fetchSpareParts();
     fetchCategories();
     fetchBrands();
-  }, [user?.id, currentCountry?.code]);
+  }, [user?.id, currentCountry?.code]);*/
   
   const fetchSpareParts = async () => {
     try {

@@ -31,7 +31,7 @@ const Input = ({
     placeholder={placeholder}
     className={`w-full px-3 py-2 border ${
       error ? 'border-red-500' : 'border-gray-300'
-    } rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-qatar-gold focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
+    } rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-qatar-maroon focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
       className
     }`}
     {...props}
@@ -86,7 +86,7 @@ const Select = ({
     disabled={disabled}
     className={`w-full px-3 py-2 border ${
       error ? 'border-red-500' : 'border-gray-300'
-    } rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-qatar-gold focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
+    } rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-qatar-maroon focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
       disabled ? 'opacity-50 cursor-not-allowed' : ''
     } ${className}`}
   >
@@ -257,7 +257,7 @@ export function DetailedInfoStep({
           placeholder={field.name}
           className={`w-full px-3 py-2 border ${
             errors[field.id] ? 'border-red-500' : 'border-gray-300'
-          } rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-qatar-gold focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white min-h-[100px]`}
+          } rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-qatar-maroon focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white min-h-[100px]`}
         />
       );
     }

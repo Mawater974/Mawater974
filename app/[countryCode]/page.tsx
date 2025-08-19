@@ -25,7 +25,7 @@ export default function HomePage() {
   const { t, language, currentLanguage } = useLanguage();
   const { currentCountry } = useCountry();
 
-  useEffect(() => {
+  /*useEffect(() => {
     const trackPageView = async () => {
       try {
         // Get the current URL and referrer
@@ -72,7 +72,7 @@ export default function HomePage() {
     };
 
     trackPageView();
-  }, [currentCountry?.code]);
+  }, [currentCountry?.code]);*/
 
   useEffect(() => {
     // Clear sign-out message after it's been shown

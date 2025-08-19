@@ -116,7 +116,7 @@ export default function ShowroomsPage() {
   }, [currentCountry, getCitiesByCountry]);
 
   // Track page view when component mounts
-  useEffect(() => {
+    /*useEffect(() => {
     if (currentCountry?.code) {
       const trackPageView = async () => {
         try {
@@ -165,7 +165,7 @@ export default function ShowroomsPage() {
 
       trackPageView();
     }
-  }, [currentCountry?.code, user?.id]);
+  }, [currentCountry?.code, user?.id]);*/
   
   const filteredShowrooms = showrooms.filter(showroom => {
     const searchText = searchQuery.toLowerCase();

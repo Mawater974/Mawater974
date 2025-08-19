@@ -378,7 +378,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
   }, [car]);
 
   // Track page view when component mounts
-  useEffect(() => {
+  /*useEffect(() => {
     const trackPageView = async () => {
       try {
         // Get the current URL and referrer
@@ -426,7 +426,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
     };
 
     trackPageView();
-  }, [params.countryCode, params.id, user?.id]);
+  }, [params.countryCode, params.id, user?.id]);*/
 
   // Check if car is in favorites when component mounts or user changes
   useEffect(() => {

@@ -26,7 +26,7 @@ export default function CountrySpecificCarRentalPage() {
   }, [countryCode, countries, setCurrentCountry]);
 
   // Track page view when component mounts
-  useEffect(() => {
+  /*useEffect(() => {
     if (currentCountry?.code) {
       const trackPageView = async () => {
         try {
@@ -75,7 +75,7 @@ export default function CountrySpecificCarRentalPage() {
 
       trackPageView();
     }
-  }, [currentCountry?.code, user?.id]);
+  }, [currentCountry?.code, user?.id]);*/
 
   return (
     <div className="min-h-screen">

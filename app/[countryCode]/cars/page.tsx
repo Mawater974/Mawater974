@@ -169,7 +169,7 @@ export default function CarsPage() {
     }
   }, [currentCountry, filters, user, searchQueryFromUrl]);
 
-  useEffect(() => {
+  /*useEffect(() => {
     if (currentCountry?.code) {
       const trackPageView = async () => {
         try {
@@ -218,7 +218,7 @@ export default function CarsPage() {
 
       trackPageView();
     }
-  }, [currentCountry?.code, user?.id]);
+  }, [currentCountry?.code, user?.id]);*/
 
   const fetchBrands = async () => {
     const { data, error } = await supabase

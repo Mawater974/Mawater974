@@ -107,7 +107,7 @@ export default function ProfilePage() {
   };
 
   // Track page view
- useEffect(() => {
+ /*useEffect(() => {
   const trackPageView = async () => {
     try {
       const response = await fetch('/api/analytics/page-view', {
@@ -131,7 +131,8 @@ export default function ProfilePage() {
   };
 
   trackPageView();
-}, [user?.id]);
+}, [user?.id]);*/
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
