@@ -36,6 +36,7 @@ export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isDealer, setIsDealer] = useState(false);
+  const [isFacilityOwner, setIsFacilityOwner] = useState(false);
   const [country, setCountry] = useState(currentCountry?.code.toLowerCase() || 'qa');
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -83,6 +84,7 @@ export default function Navbar() {
               
               setIsAdmin(retryData?.role === 'admin');
               setIsDealer(retryData?.role === 'dealer');
+              setIsFacilityOwner(retryData?.role === 'facility_owner');
             } catch (ensureError) {
               console.error('Exception ensuring profile exists:', ensureError);
             }
@@ -92,6 +94,7 @@ export default function Navbar() {
           
           setIsAdmin(data?.role === 'admin');
           setIsDealer(data?.role === 'dealer');
+          setIsFacilityOwner(data?.role === 'facility_owner');
         } catch (error) {
           console.error('Error checking user role:', error);
         }
@@ -182,6 +185,7 @@ export default function Navbar() {
     { name: t('user.myProfile'), href: `/profile`, icon: UserCircleIcon },
     ...(isAdmin ? [{ name: t('user.adminDashboard'), href: `/admin`, icon: ClipboardDocumentListIcon }] : []),
     ...(isDealer ? [{ name: t('user.dealerDashboard'), href: `/dealer-dashboard`, icon: ClipboardDocumentListIcon }] : []),
+    ...(isFacilityOwner ? [{ name: t('user.facilityDashboard'), href: `/facility-dashboard`, icon: ClipboardDocumentListIcon }] : []),
     { name: t('user.myAds'), href: `/my-ads`, icon: ClipboardDocumentListIcon },
     { name: t('user.favorites'), href: `/favorites`, icon: HeartIcon },
   ];
@@ -342,7 +346,24 @@ export default function Navbar() {
                               } flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300`}
                             >
                               <Cog6ToothIcon className={`h-5 w-5 ${language === 'ar' ? 'ml-3' : 'mr-3'}`} />
-                              {t('dashboard.title')}
+                              {t('user.dealerDashboard')}
+                            </Link>
+                          )}
+                        </Menu.Item>
+                      )}
+                      
+                      {/* Facility Owner Dashboard */}
+                      {isFacilityOwner && (
+                        <Menu.Item>
+                          {({ active }) => (
+                            <Link
+                              href="/facility-dashboard"
+                              className={`${
+                                active ? 'bg-gray-100 dark:bg-gray-700' : ''
+                              } flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300`}
+                            >
+                              <Cog6ToothIcon className={`h-5 w-5 ${language === 'ar' ? 'ml-3' : 'mr-3'}`} />
+                              {t('user.facilityDashboard')}
                             </Link>
                           )}
                         </Menu.Item>

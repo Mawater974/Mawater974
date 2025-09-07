@@ -119,7 +119,19 @@ export default function AIChatButton() {
   const getAIResponse = (userMessage: string): string => {
     const lowerMessage = userMessage.toLowerCase();
     
-    if (lowerMessage.includes('price') || lowerMessage.includes('cost')) {
+
+    if (lowerMessage.includes('price')) {
+      return 'This feature will be available soon!';
+    }
+    if (lowerMessage.includes('list') || lowerMessage.includes('sell')) {
+      return 'To list your car, you\'ll need to create an account and provide details about your vehicle in sell page.';
+    }
+    if (lowerMessage.includes('finance') || lowerMessage.includes('loan')) {
+      return 'This feature will be available soon!';
+    }
+    return 'Thank you for your message. This feature will be available soon!'};
+    
+    /*if (lowerMessage.includes('price') || lowerMessage.includes('cost')) {
       return 'Our car prices vary based on make, model, and condition. Would you like to see our current listings with prices?';
     }
     if (lowerMessage.includes('list') || lowerMessage.includes('sell')) {
@@ -130,7 +142,7 @@ export default function AIChatButton() {
     }
     
     return 'Thank you for your message. How else can I assist you today?';
-  };
+  };*/
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
