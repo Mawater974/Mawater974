@@ -22,8 +22,16 @@ import {
   ArrowDownTrayIcon,
   WrenchScrewdriverIcon,
   TruckIcon,
-  HeartIcon
+  HeartIcon,
+  StarIcon
 } from '@heroicons/react/24/outline';
+import dynamic from 'next/dynamic';
+
+// Dynamically import the modal to avoid SSR issues with modals
+const FeaturedPlansModal = dynamic(
+  () => import('@/components/dealer-dashboard/FeaturedPlansModal'),
+  { ssr: false }
+);
 import Image from 'next/image';
 import toast from 'react-hot-toast';
 import EditCarModal from '@/components/EditCarModal';
@@ -174,7 +182,9 @@ export default function DealerDashboard() {
   });
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [isExporting, setIsExporting] = useState(false);
-
+  const [isPaying, setIsPaying] = useState(false);
+  const [showPlansModal, setShowPlansModal] = useState(false);
+  
   function formatPrice(price: number, currencyCode?: string): string {
     // If no price is provided, return a placeholder
     if (price === null || price === undefined) return '-';
@@ -809,32 +819,47 @@ export default function DealerDashboard() {
     }
   };
 
-  // Track page view
-  /*useEffect(() => {
-    const trackPageView = async () => {
-      try {
-        const response = await fetch('/api/analytics/page-view', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            countryCode: '--', // Default to Qatar since this is a global page
-            userId: user?.id,
-            pageType: 'dealer-dashboard'
-          })
-        });
+  const handlePayForFeatured = () => {
+    setShowPlansModal(true);
+  };
 
-        if (!response.ok) {
-          console.error('Failed to track page view:', await response.json());
-        }
-      } catch (error) {
-        console.error('Failed to track page view:', error);
+  const handlePlanSelect = async (plan: any) => {
+    if (!dealership) return;
+    
+    try {
+      setIsPaying(true);
+      // Call your payment API endpoint with the selected plan
+      const response = await fetch('/api/payments/create-featured-checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          dealershipId: dealership.id,
+          planId: plan.id,
+          amount: plan.price * 100, // Convert to cents
+          currency: currentCountry?.currency_code || 'USD',
+          duration: plan.duration,
+          returnUrl: `${window.location.origin}/dealer-dashboard`,
+        }),
+      });
+
+      const { url } = await response.json();
+      
+      if (url) {
+        // Redirect to payment gateway
+        window.location.href = url;
+      } else {
+        throw new Error('No checkout URL received');
       }
-    };
-
-    trackPageView();
-  }, [user?.id]); */
+    } catch (error) {
+      console.error('Error initiating payment:', error);
+      toast.error(t('dealer.paymentError') || 'Error initiating payment. Please try again.');
+      setShowPlansModal(false);
+    } finally {
+      setIsPaying(false);
+    }
+  };
 
   const filteredListings = selectedStatus === 'all' 
     ? carListings 
@@ -970,6 +995,14 @@ export default function DealerDashboard() {
                   >
                     <ArrowDownTrayIcon className="h-5 w-5 mr-1 ml-1" />
                     {isExporting ? (language === 'ar' ? 'جاري التصدير...' : 'Exporting...') : (language === 'ar' ? 'تصدير البيانات' : 'Export Data')}
+                  </button>
+                  <button
+                    onClick={handlePayForFeatured}
+                    disabled={isPaying}
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-amber-500 hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <StarIcon className="h-5 w-5 mr-1 ml-1" />
+                    {isPaying ? (language === 'ar' ? 'جاري التحميل...' : 'Processing...') : (language === 'ar' ? 'دفع للتميز' : 'Pay for Featured')}
                   </button>
                   <button
                     onClick={() => router.push(`/${currentCountry?.code.toLowerCase()}/${activeTab === 'cars' ? 'sell' : 'spare-parts/add'}`)}
@@ -1162,6 +1195,14 @@ export default function DealerDashboard() {
             }}
           />
         )}
+        
+        {/* Featured Plans Modal */}
+        <FeaturedPlansModal
+          isOpen={showPlansModal}
+          onClose={() => setShowPlansModal(false)}
+          onSelectPlan={handlePlanSelect}
+          currency={currentCountry?.currency_code || 'USD'}
+        />
       </div>
     </div>
   );
