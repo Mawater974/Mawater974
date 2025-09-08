@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Star, Clock, MapPin, Phone, Mail, ExternalLink, Search, Filter, Grid, List } from 'lucide-react';
+import { Star, Clock, ArrowRight, MapPin, Phone, Mail, ExternalLink, Search, Filter, Grid, List } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -43,11 +43,16 @@ export default function GarageListPage() {
         const mockGarages: Garage[] = [
           {
             id: '1',
-            name: 'Premium Auto Care',
-            description: 'Your trusted auto service center with over 10 years of experience in car maintenance and repair.',
-            address: '123 Main St',
-            city: 'Doha',
-            country: 'Qatar',
+            name_en: 'Premium Auto Care',
+            name_ar: 'مركز تأهيل السيارات الممتاز',
+            description_en: 'Your trusted auto service center with over 10 years of experience in car maintenance and repair.',
+            description_ar: 'مركز تأهيل السيارات الممتاز هو مركز تأهيل السيارات الموثوق به مع أكثر من 10 سنوات من الخبرة في الصيانة والإصلاحات السيارات. نحن نخصص في جميع أنواع خدمات السيارات من الصيانة اليومية إلى الصيانة الكبيرة. نستخدم فقط أفضل جودة المكونات والآلات لضمان أن سيارتك تلبي أفضل الرعاية ممكنة.',
+            address_en: '123 Main St',
+            address_ar: 'شارع الرئيسي 123',
+            city_en: 'Doha',
+            city_ar: 'الدوحة',
+            country_en: 'Qatar',
+            country_ar: 'القطر',
             phone: '+97450123456',
             email: 'info@premiumautocare.qa',
             website: 'https://premiumautocare.qa',
@@ -57,7 +62,47 @@ export default function GarageListPage() {
             review_count: 124,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
-            services: ['Oil Change', 'Tire Rotation', 'Brake Service'],
+            services_en: ['Oil Change', 'Tire Rotation', 'Brake Service'],
+            services_ar: ['تغيير النفط', 'تمدد عجلات', 'خدمة العجلات'],
+            opening_hours: [
+              { day: 'Monday', open: '09:00', close: '18:00', is_closed: false },
+              { day: 'Tuesday', open: '09:00', close: '18:00', is_closed: false },
+              { day: 'Wednesday', open: '09:00', close: '18:00', is_closed: false },
+              { day: 'Thursday', open: '09:00', close: '18:00', is_closed: false },
+              { day: 'Friday', open: '14:00', close: '20:00', is_closed: false },
+              { day: 'Saturday', open: '10:00', close: '16:00', is_closed: false },
+              { day: 'Sunday', open: '09:00', close: '18:00', is_closed: false },
+            ],
+            social_links: {
+              facebook: 'https://facebook.com/premiumautocare',
+              instagram: 'https://instagram.com/premiumautocare',
+            },
+            is_featured: true,
+            is_verified: true,
+          },
+          {
+            id: '2',
+            name_en: 'First Choise Garage',
+            name_ar: 'فيرست تشويس جراج',
+            description_en: 'Your trusted auto service center with over 10 years of experience in car maintenance and repair.',
+            description_ar: 'مركز تأهيل السيارات الممتاز هو مركز تأهيل السيارات الموثوق به مع أكثر من 10 سنوات من الخبرة في الصيانة والإصلاحات السيارات. نحن نخصص في جميع أنواع خدمات السيارات من الصيانة اليومية إلى الصيانة الكبيرة. نستخدم فقط أفضل جودة المكونات والآلات لضمان أن سيارتك تلبي أفضل الرعاية ممكنة.',
+            address_en: '123 Main St',
+            address_ar: 'شارع الرئيسي 123',
+            city_en: 'Doha',
+            city_ar: 'الدوحة',
+            country_en: 'Qatar',
+            country_ar: 'القطر',
+            phone: '+97450123456',
+            email: 'info@premiumautocare.qa',
+            website: 'https://premiumautocare.qa',
+            logo_url: '/default-garage-logo.png',
+            cover_image_url: '/default-garage-cover.jpg',
+            rating: 4.8,
+            review_count: 124,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            services_en: ['Oil Change', 'Tire Rotation', 'Brake Service'],
+            services_ar: ['تغيير النفط', 'تمدد عجلات', 'خدمة العجلات'],
             opening_hours: [
               { day: 'Monday', open: '09:00', close: '18:00', is_closed: false },
               { day: 'Tuesday', open: '09:00', close: '18:00', is_closed: false },
@@ -110,7 +155,7 @@ export default function GarageListPage() {
         <p className="text-muted-foreground">Discover top-rated garages in your area</p>
       </div>
 
-      <div className="mb-8">
+      <div className="mb-8 py-2 px-2 border border-gray-50 dark:border-gray-800 rounded-lg">
         <form onSubmit={handleSearch} className="flex gap-4">
           <div className="flex-1">
             <Input
@@ -118,7 +163,7 @@ export default function GarageListPage() {
               placeholder="Search garages..."
               value={filters.search}
               onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-              className="h-12 text-base"
+              className="h-12 text-base border border-gray-50 dark:border-gray-800"
             />
           </div>
           <Button type="submit" className="h-12 px-6 text-white">
@@ -130,91 +175,124 @@ export default function GarageListPage() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {garages.map((garage) => (
           <Link key={garage.id} href={`/${countryCode}/garage/${garage.id}`} className="block h-full">
-            <Card className="h-full hover:shadow-lg transition-shadow duration-300">
-              <div className="relative h-40 bg-muted">
+            <div className="relative group bg-white dark:bg-gray-900/95 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 hover:border-qatar-maroon/100 transition-all duration-200 transform hover:scale-[1.01]">
+              {garage.is_featured && (
+                <div className="absolute top-2 left-2 z-20 px-2 py-1 bg-qatar-maroon text-white text-xs font-medium rounded-full">
+                  {language === 'ar' ? 'مميز' : 'Featured'}
+                </div>
+              )}
+              
+              {/* Cover Image */}
+              <div className="relative aspect-[16/9] bg-gray-100 dark:bg-gray-800">
                 {garage.cover_image_url ? (
                   <Image
                     src={garage.cover_image_url}
-                    alt={garage.name}
+                    alt={garage.name_en}
                     fill
-                    className="object-cover rounded-t-lg"
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   />
                 ) : (
-                  <div className="w-full h-full bg-gradient-to-r from-primary/10 to-secondary/10 flex items-center justify-center">
-                    <span className="text-muted-foreground">No cover image</span>
+                  <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center">
+                    <span className="text-muted-foreground">No Image</span>
                   </div>
                 )}
-                {garage.is_featured && (
-                  <Badge className="absolute top-2 right-2 bg-qatar-maroon hover:bg-qatar-maroon text-white">
-                    Featured
-                  </Badge>
-                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
               </div>
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-xl">{garage.name}</CardTitle>
-                    <CardDescription className="flex items-center mt-1">
-                      <MapPin className="h-4 w-4 mr-1" />
-                      {garage.city}, {garage.country}
-                    </CardDescription>
+
+              {/* Garage Info */}
+              <div className="p-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+                      {language === 'ar' ? garage.name_ar : garage.name_en}
+                    </h3>
+                    <div className="flex items-center text-sm text-gray-500 dark:text-gray-400" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+                      <MapPin className={`h-4 w-4 ${language === 'ar' ? 'ml-1' : 'mr-1'} flex-shrink-0`} />
+                      <span className="truncate">
+                        {language === 'ar' ? (
+                          <>{garage.city_ar}، {garage.country_ar}</>
+                        ) : (
+                          <>{garage.city_en}, {garage.country_en}</>
+                        )}
+                      </span>
+                    </div>
                   </div>
+                  
                   {garage.logo_url && (
-                    <div className="w-16 h-16 rounded-full border-2 border-white shadow-md -mt-12 bg-white p-1">
-                      <Image
-                        src={garage.logo_url}
-                        alt={`${garage.name} logo`}
-                        width={64}
-                        height={64}
-                        className="rounded-full w-full h-full object-contain"
-                      />
+                    <div className="ml-3 flex-shrink-0">
+                      <div className="w-12 h-12 rounded-full border-2 border-white dark:border-gray-800 shadow-md bg-white p-0.5">
+                        <Image
+                          src={garage.logo_url}
+                          alt={`${garage.name_en} logo`}
+                          width={48}
+                          height={48}
+                          className="rounded-full object-cover w-full h-full"
+                        />
+                      </div>
                     </div>
                   )}
                 </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
-                  {garage.description}
-                </p>
-                <div className="flex items-center mb-2">
-                  <div className="flex items-center text-amber-500">
-                    <Star className="h-5 w-5 fill-current" />
-                    <span className="ml-1 font-medium text-foreground">
+
+                {/* Rating */}
+                <div className="flex items-center mb-3">
+                  <div className="flex items-center">
+                    <Star className="h-4 w-4 text-amber-500 fill-current" />
+                    <span className="ml-1 text-sm font-medium text-gray-900 dark:text-white">
                       {garage.rating?.toFixed(1) || 'N/A'}
                     </span>
-                    <span className="text-muted-foreground text-sm ml-1">
-                      ({garage.review_count} reviews)
+                    <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">
+                      ({garage.review_count} {language === 'ar' ? 'تقييمات' : 'reviews'})
                     </span>
                   </div>
                 </div>
-                <div className="mt-4">
-                  <h4 className="text-sm font-medium mb-2">Services</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {garage.services.slice(0, 3).map((service, index) => (
-                      <Badge key={index} variant="secondary" className="text-xs">
+
+                {/* Services */}
+                <div className="mb-3">
+                  <div className="flex flex-wrap gap-1.5">
+                    {(language === 'ar' ? garage.services_ar : garage.services_en).slice(0, 3).map((service, index) => (
+                      <span 
+                        key={index} 
+                        className="px-2 py-1 text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-full"
+                        dir={language === 'ar' ? 'rtl' : 'ltr'}
+                      >
                         {service}
-                      </Badge>
+                      </span>
                     ))}
-                    {garage.services.length > 3 && (
-                      <Badge variant="outline" className="text-xs">
-                        +{garage.services.length - 3} more
-                      </Badge>
+                    {garage.services_en.length > 3 && (
+                      <span className="px-2 py-1 text-xs text-gray-500 dark:text-gray-400" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+                        {language === 'ar' ? `+${garage.services_ar.length - 3} المزيد` : `+${garage.services_en.length - 3} more`}
+                      </span>
                     )}
                   </div>
                 </div>
-              </CardContent>
-              <CardFooter className="flex justify-between items-center border-t pt-4">
-                <div className="flex items-center text-sm text-muted-foreground">
-                  <Clock className="h-4 w-4 mr-1" />
-                  {garage.opening_hours[new Date().getDay()]?.is_closed
-                    ? 'Closed today'
-                    : `Open until ${garage.opening_hours[new Date().getDay()]?.close || '18:00'}`}
+
+                {/* Hours & CTA */}
+                <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-800">
+                  <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                    <Clock className="h-4 w-4 mr-1.5 flex-shrink-0" />
+                    <span className="truncate max-w-[140px] md:max-w-[180px]">
+                      {garage.opening_hours[new Date().getDay()]?.is_closed
+                      ? language === 'ar' ? 'مغلق اليوم' : 'Closed today'
+                      : language === 'ar' 
+                        ? `مفتوح ${garage.opening_hours[new Date().getDay()]?.open} - ${garage.opening_hours[new Date().getDay()]?.close}`
+                        : `Open ${garage.opening_hours[new Date().getDay()]?.open} - ${garage.opening_hours[new Date().getDay()]?.close}`}
+                    </span>
+                  </div>
+                  <button 
+                    className="text-sm font-medium text-qatar-maroon hover:text-qatar-maroon/90 flex items-center"
+                    onClick={(e) => e.preventDefault()}
+                  >
+                    {language === 'ar' ? 'عرض التفاصيل' : 'View Details'}
+                    {language === 'ar' ? (
+                      <ArrowRight className="mr-1 h-4 w-4 transform rotate-180" />
+                    ) : (
+                      <ArrowRight className="ml-1 h-4 w-4" />
+                    )}
+                  </button>
                 </div>
-                <Button size="sm" variant="outline">
-                  View Details
-                </Button>
-              </CardFooter>
-            </Card>
+              </div>
+            </div>
           </Link>
         ))}
       </div>

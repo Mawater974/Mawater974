@@ -1,10 +1,15 @@
 export interface Garage {
   id: string;
-  name: string;
-  description: string;
-  address: string;
-  city: string;
-  country: string;
+  name_en: string;
+  name_ar: string;
+  description_en: string;
+  description_ar: string;
+  address_en: string;
+  address_ar: string;
+  city_en: string;
+  city_ar: string;
+  country_en: string;
+  country_ar: string;
   phone: string;
   email: string;
   website: string | null;
@@ -14,7 +19,8 @@ export interface Garage {
   review_count: number;
   created_at: string;
   updated_at: string;
-  services: string[];
+  services_en: string[];
+  services_ar: string[];
   opening_hours: {
     day: string;
     open: string;
@@ -46,7 +52,9 @@ export interface GarageService {
   id: string;
   garage_id: string;
   name: string;
+  name_ar: string;
   description: string;
+  description_ar: string;
   price: number;
   duration: number; // in minutes
   is_available: boolean;

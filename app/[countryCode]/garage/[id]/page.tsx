@@ -10,10 +10,14 @@ import { Star, MapPin, Phone, Mail, ExternalLink, Clock, ChevronLeft } from 'luc
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import {useLanguage} from '@/contexts/LanguageContext';
+import {useCountry} from '@/contexts/CountryContext';
 
 export default function GarageDetailPage() {
   const { countryCode, id } = useParams();
   const router = useRouter();
+  const { t, language } = useLanguage();
+  const { currentCountry, formatPrice } = useCountry();
   const [garage, setGarage] = useState<Garage | null>(null);
   const [services, setServices] = useState<GarageService[]>([]);
   const [reviews, setReviews] = useState<GarageReview[]>([]);
@@ -32,11 +36,16 @@ export default function GarageDetailPage() {
         // Mock data for now
         const mockGarage: Garage = {
           id: id as string,
-          name: 'Premium Auto Care',
-          description: 'Your trusted auto service center with over 10 years of experience in car maintenance and repair. We specialize in all types of vehicle services from routine maintenance to major repairs. Our certified technicians use only the highest quality parts and equipment to ensure your vehicle receives the best care possible.',
-          address: '123 Main St, Business Bay',
-          city: 'Doha',
-          country: 'Qatar',
+          name_en: 'Premium Auto Care',
+          name_ar: 'مركز تأهيل السيارات الممتاز',
+          description_en: 'Your trusted auto service center with over 10 years of experience in car maintenance and repair. We specialize in all types of vehicle services from routine maintenance to major repairs. Our certified technicians use only the highest quality parts and equipment to ensure your vehicle receives the best care possible.',
+          description_ar: 'مركز تأهيل السيارات الممتاز هو مركز تأهيل السيارات الموثوق به مع أكثر من 10 سنوات من الخبرة في الصيانة والإصلاحات السيارات. نحن نخصص في جميع أنواع خدمات السيارات من الصيانة اليومية إلى الصيانة الكبيرة. نستخدم فقط أفضل جودة المكونات والآلات لضمان أن سيارتك تلبي أفضل الرعاية ممكنة.',
+          address_en: '123 Main St, Business Bay',
+          address_ar: 'شارع الرئيسي 123, بيزنس باي',
+          city_en: 'Doha',
+          city_ar: 'الدوحة',
+          country_en: 'Qatar',
+          country_ar: 'القطر',
           phone: '+97450123456',
           email: 'info@premiumautocare.qa',
           website: 'https://premiumautocare.qa',
@@ -46,7 +55,8 @@ export default function GarageDetailPage() {
           review_count: 124,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-          services: ['Oil Change', 'Tire Rotation', 'Brake Service', 'Engine Diagnostics', 'AC Service', 'Battery Replacement', 'Car Wash'],
+          services_en: ['Oil Change', 'Tire Rotation', 'Brake Service', 'Engine Diagnostics', 'AC Service', 'Battery Replacement', 'Car Wash'],
+          services_ar: ['تغيير النفط', 'تمدد عجلات', 'خدمة العجلات', 'تشخيص المحرك', 'خدمة المكيف', 'استبدال البطارية', 'تنظيف السيارة'],
           opening_hours: [
             { day: 'Monday', open: '09:00', close: '18:00', is_closed: false },
             { day: 'Tuesday', open: '09:00', close: '18:00', is_closed: false },
@@ -65,10 +75,10 @@ export default function GarageDetailPage() {
         };
 
         const mockServices: GarageService[] = [
-          { id: '1', garage_id: id as string, name: 'Oil Change', description: 'Complete oil and filter change with premium oil', price: 200, duration: 30, is_available: true },
-          { id: '2', garage_id: id as string, name: 'Tire Rotation', description: 'Rotate all four tires and check tire pressure', price: 100, duration: 30, is_available: true },
-          { id: '3', garage_id: id as string, name: 'Brake Service', description: 'Inspect and service brake system', price: 300, duration: 60, is_available: true },
-          { id: '4', garage_id: id as string, name: 'Engine Diagnostics', description: 'Complete engine diagnostic check', price: 150, duration: 45, is_available: true },
+          { id: '1', garage_id: id as string, name_en: 'Oil Change', name_ar: 'تغيير النفط', description_en: 'Complete oil and filter change with premium oil', description_ar: 'تغيير النفط الكامل مع ملوحة ممتازة', price: 200, duration: 30, is_available: true },
+          { id: '2', garage_id: id as string, name_en: 'Tire Rotation', name_ar: 'تمدد عجلات', description_en: 'Rotate all four tires and check tire pressure', description_ar: 'تمدد جميع عجلات السيارة وتحقق من ضغط العجلات', price: 100, duration: 30, is_available: true },
+          { id: '3', garage_id: id as string, name_en: 'Brake Service', name_ar: 'خدمة العجلات', description_en: 'Inspect and service brake system', description_ar: 'Inspect and service brake system', price: 300, duration: 60, is_available: true },
+          { id: '4', garage_id: id as string, name_en: 'Engine Diagnostics', name_ar: 'تشخيص المحرك', description_en: 'Complete engine diagnostic check', description_ar: 'Complete engine diagnostic check', price: 150, duration: 45, is_available: true },
         ];
 
         const mockReviews: GarageReview[] = [
@@ -147,7 +157,7 @@ export default function GarageDetailPage() {
           {garage.cover_image_url ? (
             <Image
               src={garage.cover_image_url}
-              alt={garage.name}
+              alt={language === 'ar' ? garage.name_ar : garage.name_en}
               fill
               className="object-cover"
             />
@@ -165,7 +175,7 @@ export default function GarageDetailPage() {
               {garage.logo_url ? (
                 <Image
                   src={garage.logo_url}
-                  alt={`${garage.name} logo`}
+                  alt={`${language === 'ar' ? garage.name_ar : garage.name_en } logo`}
                   width={128}
                   height={128}
                   className="w-full h-full object-contain"
@@ -179,9 +189,9 @@ export default function GarageDetailPage() {
             
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-2">
-                <h1 className="text-3xl font-bold">{garage.name}</h1>
+                <h1 className="text-3xl font-bold">{language === 'ar' ? garage.name_ar : garage.name_en }</h1>
                 {garage.is_verified && (
-                  <Badge variant="secondary" className="text-xs">
+                  <Badge variant="secondary" className="text-xs text-black">
                     Verified
                   </Badge>
                 )}
@@ -189,7 +199,7 @@ export default function GarageDetailPage() {
               
               <div className="flex items-center text-muted-foreground mb-4">
                 <MapPin className="h-4 w-4 mr-1" />
-                <span>{garage.address}, {garage.city}, {garage.country}</span>
+                <span>{language === 'ar' ? garage.address_ar : garage.address_en}, {language === 'ar' ? garage.city_ar : garage.city_en}, {language === 'ar' ? garage.country_ar : garage.country_en}</span>
               </div>
               
               <div className="flex flex-wrap items-center gap-4">
@@ -231,25 +241,25 @@ export default function GarageDetailPage() {
         {/* Left Column */}
         <div className="lg:col-span-2">
           <Tabs defaultValue="overview" onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-3 mb-6 border">
+            <TabsList className="grid w-full grid-cols-3 mb-6 border border-gray-200 dark:border-gray-800">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="services">Services</TabsTrigger>
               <TabsTrigger value="reviews">Reviews ({reviews.length})</TabsTrigger>
             </TabsList>
             
             <TabsContent value="overview" className="space-y-6">
-              <Card>
+              <Card className="border border-gray-200 dark:border-gray-800">
                 <CardHeader>
-                  <CardTitle>About {garage.name}</CardTitle>
+                  <CardTitle>{language === 'ar' ? 'عن' : 'About'} {language === 'ar' ? garage.name_ar : garage.name_en}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-muted-foreground">{garage.description}</p>
+                  <p className="text-muted-foreground">{language === 'ar' ? garage.description_ar : garage.description_en}</p>
                 </CardContent>
               </Card>
               
-              <Card>
+              <Card className="border border-gray-200 dark:border-gray-800">
                 <CardHeader>
-                  <CardTitle>Opening Hours</CardTitle>
+                  <CardTitle>{language === 'ar' ? 'ساعات العمل' : 'Opening Hours'}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
@@ -272,14 +282,14 @@ export default function GarageDetailPage() {
             <TabsContent value="services" className="space-y-4">
               {services.length > 0 ? (
                 services.map((service) => (
-                  <Card key={service.id}>
+                  <Card className="border border-gray-200 dark:border-gray-800" key={service.id}>
                     <CardContent className="p-6">
                       <div className="flex justify-between items-start">
                         <div>
-                          <h3 className="font-medium">{service.name}</h3>
+                          <h3 className="font-medium">{language === 'ar' ? service.name_ar : service.name_en}</h3>
                           {service.description && (
                             <p className="text-sm text-muted-foreground mt-1">
-                              {service.description}
+                              {language === 'ar' ? service.description_ar : service.description_en}
                             </p>
                           )}
                           <div className="flex items-center mt-2 text-sm text-muted-foreground">
@@ -298,7 +308,7 @@ export default function GarageDetailPage() {
                   </Card>
                 ))
               ) : (
-                <Card>
+                <Card className="border border-gray-200 dark:border-gray-800">
                   <CardContent className="p-6 text-center text-muted-foreground">
                     No services available at the moment.
                   </CardContent>
@@ -310,7 +320,7 @@ export default function GarageDetailPage() {
               {reviews.length > 0 ? (
                 <>
                   {reviews.map((review) => (
-                    <Card key={review.id}>
+                    <Card key={review.id} className="border border-gray-200 dark:border-gray-800">
                       <CardContent className="p-6">
                         <div className="flex items-start gap-4">
                           <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
@@ -339,14 +349,14 @@ export default function GarageDetailPage() {
                   </div>
                 </>
               ) : (
-                <Card>
+                <Card className="border border-gray-200 dark:border-gray-800">
                   <CardContent className="p-6 text-center text-muted-foreground">
                     No reviews yet. Be the first to review!
                   </CardContent>
                 </Card>
               )}
               
-              <Card className="mt-8">
+              <Card className="mt-8 border border-gray-200 dark:border-gray-800">
                 <CardHeader>
                   <CardTitle>Write a Review</CardTitle>
                   <CardDescription>
@@ -382,7 +392,7 @@ export default function GarageDetailPage() {
         
         {/* Right Column */}
         <div className="space-y-6">
-          <Card>
+          <Card className="border border-gray-200 dark:border-gray-800">
             <CardHeader>
               <CardTitle>Contact Information</CardTitle>
             </CardHeader>
@@ -394,7 +404,7 @@ export default function GarageDetailPage() {
                 <div>
                   <h4 className="font-medium">Address</h4>
                   <p className="text-sm text-muted-foreground">
-                    {garage.address}, {garage.city}, {garage.country}
+                    {garage.address_en}, {garage.address_ar}, {garage.city_en || garage.city_ar}, {garage.country_en || garage.country_ar}
                   </p>
                 </div>
               </div>
@@ -471,7 +481,7 @@ export default function GarageDetailPage() {
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className="border border-gray-200 dark:border-gray-800">
             <CardHeader>
               <CardTitle>Location</CardTitle>
             </CardHeader>
@@ -482,7 +492,7 @@ export default function GarageDetailPage() {
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className="border border-gray-200 dark:border-gray-800">
             <CardHeader>
               <CardTitle>Why Choose Us?</CardTitle>
             </CardHeader>
