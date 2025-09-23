@@ -4,11 +4,6 @@ import { useCallback, useState, useRef, useEffect, useMemo } from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { TouchBackend } from 'react-dnd-touch-backend';
-
-// Simple mobile detection
-const isTouchDevice = () => {
-  if (typeof window === 'undefined') return false;
-  return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -20,6 +15,12 @@ import heic2any from 'heic2any';
 import { useCountry } from '@/contexts/CountryContext';
 import { ImageFile } from '@/types/image';
 import { scrollToTop } from '@/utils/scrollToTop';
+
+// Simple mobile detection
+const isTouchDevice = () => {
+  if (typeof window === 'undefined') return false;
+  return 'ontouchstart' in window || (navigator as any).maxTouchPoints > 0;
+};
 
 interface ExistingImage {
   url: string;
