@@ -3,7 +3,6 @@
 import { useCallback, useState, useRef, useEffect, useMemo } from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
-import { TouchBackend } from 'react-dnd-touch-backend';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -15,12 +14,6 @@ import heic2any from 'heic2any';
 import { useCountry } from '@/contexts/CountryContext';
 import { ImageFile } from '@/types/image';
 import { scrollToTop } from '@/utils/scrollToTop';
-
-// Simple mobile detection
-const isTouchDevice = () => {
-  if (typeof window === 'undefined') return false;
-  return 'ontouchstart' in window || (navigator as any).maxTouchPoints > 0;
-};
 
 interface ExistingImage {
   url: string;
@@ -629,15 +622,6 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
 
 
 
-  // Get the appropriate backend based on device
-  const getBackend = useCallback(() => {
-    if (isTouchDevice()) {
-      // @ts-ignore - TouchBackend has incorrect type definitions
-      return TouchBackend;
-    }
-    return HTML5Backend;
-  }, []);
-
   // Combine existing and new images
   const allImages = useMemo(() => {
     return [...files.map((file, index) => ({
@@ -699,7 +683,7 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
             </p>
           </div>
 
-          <DndProvider backend={getBackend()} options={{ enableMouseEvents: true }}>
+          <DndProvider backend={HTML5Backend}>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
               {allImages.map((image, index) => (
                 <DraggableImage
@@ -712,6 +696,7 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
                   onSetMain={setAsMain}
                   moveImage={moveImage}
                   t={t}
+                  totalImages={allImages.length}
                 />
               ))}
             </div>
