@@ -1,8 +1,33 @@
 'use client';
 
 import { useDrag, useDrop } from 'react-dnd';
-import { useRef } from 'react';
-import { Star, Trash2 } from 'lucide-react';
+import { useRef, useState, useEffect } from 'react';
+import { Star, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+
+// Custom hook to detect mobile devices
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    // Check if window is defined (client-side)
+    if (typeof window !== 'undefined') {
+      const checkIfMobile = () => {
+        setIsMobile(window.innerWidth <= 768); // Common breakpoint for mobile devices
+      };
+      
+      // Initial check
+      checkIfMobile();
+      
+      // Add event listener for window resize
+      window.addEventListener('resize', checkIfMobile);
+      
+      // Cleanup
+      return () => window.removeEventListener('resize', checkIfMobile);
+    }
+  }, []);
+
+  return isMobile;
+};
 
 type DraggableImageProps = {
   id: string;
@@ -13,6 +38,7 @@ type DraggableImageProps = {
   onSetMain: (index: number) => void;
   moveImage: (dragIndex: number, hoverIndex: number) => void;
   t: (key: string) => string;
+  totalImages: number;
 };
 
 type DragItem = {
@@ -30,6 +56,7 @@ export const DraggableImage = ({
   onSetMain,
   moveImage,
   t,
+  totalImages,
 }: DraggableImageProps) => {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -72,6 +99,39 @@ export const DraggableImage = ({
   });
 
   const opacity = isDragging ? 0.5 : 1;
+  const [showArrows, setShowArrows] = useState(false);
+  const isMobile = useIsMobile();
+  
+  // Toggle arrows on mobile when image is pressed
+  const toggleArrows = () => {
+    if (isMobile) {
+      setShowArrows(!showArrows);
+    }
+  };
+
+  // Handle move left/right
+  const handleMove = (direction: 'left' | 'right') => {
+    if (direction === 'left' && index > 0) {
+      moveImage(index, index - 1);
+    } else if (direction === 'right' && index < totalImages - 1) {
+      moveImage(index, index + 1);
+    }
+  };
+
+  // Hide arrows when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (ref.current && !ref.current.contains(event.target as Node)) {
+        setShowArrows(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   drag(drop(ref));
 
   return (
@@ -98,7 +158,40 @@ export const DraggableImage = ({
         </div>
       )}
 
-      <div className="absolute bottom-0 left-0 right-0 flex justify-between p-2 bg-[#1e2530]/90">
+      {/* Mobile Arrows */}
+      {isMobile && showArrows && (
+        <div className="absolute inset-0 flex items-center justify-between p-2 z-10">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleMove('left');
+            }}
+            disabled={index === 0}
+            className={`p-2 rounded-full bg-black/70 text-white ${index === 0 ? 'opacity-50' : 'opacity-90 hover:opacity-100'}`}
+            aria-label="Move left"
+          >
+            <ChevronLeft className="h-6 w-6" />
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleMove('right');
+            }}
+            disabled={index === totalImages - 1}
+            className={`p-2 rounded-full bg-black/70 text-white ${index === totalImages - 1 ? 'opacity-50' : 'opacity-90 hover:opacity-100'}`}
+            aria-label="Move right"
+          >
+            <ChevronRight className="h-6 w-6" />
+          </button>
+        </div>
+      )}
+
+      <div 
+        className="absolute bottom-0 left-0 right-0 flex justify-between p-2 bg-[#1e2530]/90"
+        onClick={toggleArrows}
+      >
         {!isMain && (
           <button
             type="button"
