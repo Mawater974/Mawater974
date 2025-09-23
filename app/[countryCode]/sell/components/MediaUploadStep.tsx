@@ -1,10 +1,13 @@
 'use client';
 
 import { useCallback, useState, useRef, useEffect, useMemo } from 'react';
+import { DndProvider } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Trash2, Upload, Image as ImageIcon, Star, Check } from 'lucide-react';
+import { DraggableImage } from '@/components/DraggableImage';
 import imageCompression from 'browser-image-compression';
 import { toast } from 'react-hot-toast';
 import heic2any from 'heic2any';
@@ -565,6 +568,27 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
     }
   };
 
+  // Move image in the array
+  const moveImage = useCallback((dragIndex: number, hoverIndex: number) => {
+    setFiles((prevFiles) => {
+      const newFiles = [...prevFiles];
+      const [movedFile] = newFiles.splice(dragIndex, 1);
+      newFiles.splice(hoverIndex, 0, movedFile);
+      
+      // Update main photo index if needed
+      if (mainPhotoIndex === dragIndex) {
+        onSetMainPhoto(hoverIndex);
+      } else if (dragIndex < mainPhotoIndex! && hoverIndex >= mainPhotoIndex!) {
+        onSetMainPhoto(mainPhotoIndex! - 1);
+      } else if (dragIndex > mainPhotoIndex! && hoverIndex <= mainPhotoIndex!) {
+        onSetMainPhoto(mainPhotoIndex! + 1);
+      }
+      
+      onFilesChange(newFiles);
+      return newFiles;
+    });
+  }, [mainPhotoIndex, onFilesChange, onSetMainPhoto, setFiles]);
+
   // Remove image
   const removeImage = (id: string, index: number) => {
     setFiles(prevFiles => {
@@ -659,73 +683,23 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
-            {allImages.map((image, index) => {
-              const isMain = index === mainPhotoIndex;
-              return (
-                <div 
+          <DndProvider backend={HTML5Backend}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
+              {allImages.map((image, index) => (
+                <DraggableImage
                   key={image.id}
-                  className={`relative border-4 rounded-lg overflow-hidden transition-all duration-300 ease-in-out ${
-                    isMain
-                      ? 'border-qatar-maroon shadow-lg scale-105' 
-                      : 'border-[#2a3441] hover:border-gray-600 dark:border-gray-700'
-                  }`}
-                >
-                  <img 
-                    src={image.preview} 
-                    alt={`Car image ${index + 1}`} 
-                    className="w-full h-40 object-cover"
-                  />
-                  
-                  {/* Main Photo Badge */}
-                  {isMain && (
-                    <div className="absolute top-2 left-2 bg-qatar-maroon text-white px-2 py-1 rounded-full text-xs font-bold flex items-center">
-                      <Star className="h-3 w-3 mr-1" />
-                      {t('sell.images.mainPhoto')}
-                    </div>
-                  )}
-
-                  {/* Action Buttons */}
-                  <div className="absolute bottom-0 left-0 right-0 flex justify-between p-2 bg-[#1e2530]/90">
-                    {/* Set as Main Photo Button */}
-                    {!isMain && (
-                      <button
-                        type="button"
-                        onClick={() => setAsMain(index)}
-                        className="bg-qatar-maroon text-white px-3 py-1.5 rounded-md text-xs 
-                          transition-all duration-300 ease-in-out 
-                          transform hover:scale-105 hover:shadow-lg 
-                          active:scale-95 
-                          focus:outline-none focus:ring-2 focus:ring-qatar-maroon/50"
-                      >
-                        <div className="flex items-center justify-center gap-1 rtl:flex-row-reverse">
-                          <Star className="h-4 w-4" />
-                          {t('sell.images.setMainBtn')}
-                        </div>
-                      </button>
-                    )}
-
-                    {/* Remove Image Button */}
-                    <button
-                      type="button"
-                      onClick={() => removeImage(image.id, index)}
-                      className="bg-[#2a3441] text-white px-3 py-1.5 rounded-md text-xs 
-                        transition-all duration-300 ease-in-out 
-                        transform hover:scale-105 hover:shadow-lg 
-                        active:scale-95 
-                        focus:outline-none focus:ring-2 focus:ring-gray-500/50 
-                        hover:bg-[#323d4d] ml-auto rtl:mr-auto rtl:ml-0"
-                    >
-                      <div className="flex items-center justify-center gap-1 rtl:flex-row-reverse">
-                        <Trash2 className="h-4 w-4" />
-                        {t('common.remove')}
-                      </div>
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                  id={image.id}
+                  index={index}
+                  preview={image.preview}
+                  isMain={index === mainPhotoIndex}
+                  onRemove={removeImage}
+                  onSetMain={setAsMain}
+                  moveImage={moveImage}
+                  t={t}
+                />
+              ))}
+            </div>
+          </DndProvider>
         </div>
       )}
 
