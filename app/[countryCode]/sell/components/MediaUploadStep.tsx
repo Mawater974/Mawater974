@@ -3,6 +3,12 @@
 import { useCallback, useState, useRef, useEffect, useMemo } from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
+import { TouchBackend } from 'react-dnd-touch-backend';
+
+// Simple mobile detection
+const isTouchDevice = () => {
+  if (typeof window === 'undefined') return false;
+  return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -622,6 +628,15 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
 
 
 
+  // Get the appropriate backend based on device
+  const getBackend = useCallback(() => {
+    if (isTouchDevice()) {
+      // @ts-ignore - TouchBackend has incorrect type definitions
+      return TouchBackend;
+    }
+    return HTML5Backend;
+  }, []);
+
   // Combine existing and new images
   const allImages = useMemo(() => {
     return [...files.map((file, index) => ({
@@ -683,7 +698,7 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
             </p>
           </div>
 
-          <DndProvider backend={HTML5Backend}>
+          <DndProvider backend={getBackend()} options={{ enableMouseEvents: true }}>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
               {allImages.map((image, index) => (
                 <DraggableImage
