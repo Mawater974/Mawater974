@@ -4,29 +4,32 @@ import { useDrag, useDrop } from 'react-dnd';
 import { useRef, useState, useEffect } from 'react';
 import { Star, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 
-// Custom hook to detect mobile devices
-const useIsMobile = () => {
+// Custom hook to detect screen size
+const useScreenSize = () => {
   const [isMobile, setIsMobile] = useState(false);
+  const [isSmall, setIsSmall] = useState(false);
 
   useEffect(() => {
     // Check if window is defined (client-side)
     if (typeof window !== 'undefined') {
-      const checkIfMobile = () => {
-        setIsMobile(window.innerWidth <= 768); // Common breakpoint for mobile devices
+      const checkScreenSize = () => {
+        const width = window.innerWidth;
+        setIsMobile(width <= 768);
+        setIsSmall(width < 640); // Tailwind's sm breakpoint is 640px
       };
       
       // Initial check
-      checkIfMobile();
+      checkScreenSize();
       
       // Add event listener for window resize
-      window.addEventListener('resize', checkIfMobile);
+      window.addEventListener('resize', checkScreenSize);
       
       // Cleanup
-      return () => window.removeEventListener('resize', checkIfMobile);
+      return () => window.removeEventListener('resize', checkScreenSize);
     }
   }, []);
 
-  return isMobile;
+  return { isMobile, isSmall };
 };
 
 type DraggableImageProps = {
@@ -99,8 +102,8 @@ export const DraggableImage = ({
   });
 
   const opacity = isDragging ? 0.5 : 1;
-  const [showArrows, setShowArrows] = useState(false);
-  const isMobile = useIsMobile();
+  const { isMobile, isSmall } = useScreenSize();
+  const [showArrows, setShowArrows] = useState(!isSmall); // Always show on small screens
   
   // Toggle arrows on mobile when image is pressed
   const toggleArrows = () => {
@@ -158,8 +161,8 @@ export const DraggableImage = ({
         </div>
       )}
 
-      {/* Mobile Arrows */}
-      {isMobile && showArrows && (
+      {/* Arrows for mobile overlay */}
+      {isMobile && !isSmall && showArrows && (
         <div className="absolute inset-0 flex items-center justify-between p-2 z-10">
           <button
             type="button"
@@ -189,14 +192,43 @@ export const DraggableImage = ({
       )}
 
       <div 
-        className="absolute bottom-0 left-0 right-0 flex justify-between p-2 bg-[#1e2530]/90"
-        onClick={toggleArrows}
+        className={`absolute bottom-0 left-0 right-0 flex ${isSmall ? 'justify-between' : 'justify-start'} p-2 bg-[#1e2530]/90`}
+        onClick={!isSmall ? toggleArrows : undefined}
       >
+        {/* Small screen arrows - up/down */}
+        {isSmall && (
+          <div className="flex flex-col space-y-1 mr-2">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleMove('left');
+              }}
+              disabled={index === 0}
+              className={`p-1 rounded bg-black/50 text-white ${index === 0 ? 'opacity-50' : 'opacity-90 hover:opacity-100'}`}
+              aria-label="Move up"
+            >
+              <ChevronLeft className="h-4 w-4 rotate-90" />
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleMove('right');
+              }}
+              disabled={index === totalImages - 1}
+              className={`p-1 rounded bg-black/50 text-white ${index === totalImages - 1 ? 'opacity-50' : 'opacity-90 hover:opacity-100'}`}
+              aria-label="Move down"
+            >
+              <ChevronLeft className="h-4 w-4 -rotate-90" />
+            </button>
+          </div>
+        )}
         {!isMain && (
           <button
             type="button"
             onClick={() => onSetMain(index)}
-            className="bg-qatar-maroon text-white px-3 py-1.5 rounded-md text-xs 
+            className="bg-qatar-maroon text-white px-2 sm:px-3 py-1.5 rounded-md text-xs 
               transition-all duration-300 ease-in-out 
               transform hover:scale-105 hover:shadow-lg 
               active:scale-95 
@@ -212,12 +244,12 @@ export const DraggableImage = ({
         <button
           type="button"
           onClick={() => onRemove(id, index)}
-          className="bg-[#2a3441] text-white px-3 py-1.5 rounded-md text-xs 
+          className="bg-[#2a3441] text-white px-2 sm:px-3 py-1.5 rounded-md text-xs 
             transition-all duration-300 ease-in-out 
             transform hover:scale-105 hover:shadow-lg 
             active:scale-95 
             focus:outline-none focus:ring-2 focus:ring-gray-500/50 
-            hover:bg-[#323d4d] ml-auto rtl:mr-auto rtl:ml-0"
+            hover:bg-[#323d4d] sm:ml-auto rtl:sm:mr-auto rtl:sm:ml-0"
         >
           <div className="flex items-center justify-center gap-1 rtl:flex-row-reverse">
             <Trash2 className="h-4 w-4" />
