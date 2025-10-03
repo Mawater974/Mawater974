@@ -199,13 +199,21 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
             *,
             brand:brands(*),
             model:models(*),
-            images:car_images!car_images_car_id_fkey(*),
+            images:car_images!car_images_car_id_fkey(id, url, is_main, display_order),
             city:cities(*),
             country:countries(*),
             user:profiles(*)
           `)
           .eq('id', carId)
           .single();
+
+        if (data?.images) {
+          data.images.sort((a, b) => {
+            if (a.is_main && !b.is_main) return -1;
+            if (!a.is_main && b.is_main) return 1;
+            return (a.display_order ?? 0) - (b.display_order ?? 0);
+          });
+        }
 
         if (carError) {
           setError(t('car.details.errorLoadingCar'));

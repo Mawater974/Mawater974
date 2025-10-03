@@ -46,6 +46,7 @@ export function PlanSelection({ onSelectPlan, onContinue, t, currentPlan }: Plan
   const [featuredPrice, setFeaturedPrice] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [selectedPlan, setSelectedPlan] = useState<PlanType>(currentPlan || null);
+  const [showComingSoon, setShowComingSoon] = useState(false);
 
   useEffect(() => {
     const fetchFeaturedPrice = async () => {
@@ -82,8 +83,14 @@ export function PlanSelection({ onSelectPlan, onContinue, t, currentPlan }: Plan
   }, [currentPlan]);
 
   const handleSelectPlan = (planType: PlanType) => {
+    if (planType === 'featured') {
+      setShowComingSoon(true);
+      // Don't select the featured plan, keep the current selection
+      return;
+    }
     const newPlan = selectedPlan === planType ? null : planType;
     setSelectedPlan(newPlan);
+    setShowComingSoon(false);
   };
 
   const handleContinue = () => {
@@ -135,16 +142,14 @@ export function PlanSelection({ onSelectPlan, onContinue, t, currentPlan }: Plan
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">
                 {t('sell.plan.free.title')}
               </h3>
-              <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
-                {t('sell.plan.free.description')}
-              </p>
-              <div className="mt-8">
+              
+              <div className="mt-2">
                 <p className="text-4xl font-extrabold text-gray-900 dark:text-white">
                   {t('sell.plan.free.price')}
                 </p>
               </div>
-              <div className="mt-8 block w-full">
-                <span className={`mt-8 block w-full py-2 px-3 text-sm font-semibold rounded-md text-center border-2 transition-all duration-300  ${
+              <div className="mt-2 block w-full">
+                <span className={`mt-4 block w-full py-2 px-3 text-sm font-semibold rounded-md text-center border-2 transition-all duration-300  ${
                   selectedPlan === 'free'
                     ? 'bg-qatar-maroon text-white border-qatar-maroon hover:bg-qatar-maroon/90'
                     : 'bg-qatar-maroon/10 text-qatar-maroon border-qatar-maroon/50 hover:bg-qatar-maroon/20 hover:border-qatar-maroon'
@@ -154,10 +159,8 @@ export function PlanSelection({ onSelectPlan, onContinue, t, currentPlan }: Plan
               </div>
             </div>
             <div className="px-6 pt-6 pb-8">
-              <h4 className="text-xs font-medium text-gray-900 dark:text-white uppercase tracking-wide">
-                {t('sell.plan.free.includes')}
-              </h4>
-              <ul className="mt-6 space-y-4">
+              
+              <ul className="mt-2 space-y-4">
                 {features.free.map((feature, index) => (
                   <li key={index} className="flex">
                     <CheckIcon className="h-5 w-5 text-green-500 flex-shrink-0" />
@@ -185,29 +188,30 @@ export function PlanSelection({ onSelectPlan, onContinue, t, currentPlan }: Plan
                   {t('sell.plan.featured.title')}
                 </h3>
               </div>
-              <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
-                {t('sell.plan.featured.description')}
-              </p>
-              <div className="mt-8">
+              
+              <div className="mt-2">
                 <p className="text-4xl font-extrabold text-gray-900 dark:text-white">
                   {loading ? '...' : featuredPrice || '...'}
                 </p>
               </div>
-              <div className="mt-8 block w-full">
-                <span className={`mt-8 block w-full py-2 px-3 text-sm font-semibold rounded-md text-center border-2 transition-all duration-300 ${
+              <div className="mt-2 block w-full">
+                <span className={`mt-4 block w-full py-2 px-3 text-sm font-semibold rounded-md text-center border-2 transition-all duration-300 ${
                   selectedPlan === 'featured'
-                    ? 'bg-qatar-maroon text-white border-qatar-maroon hover:bg-qatar-maroon/90'
+                    ? 'bg-gray-400 text-white border-gray-400 cursor-not-allowed'
                     : 'bg-qatar-maroon/10 text-qatar-maroon border-qatar-maroon/50 hover:bg-qatar-maroon/20 hover:border-qatar-maroon'
                 }`}>
-                  {selectedPlan === 'featured' ? t('sell.plan.featured.selected') : t('sell.plan.featured.select')}
+                  {t('sell.plan.featured.comingSoon')}
                 </span>
+                {showComingSoon && (
+                  <div className="mt-2 text-sm text-qatar-maroon dark:text-qatar-maroon-light">
+                    {t('sell.plan.featured.comingSoonMessage')}
+                  </div>
+                )}
               </div>
             </div>
             <div className="px-6 pt-6 pb-8">
-              <h4 className="text-xs font-medium text-gray-900 dark:text-white uppercase tracking-wide">
-                {t('sell.plan.featured.includes')}
-              </h4>
-              <ul className="mt-6 space-y-4">
+              
+              <ul className="mt-2 space-y-4">
                 {features.featured.map((feature, index) => (
                   <li key={index} className="flex">
                     <CheckIcon className="h-5 w-5 text-green-500 flex-shrink-0" />
@@ -225,8 +229,12 @@ export function PlanSelection({ onSelectPlan, onContinue, t, currentPlan }: Plan
           <div className="mt-8 text-center">
               <button
                 onClick={handleContinue}
-                disabled={!selectedPlan}
-                className={`inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-qatar-maroon hover:bg-qatar-maroon/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon disabled:opacity-50 disabled:cursor-not-allowed`}
+                disabled={!selectedPlan || selectedPlan === 'featured'}
+                className={`inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white ${
+                  selectedPlan === 'featured' 
+                    ? 'bg-gray-400 cursor-not-allowed' 
+                    : 'bg-qatar-maroon hover:bg-qatar-maroon/90 focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon'
+                } focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 {selectedPlan 
                   ? selectedPlan === 'free' 

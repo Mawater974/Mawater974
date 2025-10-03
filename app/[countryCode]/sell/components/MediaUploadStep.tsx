@@ -575,9 +575,9 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
       const [movedFile] = newFiles.splice(dragIndex, 1);
       newFiles.splice(hoverIndex, 0, movedFile);
       
-      // Update main photo index if needed
-      if (mainPhotoIndex === dragIndex) {
-        onSetMainPhoto(hoverIndex);
+      // If we're moving to the first position, update main photo
+      if (hoverIndex === 0) {
+        onSetMainPhoto(0);
       } else if (dragIndex < mainPhotoIndex! && hoverIndex >= mainPhotoIndex!) {
         onSetMainPhoto(mainPhotoIndex! - 1);
       } else if (dragIndex > mainPhotoIndex! && hoverIndex <= mainPhotoIndex!) {
@@ -587,7 +587,7 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
       onFilesChange(newFiles);
       return newFiles;
     });
-  }, [mainPhotoIndex, onFilesChange, onSetMainPhoto, setFiles]);
+  }, [mainPhotoIndex, onFilesChange, onSetMainPhoto]);
 
   // Remove image
   const removeImage = (id: string, index: number) => {
@@ -615,24 +615,26 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
     });
   };
 
-  // Set as main image
+  // Set as main image - always set to first photo
   const setAsMain = (index: number) => {
-    onSetMainPhoto(index);
+    if (index !== 0) {
+      // Move the selected photo to the first position
+      moveImage(index, 0);
+    }
+    onSetMainPhoto(0);
   };
-
-
 
   // Combine existing and new images
   const allImages = useMemo(() => {
     return [...files.map((file, index) => ({
       ...file,
-      isMain: index === mainPhotoIndex
+      isMain: index === 0 // Always make the first photo the main one
     }))];
-  }, [files, mainPhotoIndex]);
+  }, [files]);
   
-  // Set first image as main by default if no main image is set
+  // Ensure first image is always set as main
   useEffect(() => {
-    if (allImages.length > 0 && mainPhotoIndex === null) {
+    if (allImages.length > 0 && mainPhotoIndex !== 0) {
       onSetMainPhoto(0);
     }
   }, [allImages.length, mainPhotoIndex, onSetMainPhoto]);

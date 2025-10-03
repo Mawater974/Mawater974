@@ -553,6 +553,8 @@ const translations = {
     'sell.plan.featured.period': '/listing',
     'sell.plan.featured.select': 'Select Featured',
     'sell.plan.featured.includes': 'What\'s included',
+    'sell.plan.featured.comingSoon': 'Coming Soon',
+    'sell.plan.featured.comingSoonMessage': 'This service will be available soon',
     // Continue Button
     'sell.plan.continue': 'Continue with',
     'sell.plan.selectPlan': 'Select a Plan',
@@ -2136,6 +2138,8 @@ const translations = {
     'sell.plan.featured.period': '/إعلان',
     'sell.plan.featured.select': 'اختر المميز',
     'sell.plan.featured.includes': 'المميزات المتضمنة',
+    'sell.plan.featured.comingSoon': 'قريبًا',
+    'sell.plan.featured.comingSoonMessage': 'سيتم توفير هذه الخدمة قريبًا',
     // Continue Button
     'sell.plan.continue': 'المتابعة مع',
     'sell.plan.selectPlan': 'اختر خطة',
