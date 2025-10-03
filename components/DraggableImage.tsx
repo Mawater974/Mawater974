@@ -1,8 +1,7 @@
 'use client';
 
-import { useDrag, useDrop } from 'react-dnd';
 import { useRef, useState, useEffect } from 'react';
-import { Star, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Star, Trash2, ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from 'lucide-react';
 
 // Custom hook to detect screen size
 const useScreenSize = () => {
@@ -44,12 +43,6 @@ type DraggableImageProps = {
   totalImages: number;
 };
 
-type DragItem = {
-  index: number;
-  id: string;
-  type: string;
-};
-
 export const DraggableImage = ({
   id,
   index,
@@ -62,107 +55,63 @@ export const DraggableImage = ({
   totalImages,
 }: DraggableImageProps) => {
   const ref = useRef<HTMLDivElement>(null);
-
-  const [{ isDragging }, drag] = useDrag({
-    type: 'image',
-    item: () => ({ id, index }),
-    collect: (monitor) => ({
-      isDragging: monitor.isDragging(),
-    }),
-  });
-
-  const [, drop] = useDrop({
-    accept: 'image',
-    hover(item: DragItem, monitor) {
-      if (!ref.current) {
-        return;
-      }
-      const dragIndex = item.index;
-      const hoverIndex = index;
-
-      if (dragIndex === hoverIndex) {
-        return;
-      }
-
-      const hoverBoundingRect = ref.current?.getBoundingClientRect();
-      const hoverMiddleY = (hoverBoundingRect.bottom - hoverBoundingRect.top) / 2;
-      const clientOffset = monitor.getClientOffset();
-      const hoverClientY = clientOffset!.y - hoverBoundingRect.top;
-
-      if (dragIndex < hoverIndex && hoverClientY < hoverMiddleY) {
-        return;
-      }
-      if (dragIndex > hoverIndex && hoverClientY > hoverMiddleY) {
-        return;
-      }
-
-      moveImage(dragIndex, hoverIndex);
-      item.index = hoverIndex;
-    },
-  });
-
-  const opacity = isDragging ? 0.5 : 1;
   const { isMobile, isSmall } = useScreenSize();
-  const [showArrows, setShowArrows] = useState(!isSmall); // Always show on small screens
-  
+  const [showArrows, setShowArrows] = useState(true);
+
+  // Handle move up/down or left/right based on screen size
+  const handleMove = (direction: 'up' | 'down' | 'left' | 'right') => {
+    let targetIndex = index;
+    
+    if ((direction === 'up' || direction === 'left') && index > 0) {
+      targetIndex = index - 1;
+    } else if ((direction === 'down' || direction === 'right') && index < totalImages - 1) {
+      targetIndex = index + 1;
+    }
+    
+    if (targetIndex !== index) {
+      moveImage(index, targetIndex);
+    }
+  };
+
   // Toggle arrows on mobile when image is pressed
-  const toggleArrows = () => {
+  const toggleArrows = (e: React.MouseEvent) => {
     if (isMobile) {
       setShowArrows(!showArrows);
     }
   };
 
-  // Handle move left/right
-  const handleMove = (direction: 'left' | 'right') => {
-    if (direction === 'left' && index > 0) {
-      moveImage(index, index - 1);
-    } else if (direction === 'right' && index < totalImages - 1) {
-      moveImage(index, index + 1);
-    }
-  };
-
-  // Hide arrows when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (ref.current && !ref.current.contains(event.target as Node)) {
-        setShowArrows(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-
-  drag(drop(ref));
-
   return (
     <div 
-      ref={ref} 
-      style={{ opacity, cursor: 'move' }}
       className={`relative border-4 rounded-lg overflow-hidden transition-all duration-300 ease-in-out ${
         isMain
           ? 'border-qatar-maroon shadow-lg scale-105' 
           : 'border-[#2a3441] hover:border-gray-600 dark:border-gray-700'
       }`}
+      style={{ zIndex: isMain ? 10 : 0, position: 'relative' }}
     >
       <img 
         src={preview} 
         alt={`Car image ${index + 1}`} 
         className="w-full h-40 object-cover"
         draggable={false}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (isMobile) {
+            setShowArrows(!showArrows);
+          }
+        }}
       />
       
-      {isMain && (
+      {/* Show main photo badge only on first photo */}
+      {index === 0 && (
         <div className="absolute top-2 left-2 bg-qatar-maroon text-white px-2 py-1 rounded-full text-xs font-bold flex items-center">
           <Star className="h-3 w-3 mr-1" />
           {t('sell.images.mainPhoto')}
         </div>
       )}
 
-      {/* Arrows for mobile overlay */}
-      {isMobile && !isSmall && showArrows && (
+      {/* Arrows for desktop (left/right) */}
+      {!isSmall && showArrows && (
         <div className="absolute inset-0 flex items-center justify-between p-2 z-10">
           <button
             type="button"
@@ -171,10 +120,10 @@ export const DraggableImage = ({
               handleMove('left');
             }}
             disabled={index === 0}
-            className={`p-2 rounded-full bg-black/70 text-white ${index === 0 ? 'opacity-50' : 'opacity-90 hover:opacity-100'}`}
+            className={`p-2 rounded-full bg-black/80 text-white ${index === 0 ? 'opacity-50 cursor-not-allowed' : 'opacity-90 hover:opacity-100 hover:bg-black'}`}
             aria-label="Move left"
           >
-            <ChevronLeft className="h-6 w-6" />
+            <ChevronLeft className="h-5 w-5" />
           </button>
           <button
             type="button"
@@ -183,44 +132,45 @@ export const DraggableImage = ({
               handleMove('right');
             }}
             disabled={index === totalImages - 1}
-            className={`p-2 rounded-full bg-black/70 text-white ${index === totalImages - 1 ? 'opacity-50' : 'opacity-90 hover:opacity-100'}`}
+            className={`p-2 rounded-full bg-black/80 text-white ${index === totalImages - 1 ? 'opacity-50 cursor-not-allowed' : 'opacity-90 hover:opacity-100 hover:bg-black'}`}
             aria-label="Move right"
           >
-            <ChevronRight className="h-6 w-6" />
+            <ChevronRight className="h-5 w-5" />
           </button>
         </div>
       )}
 
+      {/* Bottom controls */}
       <div 
-        className={`absolute bottom-0 left-0 right-0 flex ${isSmall ? 'justify-between' : 'justify-start'} p-2 bg-[#1e2530]/90`}
-        onClick={!isSmall ? toggleArrows : undefined}
+        className="absolute bottom-0 left-0 right-0 flex justify-between p-2 bg-[#1e2530]/90 z-20"
+        onClick={(e) => e.stopPropagation()}
       >
-        {/* Small screen arrows - up/down */}
-        {isSmall && (
-          <div className="flex flex-col space-y-1 mr-2">
+        {/* Mobile up/down arrows */}
+        {isMobile && (
+          <div className="flex flex-col space-y-1">
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                handleMove('left');
+                handleMove('up');
               }}
               disabled={index === 0}
-              className={`p-1 rounded bg-black/50 text-white ${index === 0 ? 'opacity-50' : 'opacity-90 hover:opacity-100'}`}
+              className={`p-1 rounded-full bg-black/80 text-white ${index === 0 ? 'opacity-50 cursor-not-allowed' : 'opacity-90 hover:opacity-100 hover:bg-black'}`}
               aria-label="Move up"
             >
-              <ChevronLeft className="h-4 w-4 rotate-90" />
+              <ChevronUp className="h-4 w-4" />
             </button>
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                handleMove('right');
+                handleMove('down');
               }}
               disabled={index === totalImages - 1}
-              className={`p-1 rounded bg-black/50 text-white ${index === totalImages - 1 ? 'opacity-50' : 'opacity-90 hover:opacity-100'}`}
+              className={`p-1 rounded-full bg-black/80 text-white ${index === totalImages - 1 ? 'opacity-50 cursor-not-allowed' : 'opacity-90 hover:opacity-100 hover:bg-black'}`}
               aria-label="Move down"
             >
-              <ChevronLeft className="h-4 w-4 -rotate-90" />
+              <ChevronDown className="h-4 w-4" />
             </button>
           </div>
         )}
@@ -229,7 +179,7 @@ export const DraggableImage = ({
             type="button"
             onClick={() => onSetMain(index)}
             className="bg-qatar-maroon text-white px-2 sm:px-3 py-1.5 rounded-md text-xs 
-              transition-all duration-300 ease-in-out 
+              transition-all duration-300 ease-in-out
               transform hover:scale-105 hover:shadow-lg 
               active:scale-95 
               focus:outline-none focus:ring-2 focus:ring-qatar-maroon/50"
@@ -259,4 +209,4 @@ export const DraggableImage = ({
       </div>
     </div>
   );
-};
+};;

@@ -25,7 +25,7 @@ interface Country {
   flag: string;
 }
 
-export default function LoginPopup({ delay = 5000 }: LoginPopupProps) {
+export default function LoginPopup({ delay = 10000 }: LoginPopupProps) {
   const [isOpen, setIsOpen] = useState(false);
   const { user } = useAuth();
   const { t, language } = useLanguage();
