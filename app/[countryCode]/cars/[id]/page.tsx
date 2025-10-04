@@ -922,16 +922,36 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
                   {/* Navigation Buttons */}
                   <button
                     onClick={handlePrevImage}
-                    className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/50 text-white p-4 rounded-full hover:bg-black/70 transition-colors"
+                    className="absolute left-2 sm:left-4 top-1/2 transform -translate-y-1/2 bg-black/50 text-white p-2 sm:p-3 md:p-4 rounded-full hover:bg-black/70 transition-colors active:scale-95 touch-target"
+                    style={{
+                      // Make touch target larger than the visible button
+                      width: '48px',
+                      height: '48px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      // Ensure it's above the image but below the close button
+                      zIndex: 10,
+                    }}
                   >
-                    <ChevronLeftIcon className="h-8 w-8" />
+                    <ChevronLeftIcon className="h-6 w-6 sm:h-8 sm:w-8" />
                   </button>
 
                   <button
                     onClick={handleNextImage}
-                    className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/50 text-white p-4 rounded-full hover:bg-black/70 transition-colors"
+                    className="absolute right-2 sm:right-4 top-1/2 transform -translate-y-1/2 bg-black/50 text-white p-2 sm:p-3 md:p-4 rounded-full hover:bg-black/70 transition-colors active:scale-95 touch-target"
+                    style={{
+                      // Make touch target larger than the visible button
+                      width: '48px',
+                      height: '48px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      // Ensure it's above the image but below the close button
+                      zIndex: 10,
+                    }}
                   >
-                    <ChevronRightIcon className="h-8 w-8" />
+                    <ChevronRightIcon className="h-6 w-6 sm:h-8 sm:w-8" />
                   </button>
 
                   {/* Main Image */}
@@ -960,7 +980,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
                   </div>
 
                   {/* Image Counter */}
-                  <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/50 text-white px-4 py-2 rounded-full">
+                  <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/50 text-white px-4 py-2 rounded-full text-sm sm:text-base">
                     {fullImageIndex + 1} / {car.images.length}
                   </div>
                 </div>
