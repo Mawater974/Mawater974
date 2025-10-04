@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import Zoom from 'react-medium-image-zoom';
+import 'react-medium-image-zoom/dist/styles.css';
 
 interface ImageCarouselProps {
   images: { url: string; is_main?: boolean }[];
@@ -41,6 +43,24 @@ export default function ImageCarousel({
     setCurrentIndex((currentIndex - 1 + imageUrls.length) % imageUrls.length);
   };
 
+  // Check if device is mobile
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkIfMobile = () => {
+      setIsMobile(window.innerWidth <= 768); // 768px is typically the breakpoint for mobile
+    };
+    
+    // Initial check
+    checkIfMobile();
+    
+    // Add event listener for window resize
+    window.addEventListener('resize', checkIfMobile);
+    
+    // Cleanup
+    return () => window.removeEventListener('resize', checkIfMobile);
+  }, []);
+
   return (
     <div className={`${aspectRatio} relative overflow-hidden group`}>
       <div 
@@ -52,13 +72,25 @@ export default function ImageCarousel({
             key={index}
             className="flex-shrink-0 w-full h-full relative"
           >
-            <Image
-              src={image.url}
-              alt={`${alt} ${index + 1}`}
-              fill  
-              className="object-cover"
-              priority={index === 0}
-            />
+            {isMobile ? (
+              <Zoom zoomMargin={40}>
+                <Image
+                  src={image.url}
+                  alt={`${alt} ${index + 1}`}
+                  fill
+                  className="object-cover cursor-zoom-in"
+                  priority={index === 0}
+                />
+              </Zoom>
+            ) : (
+              <Image
+                src={image.url}
+                alt={`${alt} ${index + 1}`}
+                fill  
+                className="object-cover"
+                priority={index === 0}
+              />
+            )}
           </div>
         ))}
       </div>
