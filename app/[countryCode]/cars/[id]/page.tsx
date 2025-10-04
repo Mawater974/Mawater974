@@ -33,6 +33,7 @@ import { CardoorIcon } from '@/components/icons/CardoorIcon';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import LoginPopup from '@/components/LoginPopup';
 import { getCountryFromIP } from '@/utils/getCountryFromIP';
+import ImageCarousel from '@/components/ImageCarousel';
 
 export default function CarDetailsPage({ params: propParams }: { params?: { id: string } } = {}) {
   const params = useParams();
@@ -254,7 +255,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
             model:models!inner(id, name, name_ar),
             user:profiles!inner(full_name, email, phone_number),
             country:countries!inner(id, currency_code, code, name, name_ar),
-            images:car_images!car_images_car_id_fkey(url)
+            images:car_images!car_images_car_id_fkey(url, is_main)
           `)
           .eq('brand_id', car.brand_id)
           .eq('country_id', car.country?.id) // Filter by the same country
@@ -276,7 +277,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
             model:models!inner(id, name, name_ar),
             user:profiles!inner(full_name, email, phone_number),
             country:countries!inner(id, currency_code, code, name, name_ar),
-            images:car_images(url)
+            images:car_images(url, is_main)
           `)
           .eq('brand_id', car.brand_id)
           .eq('country_id', car.country?.id) // Filter by the same country
@@ -293,7 +294,10 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
         if (featuredData) {
           const processedFeaturedCars = featuredData.map(carData => ({
             ...carData,
-            images: carData.images?.map(img => img.url) || [],
+            images: carData.images?.map(img => ({
+              url: img.url,
+              is_main: img.is_main || false
+            })) || [],
             brand: carData.brand,
             model: carData.model,
             user: carData.user,
@@ -305,7 +309,10 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
         if (normalData) {
           const processedNormalCars = normalData.map(carData => ({
             ...carData,
-            images: carData.images?.map(img => img.url) || [],
+            images: carData.images?.map(img => ({
+              url: img.url,
+              is_main: img.is_main || false
+            })) || [],
             brand: carData.brand,
             model: carData.model,
             user: carData.user,
@@ -1467,14 +1474,12 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
                           {t('car.featured.badge')}
                         </span>
                       </div>
-                      <div className="relative aspect-[4/3]">
-                        <Image
-                          src={similarCar.images && similarCar.images.length > 0 ? 
-                            (typeof similarCar.images[0] === 'string' ? similarCar.images[0] : similarCar.images[0].url) 
-                            : '/placeholder-car.svg'}
-                          alt={`${similarCar.brand.name} ${similarCar.model.name}`}
-                          fill
-                          className="object-cover"
+                      <div className="relative aspect-[4/3] bg-gray-100 dark:bg-gray-800">
+                        <ImageCarousel
+                          images={similarCar.images || []}
+                          alt={`${similarCar.brand?.name || ''} ${similarCar.model?.name || ''}`}
+                          aspectRatio="aspect-[4/3]"
+                          fallbackImage="/placeholder-car.svg"
                         />
                       </div>
                       <div className="p-4">
@@ -1507,14 +1512,12 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
                       key={similarCar.id}
                       className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
                     >
-                      <div className="relative aspect-[4/3]">
-                        <Image
-                          src={similarCar.images && similarCar.images.length > 0 ? 
-                            (typeof similarCar.images[0] === 'string' ? similarCar.images[0] : similarCar.images[0].url) 
-                            : '/placeholder-car.svg'}
-                          alt={`${similarCar.brand.name} ${similarCar.model.name}`}
-                          fill
-                          className="object-cover"
+                      <div className="relative aspect-[4/3] bg-gray-100 dark:bg-gray-800">
+                        <ImageCarousel
+                          images={similarCar.images || []}
+                          alt={`${similarCar.brand?.name || ''} ${similarCar.model?.name || ''}`}
+                          aspectRatio="aspect-[4/3]"
+                          fallbackImage="/placeholder-car.svg"
                         />
                       </div>
                       <div className="p-4">
