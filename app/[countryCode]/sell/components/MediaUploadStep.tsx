@@ -6,7 +6,7 @@ import { HTML5Backend } from 'react-dnd-html5-backend';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Trash2, Upload, Image as ImageIcon, Star, Check } from 'lucide-react';
+import { Trash2, Upload, Image as ImageIcon, Star, Check, Loader2 } from 'lucide-react';
 import { DraggableImage } from '@/components/DraggableImage';
 import imageCompression from 'browser-image-compression';
 import { toast } from 'react-hot-toast';
@@ -709,17 +709,30 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
       {/* Upload Area when no images */}
       {allImages.length === 0 && (
         <div 
-          onClick={() => fileInputRef.current?.click()}
-          className="cursor-pointer flex flex-col items-center justify-center w-full h-64 border-2 border-dashed border-gray-600 rounded-lg bg-white dark:bg-[#2a3441] hover:bg-[white] dark:hover:bg-[#323d4d] transition-colors group"
+          onClick={() => !isLoading && fileInputRef.current?.click()}
+          className={`cursor-pointer flex flex-col items-center justify-center w-full h-64 border-2 border-dashed border-gray-600 rounded-lg bg-white dark:bg-[#2a3441] transition-colors group ${
+            isLoading ? 'opacity-70' : 'hover:bg-[white] dark:hover:bg-[#323d4d]'
+          }`}
         >
           <div className="flex flex-col items-center justify-center pt-5 pb-6">
-            <Upload className="h-12 w-12 mb-4 text-gray-400 group-hover:text-qatar-maroon transition-colors" />
-            <p className="mb-2 text-sm text-gray-400 group-hover:text-white transition-colors">
-              <span className="font-semibold group-hover:text-qatar-maroon transition-colors">{t('sell.images.drag')}</span>
-            </p>
-            <p className="text-xs text-gray-500 group-hover:text-qatar-maroon transition-colors">
-              {t('sell.images.formats')}
-            </p>
+            {isLoading ? (
+              <div className="flex flex-col items-center">
+                <Loader2 className="h-12 w-12 mb-4 text-qatar-maroon animate-spin" />
+                <p className="text-sm text-gray-400">{t('sell.images.uploading')}</p>
+              </div>
+            ) : (
+              <>
+                <Upload className="h-12 w-12 mb-4 text-gray-400 group-hover:text-qatar-maroon transition-colors" />
+                <p className="mb-2 text-sm text-gray-400 group-hover:text-white">
+                  <span className="font-semibold group-hover:text-qatar-maroon">
+                    {t('sell.images.drag')}
+                  </span>
+                </p>
+                <p className="text-xs text-gray-500 group-hover:text-qatar-maroon">
+                  {t('sell.images.formats')}
+                </p>
+              </>
+            )}
           </div>
           <input
             type="file"
@@ -727,6 +740,7 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
             className="hidden"
             accept="image/*"
             multiple
+            disabled={isLoading}
             onChange={handleFileSelect}
           />
         </div>
@@ -738,13 +752,25 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
           {canAddMore ? (
             <button 
               type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-qatar-maroon hover:bg-qatar-maroon/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon"
+              onClick={() => !isLoading && fileInputRef.current?.click()}
+              disabled={isLoading}
+              className={`inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-qatar-maroon focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon ${
+                isLoading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-qatar-maroon/90'
+              }`}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 ml-2" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-              </svg>
-              {t('sell.images.addMore')}
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-5 w-5 mr-2 ml-2 animate-spin" />
+                  {t('sell.images.uploading')}
+                </>
+              ) : (
+                <>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 ml-2" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                  </svg>
+                  {t('sell.images.addMore')}
+                </>
+              )}
             </button>
           ) : (
             <p className="text-sm text-gray-400">{t('sell.images.maxReached')}</p>
@@ -756,7 +782,7 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
             accept="image/*"
             multiple
             onChange={handleFileSelect}
-            disabled={!canAddMore}
+            disabled={!canAddMore || isLoading}
           />
         </div>
       )}
