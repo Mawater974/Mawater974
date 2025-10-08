@@ -68,11 +68,11 @@ export default function CarCard({
             {t('car.featured.badge')}
           </div>
         )}
-        {car.user?.role === 'dealer' && (
+        {/*{car.user?.role === 'dealer' && (
           <div className="absolute top-2 right-2 z-20 px-2 py-1 bg-blue-500/90 text-white text-xs font-medium rounded-full">
             {t('car.dealer.badge') || 'Dealer'}
           </div>
-        )}
+        )}*/}
 
        
 
