@@ -70,7 +70,6 @@ CREATE TABLE IF NOT EXISTS public.cars (
   color CAR_COLOR DEFAULT 'Other',
   exact_model VARCHAR,
   is_featured BOOLEAN DEFAULT false,
-  location VARCHAR NOT NULL,
   cylinders CYLINDER_TYPE,
   views_count INTEGER DEFAULT 0,
   expiration_date TIMESTAMPTZ,
