@@ -13,7 +13,6 @@ import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabaseClient';
-import { Heart, MapPin, Star, Clock, Calendar, Check, Shield } from 'lucide-react';
 
 import { SparePart as SparePartType } from '@/types/spare-parts';
 
@@ -48,7 +47,7 @@ type SparePart = Omit<SparePartType, 'images' | 'id' | 'user'> & {
   } | null;
   images: Array<{
     url: string;
-    is_primary?: boolean; 
+    is_main?: boolean;
   }>;
   is_favorite?: boolean;
 };
@@ -148,20 +147,29 @@ const SparePartCard: React.FC<SparePartCardProps> = ({
   };
 
   return (
-    <div className={`relative group bg-white dark:bg-gray-900/95 rounded-xl overflow-hidden border 
-      ${featured 
-        ? 'border-qatar-maroon shadow-lg shadow-qatar-maroon/20' 
-        : 'border-gray-200 dark:border-gray-700'} 
-      hover:border-qatar-maroon/100 transition-all duration-200 transform hover:scale-[1.01]`}>
-      
-      <Link 
-        href={`/${part.country?.code?.toLowerCase() || countryCode}/spare-parts/${part.id}`}
-        className="block w-full h-full"
+    <Link href={`/${part.country?.code?.toLowerCase() || countryCode}/spare-parts/${part.id}`}>
+      <div 
+        className={`relative group bg-white dark:bg-gray-900/95 rounded-xl overflow-hidden border 
+          ${featured 
+            ? 'border-qatar-maroon shadow-lg shadow-qatar-maroon/20' 
+            : 'border-gray-200 dark:border-gray-700'} 
+          hover:border-qatar-maroon/100 transition-all duration-200 transform hover:scale-[1.01]`}
       >
+        {part.is_featured && (
+          <div className="absolute top-2 left-2 z-20 px-2 py-1 bg-qatar-maroon text-white text-xs font-medium rounded-full">
+            {t('common.featured')}
+          </div>
+        )}
+        {part.user_id && (
+          <div className="absolute top-2 right-2 z-20 px-2 py-1 bg-blue-500/90 text-white text-xs font-medium rounded-full">
+            {t('car.dealer.badge') || 'Dealer'}
+          </div>
+        )}
+        
         <div className="relative aspect-[16/9] bg-gray-100 dark:bg-gray-800">
           {part.images && part.images.length > 0 ? (
             <LazyImage 
-              src={part.images.find(img => img.is_primary)?.url || part.images[0]?.url} 
+              src={part.images[0]?.url} 
               alt={part.title} 
               fallback="/placeholder-spare-part.jpg"
               className="w-full h-full object-cover"
@@ -176,31 +184,69 @@ const SparePartCard: React.FC<SparePartCardProps> = ({
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
         </div>
 
-        <div className="p-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
-          <div className="flex flex-col gap-2">
+        <div className="p-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-white h-[140px] flex flex-col justify-between">
+          <div className="flex flex-col">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
-                {part.title}
-              </h3>
+              <div className="flex items-baseline gap-2 truncate">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
+                  {part.title}
+                </h3>
+              </div>
+              
+              {/* Favorite Button */}
+              <button
+                onClick={handleFavoriteClick}
+                className={`absolute bottom-3 ${language === 'ar' ? 'left-3' : 'right-3'} p-1.5 rounded-lg transition-all duration-200 border
+                  ${isFavorited
+                    ? 'bg-qatar-maroon/10 text-qatar-maroon border-qatar-maroon hover:bg-qatar-maroon hover:text-white'
+                    : 'bg-transparent border-gray-200 dark:border-gray-600 text-gray-400 hover:border-qatar-maroon hover:text-qatar-maroon'
+                  }
+                  transform active:scale-95 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed`}
+                aria-label={isFavorited ? t('spareParts.favorite.remove') || 'Remove from favorites' : t('spareParts.favorite.add') || 'Add to favorites'}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-400 border-t-transparent"></div>
+                ) : isFavorited ? (
+                  <HeartSolid className="h-4 w-4" />
+                ) : (
+                  <HeartOutline className="h-4 w-4" />
+                )}
+              </button>
             </div>
 
-            <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
+            <div className="flex items-center gap-1 mt-1 text-sm text-gray-500 dark:text-gray-400">
               {part.brand && (
                 <span>{language === 'ar' && part.brand.name_ar ? part.brand.name_ar : part.brand.name}</span>
               )}
               {part.model && (
                 <>
-                  <span>•</span>
+                <span>•</span>
                   <span>{language === 'ar' && part.model.name_ar ? part.model.name_ar : part.model.name}</span>
                 </>
               )}
             </div>
+          </div>
 
+          <div className="flex flex-col gap-2">
             <div>
               <span className="text-2xl font-semibold text-qatar-maroon">
                 {formatPrice(part.price, language)}
               </span>
             </div>
+
+            {/*{part.category && part.category.name_en && (
+              <div className="text-sm text-gray-500 dark:text-gray-400">
+                {language === 'ar' ? part.category.name_ar : part.category.name_en} 
+                 {part.condition && (
+                  <span className="ml-1">
+                   <span>•</span> {t(`spareParts.condition.${part.condition}`, { 
+                      defaultValue: part.condition.charAt(0).toUpperCase() + part.condition.slice(1) 
+                    })}
+                  </span> 
+                )}
+              </div>
+            )}*/}
 
             {(part.city || part.country) && (
               <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 truncate">
@@ -217,39 +263,8 @@ const SparePartCard: React.FC<SparePartCardProps> = ({
             )}
           </div>
         </div>
-      </Link>
-
-      {part.is_featured && (
-        <div className="absolute top-2 left-2 z-10 px-2 py-1 bg-qatar-maroon text-white text-xs font-medium rounded-full">
-          {t('common.featured')}
-        </div>
-      )}
-      {part.user_id && (
-        <div className="absolute top-2 right-2 z-10 px-2 py-1 bg-blue-500/90 text-white text-xs font-medium rounded-full">
-          {t('car.dealer.badge') || 'Dealer'}
-        </div>
-      )}
-
-      <button
-        onClick={handleFavoriteClick}
-        className={`absolute top-3 ${language === 'ar' ? 'left-auto right-3' : 'right-auto left-3'} z-20 p-1.5 rounded-lg transition-all duration-200 border
-          ${isFavorited
-            ? 'bg-qatar-maroon/10 text-qatar-maroon border-qatar-maroon hover:bg-qatar-maroon hover:text-white'
-            : 'bg-white/80 dark:bg-gray-800/80 border-gray-200 dark:border-gray-600 text-gray-400 hover:border-qatar-maroon hover:text-qatar-maroon'
-          }
-          transform active:scale-95 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed`}
-        aria-label={isFavorited ? t('spareParts.favorite.remove') || 'Remove from favorites' : t('spareParts.favorite.add') || 'Add to favorites'}
-        disabled={isLoading}
-      >
-        {isLoading ? (
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-400 border-t-transparent"></div>
-        ) : isFavorited ? (
-          <HeartSolid className="h-4 w-4" />
-        ) : (
-          <HeartOutline className="h-4 w-4" />
-        )}
-      </button>
-    </div>
+      </div>
+    </Link>
   );
 };
 
