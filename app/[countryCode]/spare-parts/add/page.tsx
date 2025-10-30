@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,9 +11,7 @@ import toast from 'react-hot-toast';
 import LoginPopup from '@/components/LoginPopup';
 import imageCompression from 'browser-image-compression';
 import heic2any from 'heic2any';
-import { DndProvider } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
-import { DraggableImage } from '@/components/DraggableImage';
+import { SimpleImage } from '@/components/SimpleImage';
 import { Trash2, Upload, Image as ImageIcon, Star, Check, Loader2 } from 'lucide-react';
 
 type Brand = {
@@ -463,11 +461,11 @@ export default function AddSparePart() {
     // Revoke the object URL to avoid memory leaks
     URL.revokeObjectURL(selectedFiles[index].preview);
     objectUrls.current.delete(selectedFiles[index].preview);
-    
+
     // Update both states
     setSelectedFiles(prev => {
       const newFiles = prev.filter((_, i) => i !== index);
-      // If we removed the primary image and there are other images, make the first one primary
+      // If we removed the primary image and there are other images, make the first remaining one primary
       if (prev[index]?.isPrimary && newFiles.length > 0) {
         newFiles[0].isPrimary = true;
       }
@@ -477,33 +475,15 @@ export default function AddSparePart() {
   };
   
   const setPrimaryImage = (index: number) => {
-    if (index !== 0) {
-      // Move the selected photo to the first position
-      moveImage(index, 0);
-    }
-    // The first photo is always the primary photo
-    setSelectedFiles(prev => 
+    // Update the primary status without reordering
+    setSelectedFiles(prev =>
       prev.map((file, i) => ({
         ...file,
-        isPrimary: i === 0
+        isPrimary: i === index
       }))
     );
   };
 
-  // Move image in the array
-  const moveImage = useCallback((dragIndex: number, hoverIndex: number) => {
-    setSelectedFiles((prevFiles) => {
-      const newFiles = [...prevFiles];
-      const [movedFile] = newFiles.splice(dragIndex, 1);
-      newFiles.splice(hoverIndex, 0, movedFile);
-      
-      // Always make the first photo the primary photo
-      return newFiles.map((file, i) => ({
-        ...file,
-        isPrimary: i === 0
-      }));
-    });
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1007,27 +987,23 @@ export default function AddSparePart() {
               
               {/* Image previews */}
               {selectedFiles.length > 0 && (
-                <DndProvider backend={HTML5Backend}>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4 mt-4">
-                    {selectedFiles.map((file, index) => (
-                      <DraggableImage
-                        key={file.id}
-                        id={file.id}
-                        index={index}
-                        preview={file.preview}
-                        isMain={index === 0}
-                        onRemove={(id) => {
-                          const removeIndex = selectedFiles.findIndex(f => f.id === id);
-                          removeImage(removeIndex);
-                        }}
-                        onSetMain={(index) => setPrimaryImage(index)}
-                        moveImage={moveImage}
-                        t={t}
-                        totalImages={selectedFiles.length}
-                      />
-                    ))}
-                  </div>
-                </DndProvider>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4 mt-4">
+                  {selectedFiles.map((file, index) => (
+                    <SimpleImage
+                      key={file.id}
+                      id={file.id}
+                      index={index}
+                      preview={file.preview}
+                      isMain={file.isPrimary}
+                      onRemove={(id) => {
+                        const removeIndex = selectedFiles.findIndex(f => f.id === id);
+                        removeImage(removeIndex);
+                      }}
+                      onSetMain={(index) => setPrimaryImage(index)}
+                      t={t}
+                    />
+                  ))}
+                </div>
               )}
             </div>
             
