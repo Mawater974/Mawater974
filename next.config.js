@@ -18,9 +18,20 @@ const nextConfig = {
     config.resolve.fallback = { fs: false };
     return config;
   },
-  env: {
-    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  // Add this to handle static exports
+  output: 'export',
+  // Add this to handle dynamic routes
+  trailingSlash: true,
+  // Disable image optimization for static export
+  images: {
+    unoptimized: true,
+  },
+  // Add this to handle dynamic routes
+  exportPathMap: async function () {
+    return {
+      '/': { page: '/' },
+      // Add other static paths here
+    };
   }
 };
 
