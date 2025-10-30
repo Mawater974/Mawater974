@@ -1,5 +1,7 @@
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useEffect, useState, useRef, useMemo } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
+import { DndProvider } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSupabase } from '@/contexts/SupabaseContext';
 import { XMarkIcon } from '@heroicons/react/24/outline';
@@ -7,6 +9,11 @@ import toast from 'react-hot-toast';
 import ImageCarousel from './ImageCarousel';
 import ImageUpload from './ImageUpload';
 import Image from 'next/image';
+import { DraggableImage } from './DraggableImage';
+import imageCompression from 'browser-image-compression';
+import heic2any from 'heic2any';
+import { ImageFile } from '@/types/image';
+import { scrollToTop } from '@/utils/scrollToTop';
 
 interface CarImage {
   url: string;
@@ -98,6 +105,9 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [images, setImages] = useState<CarImage[]>([]);
+  const [imageFiles, setImageFiles] = useState<ImageFile[]>([]);
+  const [mainPhotoIndex, setMainPhotoIndex] = useState<number | null>(null);
+  const objectUrls = useRef<Set<string>>(new Set());
   const [formData, setFormData] = useState<FormData>({
     brand_id: '',
     model_id: '',
@@ -123,6 +133,130 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
   const safeString = (value: string | number | undefined | null): string => {
     if (value === undefined || value === null) return '';
     return String(value);
+  };
+  const SUPPORTED_IMAGE_TYPES = [
+    'image/jpeg',
+    'image/jpg',
+    'image/png',
+    'image/webp',
+    'image/gif',
+    'image/bmp',
+    'image/tiff',
+    'image/svg+xml',
+    'image/avif',
+    'image/apng',
+    'image/heic',
+    'image/heif',
+    'image/heic-sequence',
+    'image/heif-sequence',
+    'image/x-heic',
+    'image/x-heif'
+  ];
+
+  // Get file extension from MIME type
+  const getFileExtension = (mimeType: string): string => {
+    const extensionMap: Record<string, string> = {
+      'image/jpeg': 'jpg',
+      'image/jpg': 'jpg',
+      'image/png': 'png',
+      'image/webp': 'webp',
+      'image/gif': 'gif',
+      'image/bmp': 'bmp',
+      'image/tiff': 'tiff',
+      'image/svg+xml': 'svg',
+      'image/avif': 'avif',
+      'image/apng': 'apng',
+      'image/heic': 'heic',
+      'image/heif': 'heif',
+      'image/heic-sequence': 'heic',
+      'image/heif-sequence': 'heif',
+      'image/x-heic': 'heic',
+      'image/x-heif': 'heif'
+    };
+    return extensionMap[mimeType.toLowerCase()] || 'jpg';
+  };
+
+  // Convert HEIC/HEIF to JPEG for better compatibility
+  const convertHeicToJpeg = async (file: File): Promise<File> => {
+    try {
+      const jpegBlob = await heic2any({
+        blob: file,
+        toType: 'image/jpeg',
+        quality: 0.9
+      }) as Blob;
+
+      return new File(
+        [jpegBlob],
+        file.name.replace(/\.[^/.]+$/, '.jpg'),
+        { type: 'image/jpeg', lastModified: Date.now() }
+      );
+    } catch (error) {
+      console.error('Error converting HEIC/HEIF to JPEG:', error);
+      return file; // Return original if conversion fails
+    }
+  };
+
+  // Compress image with optimized settings
+  const compressImage = async (file: File): Promise<File> => {
+    const fileType = file.type.toLowerCase();
+
+    // Skip non-image files or unsupported image types
+    if (!fileType.startsWith('image/') || !SUPPORTED_IMAGE_TYPES.includes(fileType)) {
+      console.warn(`Unsupported file type: ${fileType}. File will be uploaded as-is.`);
+      return file;
+    }
+
+    // Convert HEIC/HEIF to JPEG first
+    let processedFile = file;
+    if (fileType.includes('heic') || fileType.includes('heif')) {
+      processedFile = await convertHeicToJpeg(file);
+    }
+
+    try {
+      const options = {
+        maxSizeMB: 1.0,
+        maxWidthOrHeight: 2560,
+        useWebWorker: true,
+        maxIteration: 15,
+        fileType: 'image/webp',
+        initialQuality: 0.95,
+        alwaysKeepResolution: true,
+        onProgress: (progress: number) => {
+          console.log(`Image compression progress: ${Math.round(progress)}%`);
+        },
+        preserveExif: false,
+      };
+
+      console.log('Original file name:', file.name);
+      console.log('Original file type:', file.type);
+      console.log('Original file size:', (file.size / 1024 / 1024).toFixed(2), 'MB');
+
+      const compressedBlob = await imageCompression(processedFile, options) as Blob;
+
+      // Determine output format (convert all to webp for better compression, except for SVG)
+      const outputFormat = fileType === 'image/svg+xml' ? 'image/svg+xml' : 'image/webp';
+      const extension = getFileExtension(outputFormat);
+
+      // Create a new File object with the correct MIME type and extension
+      const compressedFile = new File(
+        [compressedBlob],
+        `${file.name.replace(/\.[^/.]+$/, '')}.${extension}`,
+        {
+          type: outputFormat,
+          lastModified: Date.now()
+        }
+      );
+
+      console.log('Compressed file type:', compressedFile.type);
+      console.log('Compressed file size:', (compressedFile.size / 1024 / 1024).toFixed(2), 'MB');
+      console.log('Compression ratio:', ((file.size - compressedFile.size) / file.size * 100).toFixed(2) + '%');
+
+      return compressedFile;
+    } catch (error) {
+      console.error('Error compressing image:', error);
+      // In case of error, return the original file
+      return file;
+    }
   };
 
   // Initialize form data and images when car changes
@@ -158,8 +292,27 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
         url: typeof img === 'string' ? img : img?.url || '',
         is_main: typeof img === 'string' ? false : Boolean(img?.is_main)
       })));
+
+      // Initialize image files for existing images
+      const initialImageFiles = car.images.map((img, index) => ({
+        preview: typeof img === 'string' ? img : img?.url || '',
+        isMain: typeof img === 'string' ? false : Boolean(img?.is_main),
+        id: `existing-${index}`,
+        type: 'existing' as const,
+        raw: new File([], 'temp.jpg', { type: 'image/jpeg' }),
+        name: `image-${index}.jpg`,
+        size: 0,
+        lastModified: Date.now()
+      }));
+      setImageFiles(initialImageFiles);
+
+      // Set main photo index (always 0)
+      const mainIndex = initialImageFiles.findIndex(img => img.isMain);
+      setMainPhotoIndex(mainIndex >= 0 ? mainIndex : (initialImageFiles.length > 0 ? 0 : null));
     } else {
       setImages([]);
+      setImageFiles([]);
+      setMainPhotoIndex(null);
     }
 
     // Initialize form data
@@ -268,6 +421,13 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
     fetchData();
   }, [car, supabase, t]);
 
+  // Ensure main photo index is always 0 when images are present
+  useEffect(() => {
+    if (images.length > 0 && mainPhotoIndex !== 0) {
+      setMainPhotoIndex(0);
+    }
+  }, [images.length, mainPhotoIndex]);
+
   // Handle country change
   const handleCountryChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const countryId = e.target.value;
@@ -327,33 +487,58 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
   // Handle image upload
   const handleImageUpload = async (files: File[]): Promise<void> => {
     if (!car) return;
-    
+
     setUploading(true);
     try {
       const uploadedImages: CarImage[] = [];
-      
+
       for (const file of files) {
-        const fileExt = file.name.split('.').pop();
+        // Compress the image first
+        const compressedFile = await compressImage(file);
+
+        const fileExt = compressedFile.name.split('.').pop();
         const fileName = `${Math.random()}.${fileExt}`;
         const filePath = `cars/${car.id}/${fileName}`;
-        
+
         const { error: uploadError } = await supabase.storage
           .from('car-images')
-          .upload(filePath, file);
-        
+          .upload(filePath, compressedFile);
+
         if (uploadError) throw uploadError;
-        
+
         const { data: { publicUrl } } = supabase.storage
           .from('car-images')
           .getPublicUrl(filePath);
-        
+
         uploadedImages.push({
           url: publicUrl,
-          is_main: images.length === 0 // Set as main if no other images
+          is_main: images.length === 0 // Set as main only if no other images exist
         });
       }
-      
+
       setImages(prev => [...prev, ...uploadedImages]);
+
+      // Update image files for new uploads
+      const newImageFiles = files.map((file, index) => ({
+        preview: URL.createObjectURL(file),
+        isMain: images.length === 0 && index === 0,
+        id: `new-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+        type: 'new' as const,
+        raw: file,
+        name: file.name,
+        size: file.size,
+        lastModified: file.lastModified
+      }));
+
+      setImageFiles(prev => [...prev, ...newImageFiles]);
+
+      // Update main photo index
+      if (images.length === 0) {
+        // If no images existed before, set the first new image as main
+        setMainPhotoIndex(0);
+      }
+      // If images already existed, main photo stays at index 0
+
       toast.success(t('car.images.uploadSuccess'));
     } catch (error) {
       console.error('Error uploading images:', error);
@@ -365,7 +550,7 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
 
   const handleSetMainImage = async (imageUrl: string) => {
     if (!car?.id) return;
-    
+
     setLoading(true);
     try {
       // Update all images to set is_main = false
@@ -373,22 +558,28 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
         .from('car_images')
         .update({ is_main: false })
         .eq('car_id', car.id);
-      
+
       // Set the selected image as main
       await supabase
         .from('car_images')
         .update({ is_main: true })
         .eq('car_id', car.id)
         .eq('url', imageUrl);
-      
+
       // Update local state
-      setImages(prev => 
+      setImages(prev =>
         prev.map(img => ({
           ...img,
           is_main: img.url === imageUrl
         }))
       );
-      
+
+      // Update main photo index
+      const imageIndex = images.findIndex(img => img.url === imageUrl);
+      if (imageIndex >= 0) {
+        setMainPhotoIndex(imageIndex);
+      }
+
       toast.success(t('car.images.setMainSuccess'));
     } catch (error) {
       console.error('Error setting main image:', error);
@@ -401,31 +592,47 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
   // Handle delete image
   const handleDeleteImage = async (imageUrl: string) => {
     if (!car?.id) return;
-    
+
     setLoading(true);
     try {
       // Delete from storage
       const urlParts = imageUrl.split('/');
       const fileName = urlParts[urlParts.length - 1];
-      
+
       const { error: storageError } = await supabase.storage
         .from('car-images')
         .remove([`cars/${car.id}/${fileName}`]);
-      
+
       if (storageError) throw storageError;
-      
+
       // Delete from database
       const { error: dbError } = await supabase
         .from('car_images')
         .delete()
         .eq('car_id', car.id)
         .eq('url', imageUrl);
-      
+
       if (dbError) throw dbError;
-      
+
       // Update local state
+      const imageIndex = images.findIndex(img => img.url === imageUrl);
       setImages(prev => prev.filter(img => img.url !== imageUrl));
-      
+
+      // Update image files
+      setImageFiles(prev => prev.filter(img => img.preview !== imageUrl));
+
+      // Update main photo index (always stays at 0 if images remain)
+      if (images.length > 1) {
+        // If multiple images remain, main photo stays at index 0
+        setMainPhotoIndex(0);
+      } else if (images.length === 1) {
+        // If only one image remains, it's automatically the main photo at index 0
+        setMainPhotoIndex(0);
+      } else {
+        // No images left
+        setMainPhotoIndex(null);
+      }
+
       toast.success(t('car.images.deleteSuccess'));
     } catch (error) {
       console.error('Error deleting image:', error);
@@ -901,45 +1108,66 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
                     </h3>
                     {images.length > 0 ? (
                       <>
-                        <div className="rounded-md mt-4 grid grid-cols-4 gap-4">
-                          {images.map((image, index) => (
-                            <div key={image.url} className="relative group">
-                              <div className="relative aspect-[4/3] w-full rounded-lg overflow-hidden">
-                                <Image
-                                  src={image.url}
-                                  alt="Car"
-                                  width={128}
-                                  height={160}
-                                  className={`w-full h-full object-cover ${
-                                    image.is_main ? 'ring-2 ring-qatar-maroon' : ''
-                                  }`}
-                                />
-                                <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
-                                  {!image.is_main && (
-                                    <button
-                                      type="button"
-                                      onClick={() => handleSetMainImage(image.url)}
-                                      className="p-1 bg-white rounded-full hover:bg-qatar-maroon hover:text-white transition-colors"
-                                    >
-                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                      </svg>
-                                    </button>
-                                  )}
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDeleteImage(image.url)}
-                                    className="p-1 bg-white rounded-full hover:bg-red-500 hover:text-white transition-colors"
-                                  >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                                    </svg>
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
+                        {/* Main Photo Guidance */}
+                        <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                          <p className="text-sm text-gray-600 dark:text-gray-300">
+                            {t('myAds.edit.images.guidance')}
+                          </p>
                         </div>
+
+                        <DndProvider backend={HTML5Backend}>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
+                            {images.map((image, index) => (
+                              <DraggableImage
+                                key={image.url}
+                                id={image.url}
+                                index={index}
+                                preview={image.url}
+                                isMain={index === 0} // Main photo is always at index 0
+                                onRemove={(id, idx) => handleDeleteImage(id)}
+                                onSetMain={(idx) => {
+                                  // Move the selected image to be main by updating both state and database
+                                  if (idx !== 0) {
+                                    // Move image to first position in array
+                                    const newImages = [...images];
+                                    const [movedImage] = newImages.splice(idx, 1);
+                                    newImages.unshift(movedImage);
+                                    setImages(newImages);
+
+                                    // Update main photo index (always 0)
+                                    setMainPhotoIndex(0);
+
+                                    // Update database
+                                    handleSetMainImage(movedImage.url);
+                                  }
+                                }}
+                                moveImage={(dragIndex, hoverIndex) => {
+                                  // Move image in array
+                                  const newImages = [...images];
+                                  const [movedImage] = newImages.splice(dragIndex, 1);
+                                  newImages.splice(hoverIndex, 0, movedImage);
+                                  setImages(newImages);
+
+                                  // Handle main photo logic - main photo is always at index 0
+                                  if (hoverIndex === 0) {
+                                    // If moved to first position, set as main
+                                    setMainPhotoIndex(0);
+                                    handleSetMainImage(movedImage.url);
+                                  } else if (dragIndex === 0) {
+                                    // If main photo was moved away from first position, set new first photo as main
+                                    setMainPhotoIndex(0);
+                                    handleSetMainImage(newImages[0].url);
+                                  }
+                                }}
+                                t={(key: string) => {
+                                  // Use proper translation function with fallback
+                                  return t(key) || key;
+                                }}
+                                totalImages={images.length}
+                              />
+                            ))}
+                          </div>
+                        </DndProvider>
                       </>
                     ) : (
                       <div className="text-gray-500 dark:text-gray-400 text-center py-8">
