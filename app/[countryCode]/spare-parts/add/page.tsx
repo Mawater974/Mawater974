@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
@@ -10,6 +10,9 @@ import { supabase } from '@/lib/supabase';
 import toast from 'react-hot-toast';
 import LoginPopup from '@/components/LoginPopup';
 import imageCompression from 'browser-image-compression';
+import heic2any from 'heic2any';
+import { SimpleImage } from '@/components/SimpleImage';
+import { Trash2, Upload, Image as ImageIcon, Star, Check, Loader2 } from 'lucide-react';
 
 type Brand = {
   id: number;
@@ -73,12 +76,15 @@ export default function AddSparePart() {
   
   const [loading, setLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [brands, setBrands] = useState<Brand[]>([]);
   const [models, setModels] = useState<CarModel[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [cities, setCities] = useState<City[]>([]);
-  const [selectedFiles, setSelectedFiles] = useState<{file: File, isPrimary: boolean}[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<{file: File, isPrimary: boolean, id: string, preview: string}[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const objectUrls = useRef<Set<string>>(new Set());
   
   type ConditionType = 'new' | 'used' | 'refurbished';
   type PartType = 'original' | 'aftermarket';
@@ -116,7 +122,22 @@ export default function AddSparePart() {
     images: [],
   };
 
-  const [formData, setFormData] = useState<FormData>(initialFormData);
+  // Form data state
+  const [formData, setFormData] = useState<FormData>({
+    title: '',
+    title_ar: '',
+    description: '',
+    description_ar: '',
+    part_type: '',
+    brandId: '',
+    modelId: '',
+    categoryId: '',
+    condition: '',
+    price: '',
+    isNegotiable: false,
+    cityId: '',
+    images: [],
+  });
 
   // Fetch initial data
   // Scroll to top when form is submitted
@@ -227,111 +248,210 @@ export default function AddSparePart() {
     fetchModels();
   }, [formData.brandId, t]);
 
-  const compressImage = async (file: File): Promise<File> => {
-    console.log('Original file size:', (file.size / 1024 / 1024).toFixed(2), 'MB');
-    
-    const options = {
-      maxSizeMB: 0.95,          // Maximum file size in MB (950KB)
-      maxWidthOrHeight: 1200,   // Maximum width or height
-      useWebWorker: true,       // Use web worker for better performance
-      maxIteration: 10,         // Maximum number of iterations to compress
-      fileType: file.type,      // Keep the original file type
-      initialQuality: 0.9,      // Initial quality (0-1)
+  // Supported image MIME types
+  const SUPPORTED_IMAGE_TYPES = [
+    'image/jpeg',
+    'image/jpg',
+    'image/png',
+    'image/webp',
+    'image/gif',
+    'image/bmp',
+    'image/tiff',
+    'image/svg+xml',
+    'image/avif',
+    'image/apng',
+    'image/heic',
+    'image/heif',
+    'image/heic-sequence',
+    'image/heif-sequence',
+    'image/x-heic',
+    'image/x-heif'
+  ];
+
+  // Get file extension from MIME type
+  const getFileExtension = (mimeType: string): string => {
+    const extensionMap: Record<string, string> = {
+      'image/jpeg': 'jpg',
+      'image/jpg': 'jpg',
+      'image/png': 'png',
+      'image/webp': 'webp',
+      'image/gif': 'gif',
+      'image/bmp': 'bmp',
+      'image/tiff': 'tiff',
+      'image/svg+xml': 'svg',
+      'image/avif': 'avif',
+      'image/apng': 'apng',
+      'image/heic': 'heic',
+      'image/heif': 'heif',
+      'image/heic-sequence': 'heic',
+      'image/heif-sequence': 'heif',
+      'image/x-heic': 'heic',
+      'image/x-heif': 'heif'
     };
+    return extensionMap[mimeType.toLowerCase()] || 'jpg';
+  };
+
+  // Convert HEIC/HEIF to JPEG for better compatibility
+  const convertHeicToJpeg = async (file: File): Promise<File> => {
+    try {
+      const jpegBlob = await heic2any({
+        blob: file,
+        toType: 'image/jpeg',
+        quality: 0.9
+      }) as Blob;
+      
+      return new File(
+        [jpegBlob],
+        file.name.replace(/\.[^/.]+$/, '.jpg'),
+        { type: 'image/jpeg', lastModified: Date.now() }
+      );
+    } catch (error) {
+      console.error('Error converting HEIC/HEIF to JPEG:', error);
+      return file; // Return original if conversion fails
+    }
+  };
+
+  // Compress image with optimized settings
+  const compressImage = async (file: File): Promise<File> => {
+    const fileType = file.type.toLowerCase();
+    
+    // Skip non-image files or unsupported image types
+    if (!fileType.startsWith('image/') || !SUPPORTED_IMAGE_TYPES.includes(fileType)) {
+      console.warn(`Unsupported file type: ${fileType}. File will be uploaded as-is.`);
+      return file;
+    }
+    
+    // Convert HEIC/HEIF to JPEG first
+    let processedFile = file;
+    if (fileType.includes('heic') || fileType.includes('heif')) {
+      processedFile = await convertHeicToJpeg(file);
+    }
 
     try {
-      console.log('Starting compression...');
-      const compressedFile = await imageCompression(file, options);
+      const options = {
+        // Standard compression for spare parts listings
+        maxSizeMB: 0.6,
+        maxWidthOrHeight: 1920,
+        useWebWorker: true,
+        maxIteration: 15,
+        fileType: 'image/webp', // Convert to WebP for better compression (except SVGs)
+        initialQuality: 0.90,
+        alwaysKeepResolution: true,
+        onProgress: (progress: number) => {
+          console.log(`Image compression progress: ${Math.round(progress)}%`);
+        },
+        preserveExif: false,
+      };
       
+      console.log('Original file name:', file.name);
+      console.log('Original file type:', file.type);
+      console.log('Original file size:', (file.size / 1024 / 1024).toFixed(2), 'MB');
+      
+      const compressedBlob = await imageCompression(processedFile, options) as Blob;
+      
+      // Determine output format (convert all to webp for better compression, except for SVG)
+      const outputFormat = fileType === 'image/svg+xml' ? 'image/svg+xml' : 'image/webp';
+      const extension = getFileExtension(outputFormat);
+      
+      // Create a new File object with the correct MIME type and extension
+      const compressedFile = new File(
+        [compressedBlob],
+        `${file.name.replace(/\.[^/.]+$/, '')}.${extension}`, // Preserve original name, update extension
+        { 
+          type: outputFormat,
+          lastModified: Date.now()
+        }
+      );
+      
+      console.log('Compressed file type:', compressedFile.type);
       console.log('Compressed file size:', (compressedFile.size / 1024 / 1024).toFixed(2), 'MB');
       console.log('Compression ratio:', ((file.size - compressedFile.size) / file.size * 100).toFixed(2) + '%');
       
-      // Create a new file with the compressed content
-      const resultFile = new File([compressedFile], file.name, { 
-        type: file.type,
-        lastModified: new Date().getTime()
-      });
-      
-      return resultFile;
+      return compressedFile;
     } catch (error) {
       console.error('Error compressing image:', error);
-      toast.error('Failed to compress image. Using original file.');
-      return file; // Return original file if compression fails
+      // In case of error, return the original file
+      return file;
     }
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     
+    setIsUploading(true);
     const files = Array.from(e.target.files);
     
     // Check number of files
     if (files.length + selectedFiles.length > 10) {
       toast.error(t('spareParts.add.maxImagesError', { max: 10 }));
+      setIsUploading(false);
       return;
     }
     
-    // Check if this is the first image being uploaded
-    const isFirstUpload = selectedFiles.length === 0;
-    
-    // Process files in parallel
-    const processFiles = files.map(async (file, i) => {
-      const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
-      const maxSize = 5 * 1024 * 1024; // 5MB
-      
-      if (!validTypes.includes(file.type)) {
-        toast.error(t('spareParts.add.invalidFileType'));
-        return null;
-      }
-      
-      // Always compress images for consistency
-      let fileToProcess = file;
-      try {
-        console.log('Processing file:', file.name, 'Size:', (file.size / 1024 / 1024).toFixed(2), 'MB');
-        fileToProcess = await compressImage(file);
+    try {
+      // Process files in parallel
+      const processFiles = files.map(async (file, i) => {
+        const maxSize = 5 * 1024 * 1024; // 5MB
         
-        // Check if the file is still too large after compression
-        if (fileToProcess.size > maxSize) {
-          console.error('File still too large after compression:', (fileToProcess.size / 1024 / 1024).toFixed(2), 'MB');
-          toast.error(t('spareParts.add.fileTooLarge'));
+        // Skip non-image files
+        if (!file.type.startsWith('image/')) {
+          toast.error(t('spareParts.add.invalidFileType'));
           return null;
         }
         
-        console.log('Successfully processed file:', file.name);
-      } catch (error) {
-        console.error('Error processing image:', error);
-        toast.error(t('spareParts.add.uploadError'));
-        return null;
-      }
+        // Always compress images for consistency
+        let fileToProcess = file;
+        try {
+          console.log('Processing file:', file.name, 'Size:', (file.size / 1024 / 1024).toFixed(2), 'MB');
+          fileToProcess = await compressImage(file);
+          
+          // Check if the file is still too large after compression
+          if (fileToProcess.size > maxSize) {
+            console.error('File still too large after compression:', (fileToProcess.size / 1024 / 1024).toFixed(2), 'MB');
+            toast.error(t('spareParts.add.fileTooLarge'));
+            return null;
+          }
+          
+          console.log('Successfully processed file:', file.name);
+        } catch (error) {
+          console.error('Error processing image:', error);
+          toast.error(t('spareParts.add.uploadError'));
+          return null;
+        }
+        
+        // Create preview URL
+        const previewUrl = URL.createObjectURL(fileToProcess);
+        objectUrls.current.add(previewUrl);
+        
+        return { 
+          file: fileToProcess, 
+          isPrimary: false, // Will be set based on position
+          id: `new-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          preview: previewUrl
+        };
+      });
       
-      // Only the first image in the first batch should be primary
-      return { 
-        file: fileToProcess, 
-        isPrimary: isFirstUpload && i === 0 // Only true for the very first image in the first upload
-      };
-    });
-    
-    try {
-      const processedFiles = (await Promise.all(processFiles)).filter(Boolean) as {file: File, isPrimary: boolean}[];
+      const processedFiles = (await Promise.all(processFiles)).filter(Boolean) as {file: File, isPrimary: boolean, id: string, preview: string}[];
       
       if (processedFiles.length > 0) {
         setSelectedFiles(prev => {
-          // If this is the first upload, just use the new files
-          if (prev.length === 0) {
-            return processedFiles;
-          }
-          // Otherwise, append new files (none of them will be primary)
-          return [...prev, ...processedFiles];
+          const newFiles = [...prev, ...processedFiles];
+          // Always make the first photo the primary photo
+          return newFiles.map((file, i) => ({
+            ...file,
+            isPrimary: i === 0
+          }));
         });
         
         // Create preview URLs
-        const newPreviewUrls = processedFiles.map(({file}) => URL.createObjectURL(file));
+        const newPreviewUrls = processedFiles.map(({preview}) => preview);
         setPreviewUrls(prev => [...prev, ...newPreviewUrls]);
       }
     } catch (error) {
       console.error('Error processing files:', error);
       toast.error(t('spareParts.add.uploadError'));
     } finally {
+      setIsUploading(false);
       // Reset the file input to allow selecting the same file again
       e.target.value = '';
     }
@@ -339,12 +459,13 @@ export default function AddSparePart() {
 
   const removeImage = (index: number) => {
     // Revoke the object URL to avoid memory leaks
-    URL.revokeObjectURL(previewUrls[index]);
-    
+    URL.revokeObjectURL(selectedFiles[index].preview);
+    objectUrls.current.delete(selectedFiles[index].preview);
+
     // Update both states
     setSelectedFiles(prev => {
       const newFiles = prev.filter((_, i) => i !== index);
-      // If we removed the primary image and there are other images, make the first one primary
+      // If we removed the primary image and there are other images, make the first remaining one primary
       if (prev[index]?.isPrimary && newFiles.length > 0) {
         newFiles[0].isPrimary = true;
       }
@@ -354,13 +475,15 @@ export default function AddSparePart() {
   };
   
   const setPrimaryImage = (index: number) => {
-    setSelectedFiles(prev => 
+    // Update the primary status without reordering
+    setSelectedFiles(prev =>
       prev.map((file, i) => ({
         ...file,
         isPrimary: i === index
       }))
     );
   };
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -700,7 +823,7 @@ export default function AddSparePart() {
                     />
                     
                   </div>
-                  <div className="mt-1 flex items-center">
+                  {/*<div className="mt-1 flex items-center">
                     <input
                       id="isNegotiable"
                       name="isNegotiable"
@@ -712,7 +835,7 @@ export default function AddSparePart() {
                     <label htmlFor="isNegotiable" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
                       {t('spareParts.add.negotiable')}
                     </label>
-                  </div>
+                  </div>*/}  
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -829,106 +952,57 @@ export default function AddSparePart() {
               <div className="flex items-center justify-center w-full">
                 <label
                   htmlFor="dropzone-file"
-                  className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                  className={`flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
-                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    <svg
-                      className="w-8 h-8 mb-4 text-gray-500 dark:text-gray-400"
-                      aria-hidden="true"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 20 16"
-                    >
-                      <path
-                        stroke="currentColor"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"
-                      />
-                    </svg>
-                    <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
-                      <span className="font-semibold">{t('spareParts.add.clickToUpload')}</span> {t('or drag and drop')}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {t('spareParts.add.imageRequirements')}
-                    </p>
-                  </div>
+                  {isUploading ? (
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <Loader2 className="w-8 h-8 mb-2 text-gray-500 dark:text-gray-400 animate-spin" />
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {t('spareParts.add.uploading')}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <Upload className="w-8 h-8 mb-4 text-gray-500 dark:text-gray-400" />
+                      <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
+                        <span className="font-semibold">{t('spareParts.add.clickToUpload')}</span> {t('spareParts.add.orDragDrop')}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {t('spareParts.add.imageRequirements')}
+                      </p>
+                    </div>
+                  )}
                   <input
                     id="dropzone-file"
                     type="file"
                     className="hidden"
                     accept="image/*"
                     multiple
-                    
+                    ref={fileInputRef}
                     onChange={handleFileChange}
+                    disabled={isUploading}
                   />
                 </label>
               </div>
               
               {/* Image previews */}
-              {previewUrls.length > 0 && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mt-4">
-                  {previewUrls.map((url, index) => {
-                    const isPrimary = selectedFiles[index]?.isPrimary || false;
-                    return (
-                      <div key={index} className="relative group">
-                        <div 
-                          className={`aspect-square overflow-hidden rounded-lg cursor-pointer ${isPrimary ? 'ring-2 ring-qatar-maroon' : 'bg-gray-100 dark:bg-gray-700 hover:ring-1 hover:ring-gray-400'}`}
-                          onClick={() => setPrimaryImage(index)}
-                        >
-                          <img
-                            src={url}
-                            alt={`Preview ${index + 1}`}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                        <div className="absolute inset-0 flex flex-col justify-between p-2 pointer-events-none">
-                          {!isPrimary && (
-                            <div 
-                              className="self-start bg-black/50 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-auto"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setPrimaryImage(index);
-                              }}
-                              title={t('spareParts.add.setAsPrimary')}
-                            >
-                              {t('spareParts.add.primary')}
-                            </div>
-                          )}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              removeImage(index);
-                            }}
-                            className="self-end bg-red-500 hover:bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-auto"
-                            aria-label={t('common.remove')}
-                          >
-                            <svg
-                              className="w-3 h-3"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                              xmlns="http://www.w3.org/2000/svg"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M6 18L18 6M6 6l12 12"
-                              />
-                            </svg>
-                          </button>
-                        </div>
-                        {isPrimary && (
-                          <span className="absolute bottom-2 left-2 bg-qatar-maroon text-white text-xs px-2 py-1 rounded">
-                            {t('spareParts.add.primary')}
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
+              {selectedFiles.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4 mt-4">
+                  {selectedFiles.map((file, index) => (
+                    <SimpleImage
+                      key={file.id}
+                      id={file.id}
+                      index={index}
+                      preview={file.preview}
+                      isMain={file.isPrimary}
+                      onRemove={(id) => {
+                        const removeIndex = selectedFiles.findIndex(f => f.id === id);
+                        removeImage(removeIndex);
+                      }}
+                      onSetMain={(index) => setPrimaryImage(index)}
+                      t={t}
+                    />
+                  ))}
                 </div>
               )}
             </div>

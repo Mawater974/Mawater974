@@ -73,7 +73,7 @@ export default function SpareParts() {
   });
   
   // Track page view
-  /*useEffect(() => {
+  useEffect(() => {
     const trackPageView = async () => {
       try {
         const response = await fetch('/api/analytics/page-view', {
@@ -87,7 +87,7 @@ export default function SpareParts() {
             pageType: 'spareParts'
           })
         });
-  
+
         if (!response.ok) {
           console.error('Failed to track page view:', await response.json());
         }
@@ -95,12 +95,12 @@ export default function SpareParts() {
         console.error('Failed to track page view:', error);
       }
     };
-    
+
     trackPageView();
     fetchSpareParts();
     fetchCategories();
     fetchBrands();
-  }, [user?.id, currentCountry?.code]);*/
+  }, [user?.id, currentCountry?.code]);
   
   const fetchSpareParts = async () => {
     try {
@@ -621,6 +621,7 @@ export default function SpareParts() {
                 countryCode={currentCountry?.code?.toLowerCase() || 'qa'}
                 onToggleFavorite={toggleFavorite}
                 isFavorite={part.is_favorite || false}
+                featured={part.is_featured || false}
               />
             ))}
           </div>

@@ -107,20 +107,20 @@ export function PlanSelection({ onSelectPlan, onContinue, t, currentPlan }: Plan
         t('sell.features.basic.visibility'),
         t('sell.features.basic.photos'),
         t('sell.features.basic.search'),
-        t('sell.features.basic.details'),
+        /*t('sell.features.basic.details'),*/
         t('sell.features.basic.duration'),
-        t('sell.features.basic.support')
+        /*t('sell.features.basic.support')*/
     ],
     featured: [
         t('sell.features.featured.visibility'),
         t('sell.features.featured.photos'),
         t('sell.features.featured.search'),
-        t('sell.features.featured.details'),
+        /*t('sell.features.featured.details'),*/
         t('sell.features.featured.duration'),
-        t('sell.features.featured.support'),
+        /*t('sell.features.featured.support'),*/
         t('sell.features.featured.badge'),
-        t('sell.features.featured.social'),
-        t('sell.features.featured.analytics')
+        /*t('sell.features.featured.social'),*/
+        /*t('sell.features.featured.analytics')*/
     ]
   } as const;
 

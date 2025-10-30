@@ -25,6 +25,7 @@ type City = Database['public']['Tables']['cities']['Row'];
 
 import { ImageFile } from '@/types/image';
 import { getCountryFromIP } from '@/utils/geoLocation';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
 export type FormData = {
   is_featured?: boolean | null;
@@ -905,16 +906,13 @@ export default function NewSellPage() {
   
   
   // Render loading state
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-qatar-gold border-t-transparent mx-auto"></div>
-          <p className="text-gray-600 dark:text-gray-300">{t('common.loading')}...</p>
-        </div>
-      </div>
-    );
-  }
+ if (loading) {
+     return (
+       <div className="flex col-span-full items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
+         <LoadingSpinner />
+       </div>
+     );
+   }
 
   // Check if user is not logged in
   if (!user) {
