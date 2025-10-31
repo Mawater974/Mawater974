@@ -472,69 +472,46 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
     }
   };
 
-  // Handle image upload
   const handleImageUpload = async (files: File[]): Promise<void> => {
-    if (!car) return;
+  if (!car) return;
 
-    setUploading(true);
-    try {
-      const uploadedImages: CarImage[] = [];
+  setUploading(true);
+  try {
+    const uploadedImages: CarImage[] = [];
 
-      for (const file of files) {
-        // Compress the image first
-        const compressedFile = await compressImage(file);
+    for (const file of files) {
+      // Compress the image first
+      const compressedFile = await compressImage(file);
 
-        const fileExt = compressedFile.name.split('.').pop();
-        const fileName = `${Math.random()}.${fileExt}`;
-        const filePath = `cars/${car.id}/${fileName}`;
+      const fileExt = compressedFile.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `cars/${car.id}/${fileName}`;
 
-        const { error: uploadError } = await supabase.storage
-          .from('car-images')
-          .upload(filePath, compressedFile);
+      const { error: uploadError } = await supabase.storage
+        .from('car-images')
+        .upload(filePath, compressedFile);
 
-        if (uploadError) throw uploadError;
+      if (uploadError) throw uploadError;
 
-        const { data: { publicUrl } } = supabase.storage
-          .from('car-images')
-          .getPublicUrl(filePath);
+      const { data: { publicUrl } } = supabase.storage
+        .from('car-images')
+        .getPublicUrl(filePath);
 
-        uploadedImages.push({
-          url: publicUrl,
-          is_main: images.length === 0 // Set as main only if no other images exist
-        });
-      }
-
-      setImages(prev => [...prev, ...uploadedImages]);
-
-      // Update image files for new uploads
-      const newImageFiles = files.map((file, index) => ({
-        preview: URL.createObjectURL(file),
-        isMain: images.length === 0 && index === 0,
-        id: `new-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-        type: 'new' as const,
-        raw: file,
-        name: file.name,
-        size: file.size,
-        lastModified: file.lastModified
-      }));
-
-      setImageFiles(prev => [...prev, ...newImageFiles]);
-
-      // Update main photo index
-      if (images.length === 0) {
-        // If no images existed before, set the first new image as main
-        setMainPhotoIndex(0);
-      }
-      // If images already existed, main photo stays at index 0
-
-      toast.success(t('car.images.uploadSuccess'));
-    } catch (error) {
-      console.error('Error uploading images:', error);
-      toast.error(t('car.images.uploadError'));
-    } finally {
-      setUploading(false);
+      uploadedImages.push({
+        url: publicUrl,
+        is_main: images.length === 0 // Set as main only if no other images exist
+      });
     }
-  };
+
+    setImages(prev => [...prev, ...uploadedImages]);
+    toast.success(t('car.images.uploadSuccess'));
+  } catch (error) {
+    console.error('Error uploading images:', error);
+    toast.error(t('car.images.uploadError'));
+  } finally {
+    setUploading(false);
+  }
+};
 
   const handleSetMainImage = async (imageUrl: string) => {
     if (!car?.id) return;
