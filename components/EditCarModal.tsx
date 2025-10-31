@@ -1,5 +1,7 @@
 import { Fragment, useEffect, useState, useRef, useMemo } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
+import { DndProvider } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSupabase } from '@/contexts/SupabaseContext';
 import { XMarkIcon } from '@heroicons/react/24/outline';
@@ -92,14 +94,15 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
   const { t, language } = useLanguage();
   const { supabase } = useSupabase();
   // State for form data and UI
+  const [selectedCountry, setSelectedCountry] = useState<string | number | null>(null);
   const [cities, setCities] = useState<Array<{ id: number; name: string; name_ar: string | null; country_id: number }>>([]);
   const [brands, setBrands] = useState<Array<{ id: number; name: string; name_ar: string | null }>>([]);
   const [models, setModels] = useState<Array<{ id: number; name: string; name_ar: string | null; brand_id: number }>>([]);
+  const [countries, setCountries] = useState<Array<{ id: number; name: string; name_ar: string | null; code: string; currency_code: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [images, setImages] = useState<CarImage[]>([]);
   const [imageFiles, setImageFiles] = useState<ImageFile[]>([]);
-  const [mainPhotoIndex, setMainPhotoIndex] = useState<number | null>(null);
   const objectUrls = useRef<Set<string>>(new Set());
   const [formData, setFormData] = useState<FormData>({
     brand_id: '',
@@ -345,13 +348,54 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
     const fetchData = async () => {
       if (!car) return;
       
+      setLoading(true);
       try {
-        // Fetch all cities
-        const { data: citiesData } = await supabase
-          .from('cities')
+        // Fetch brands
+        const { data: brandsData } = await supabase
+          .from('brands')
           .select('*')
           .order('name');
-        setCities(citiesData || []);
+        setBrands(brandsData || []);
+
+        // Fetch countries
+        const { data: countriesData } = await supabase
+          .from('countries')
+          .select('*')
+          .order('name');
+        setCountries(countriesData || []);
+
+        // If we have city data with country_id, use that
+        if (car.city?.country_id) {
+          setSelectedCountry(car.city.country_id);
+          
+          // Fetch cities for the car's country
+          const { data: citiesData } = await supabase
+            .from('cities')
+            .select('*')
+            .eq('country_id', car.city.country_id)
+            .order('name');
+          setCities(citiesData || []);
+        } 
+        // If we only have city_id, fetch the city first to get country_id
+        else if (car.city_id) {
+          const { data: cityData } = await supabase
+            .from('cities')
+            .select('*')
+            .eq('id', car.city_id)
+            .single();
+            
+          if (cityData) {
+            setSelectedCountry(cityData.country_id);
+            
+            // Fetch cities for the country
+            const { data: citiesData } = await supabase
+              .from('cities')
+              .select('*')
+              .eq('country_id', cityData.country_id)
+              .order('name');
+            setCities(citiesData || []);
+          }
+        }
 
         // If we have a brand_id, fetch models
         if (car.brand?.id) {
@@ -373,13 +417,24 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
     fetchData();
   }, [car, supabase, t]);
 
-  // Ensure main photo index is always 0 when images are present
-  useEffect(() => {
-    if (images.length > 0 && mainPhotoIndex !== 0) {
-      setMainPhotoIndex(0);
-    }
-  }, [images.length, mainPhotoIndex]);
 
+  // Handle country change
+  const handleCountryChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const countryId = e.target.value;
+    setSelectedCountry(countryId);
+    setFormData(prev => ({ ...prev, city_id: '' }));
+
+    if (countryId) {
+      const { data } = await supabase
+        .from('cities')
+        .select('*')
+        .eq('country_id', Number(countryId))
+        .order('name');
+      setCities(data || []);
+    } else {
+      setCities([]);
+    }
+  };
 
   // Fetch models when brand changes
   useEffect(() => {
@@ -467,12 +522,6 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
 
       setImageFiles(prev => [...prev, ...newImageFiles]);
 
-      // Update main photo index
-      if (images.length === 0) {
-        // If no images existed before, set the first new image as main
-        setMainPhotoIndex(0);
-      }
-      // If images already existed, main photo stays at index 0
 
       toast.success(t('car.images.uploadSuccess'));
     } catch (error) {
@@ -483,46 +532,6 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
     }
   };
 
-  const handleSetMainImage = async (imageUrl: string) => {
-    if (!car?.id) return;
-
-    setLoading(true);
-    try {
-      // Update all images to set is_main = false
-      await supabase
-        .from('car_images')
-        .update({ is_main: false })
-        .eq('car_id', car.id);
-
-      // Set the selected image as main
-      await supabase
-        .from('car_images')
-        .update({ is_main: true })
-        .eq('car_id', car.id)
-        .eq('url', imageUrl);
-
-      // Update local state
-      setImages(prev =>
-        prev.map(img => ({
-          ...img,
-          is_main: img.url === imageUrl
-        }))
-      );
-
-      // Update main photo index
-      const imageIndex = images.findIndex(img => img.url === imageUrl);
-      if (imageIndex >= 0) {
-        setMainPhotoIndex(imageIndex);
-      }
-
-      toast.success(t('car.images.setMainSuccess'));
-    } catch (error) {
-      console.error('Error setting main image:', error);
-      toast.error(t('car.images.setMainError'));
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Handle delete image
   const handleDeleteImage = async (imageUrl: string) => {
@@ -556,17 +565,6 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
       // Update image files
       setImageFiles(prev => prev.filter(img => img.preview !== imageUrl));
 
-      // Update main photo index (always stays at 0 if images remain)
-      if (images.length > 1) {
-        // If multiple images remain, main photo stays at index 0
-        setMainPhotoIndex(0);
-      } else if (images.length === 1) {
-        // If only one image remains, it's automatically the main photo at index 0
-        setMainPhotoIndex(0);
-      } else {
-        // No images left
-        setMainPhotoIndex(null);
-      }
 
       toast.success(t('car.images.deleteSuccess'));
     } catch (error) {
@@ -862,7 +860,25 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
                       </select>
                     </div>
 
-                    <div className="col-span-2">
+                    <div>
+                      <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {t('car.country')}
+                      </label>
+                      <select
+                        value={selectedCountry}
+                        onChange={handleCountryChange}
+                        className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-qatar-maroon focus:border-qatar-maroon sm:text-sm bg-white dark:bg-gray-700 transition-colors duration-200"
+                        required
+                      >
+                        <option value="">{t('car.select')}</option>
+                        {countries.map(country => (
+                          <option key={country.id} value={country.id}>
+                            {language === 'ar' ? country.name_ar : country.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
                       <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
                         {t('car.city')}
                       </label>
@@ -1032,57 +1048,32 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
                           </p>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
-                          {images.map((image, index) => (
-                            <DraggableImage
-                              key={image.url}
-                              id={image.url}
-                              index={index}
-                              preview={image.url}
-                              isMain={index === 0} // Main photo is always at index 0
-                              onRemove={(id, idx) => handleDeleteImage(id)}
-                              onSetMain={(idx) => {
-                                // Move the selected image to be main by updating both state and database
-                                if (idx !== 0) {
-                                  // Move image to first position in array
+                        <DndProvider backend={HTML5Backend}>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
+                            {images.map((image, index) => (
+                              <DraggableImage
+                                key={image.url}
+                                id={image.url}
+                                index={index}
+                                preview={image.url}
+                                isMain={false}
+                                onRemove={(id, idx) => handleDeleteImage(id)}
+                                moveImage={(dragIndex, hoverIndex) => {
+                                  // Move image in array
                                   const newImages = [...images];
-                                  const [movedImage] = newImages.splice(idx, 1);
-                                  newImages.unshift(movedImage);
+                                  const [movedImage] = newImages.splice(dragIndex, 1);
+                                  newImages.splice(hoverIndex, 0, movedImage);
                                   setImages(newImages);
-
-                                  // Update main photo index (always 0)
-                                  setMainPhotoIndex(0);
-
-                                  // Update database
-                                  handleSetMainImage(movedImage.url);
-                                }
-                              }}
-                              moveImage={(dragIndex, hoverIndex) => {
-                                // Move image in array
-                                const newImages = [...images];
-                                const [movedImage] = newImages.splice(dragIndex, 1);
-                                newImages.splice(hoverIndex, 0, movedImage);
-                                setImages(newImages);
-
-                                // Handle main photo logic - main photo is always at index 0
-                                if (hoverIndex === 0) {
-                                  // If moved to first position, set as main
-                                  setMainPhotoIndex(0);
-                                  handleSetMainImage(movedImage.url);
-                                } else if (dragIndex === 0) {
-                                  // If main photo was moved away from first position, set new first photo as main
-                                  setMainPhotoIndex(0);
-                                  handleSetMainImage(newImages[0].url);
-                                }
-                              }}
-                              t={(key: string) => {
-                                // Use proper translation function with fallback
-                                return t(key) || key;
-                              }}
-                              totalImages={images.length}
-                            />
-                          ))}
-                        </div>
+                                }}
+                                t={(key: string) => {
+                                  // Use proper translation function with fallback
+                                  return t(key) || key;
+                                }}
+                                totalImages={images.length}
+                              />
+                            ))}
+                          </div>
+                        </DndProvider>
                       </>
                     ) : (
                       <div className="text-gray-500 dark:text-gray-400 text-center py-8">
