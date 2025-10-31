@@ -8,37 +8,51 @@ import toast from 'react-hot-toast';
 import { ImageFile } from '@/types/image';
 
 // Dynamically import components that use browser APIs
-const DndProvider = dynamic(
+const DndProviderWrapper = dynamic(
   async () => {
-    const { DndProvider: DndProviderComponent } = await import('react-dnd');
+    const { DndProvider } = await import('react-dnd');
     const { HTML5Backend } = await import('react-dnd-html5-backend');
-    return function DndProviderWrapper({ children }: { children: React.ReactNode }) {
-      return <DndProviderComponent backend={HTML5Backend}>{children}</DndProviderComponent>;
+    
+    // Create a wrapper component that will be rendered on the client side
+    return function Wrapper({ children }: { children: React.ReactNode }) {
+      return <DndProvider backend={HTML5Backend}>{children}</DndProvider>;
     };
   },
-  { ssr: false }
+  { 
+    ssr: false,
+    loading: () => null // Show nothing while loading
+  }
 );
 
-const ImageUpload = dynamic(() => import('./ImageUpload'), { ssr: false });
-const DraggableImage = dynamic(() => import('./DraggableImage'), { ssr: false });
+const ImageUpload = dynamic(() => import('./ImageUpload'), { 
+  ssr: false,
+  loading: () => <div>Loading image uploader...</div>
+});
+
+const DraggableImage = dynamic(() => import('./DraggableImage'), { 
+  ssr: false,
+  loading: () => <div>Loading image editor...</div>
+});
 
 // Create a no-op function for SSR
 const noop = () => Promise.resolve();
 
 // Only import browser-specific modules on the client side
-let imageCompression: any = { default: noop };
-let heic2any: any = { default: noop };
+const [imageCompression, setImageCompression] = useState<{default: any}>({ default: noop });
+const [heic2any, setHeic2any] = useState<{default: any}>({ default: noop });
 
-if (typeof window !== 'undefined') {
+useEffect(() => {
   // These will only be imported on the client side
-  import('browser-image-compression').then(mod => {
-    imageCompression = mod;
-  });
-  
-  import('heic2any').then(mod => {
-    heic2any = mod;
-  });
-}
+  if (typeof window !== 'undefined') {
+    import('browser-image-compression').then(mod => {
+      setImageCompression({ default: mod.default });
+    });
+    
+    import('heic2any').then(mod => {
+      setHeic2any({ default: mod.default });
+    });
+  }
+}, []);
 
 // Add a check for browser environment
 const isBrowser = typeof window !== 'undefined';
