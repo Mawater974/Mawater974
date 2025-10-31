@@ -1,16 +1,47 @@
 import { Fragment, useEffect, useState, useRef, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import { Dialog, Transition } from '@headlessui/react';
-import { DndProvider } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSupabase } from '@/contexts/SupabaseContext';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
-import ImageUpload from './ImageUpload';
-import { DraggableImage } from './DraggableImage';
-import imageCompression from 'browser-image-compression';
-import heic2any from 'heic2any';
 import { ImageFile } from '@/types/image';
+
+// Dynamically import components that use browser APIs
+const DndProvider = dynamic(
+  async () => {
+    const { DndProvider: DndProviderComponent } = await import('react-dnd');
+    const { HTML5Backend } = await import('react-dnd-html5-backend');
+    return function DndProviderWrapper({ children }: { children: React.ReactNode }) {
+      return <DndProviderComponent backend={HTML5Backend}>{children}</DndProviderComponent>;
+    };
+  },
+  { ssr: false }
+);
+
+const ImageUpload = dynamic(() => import('./ImageUpload'), { ssr: false });
+const DraggableImage = dynamic(() => import('./DraggableImage'), { ssr: false });
+
+// Create a no-op function for SSR
+const noop = () => Promise.resolve();
+
+// Only import browser-specific modules on the client side
+let imageCompression: any = { default: noop };
+let heic2any: any = { default: noop };
+
+if (typeof window !== 'undefined') {
+  // These will only be imported on the client side
+  import('browser-image-compression').then(mod => {
+    imageCompression = mod;
+  });
+  
+  import('heic2any').then(mod => {
+    heic2any = mod;
+  });
+}
+
+// Add a check for browser environment
+const isBrowser = typeof window !== 'undefined';
 
 interface CarImage {
   url: string;
