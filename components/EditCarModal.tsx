@@ -94,11 +94,9 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
   const { t, language } = useLanguage();
   const { supabase } = useSupabase();
   // State for form data and UI
-  const [selectedCountry, setSelectedCountry] = useState<string | number>('');
   const [cities, setCities] = useState<Array<{ id: number; name: string; name_ar: string | null; country_id: number }>>([]);
   const [brands, setBrands] = useState<Array<{ id: number; name: string; name_ar: string | null }>>([]);
   const [models, setModels] = useState<Array<{ id: number; name: string; name_ar: string | null; brand_id: number }>>([]);
-  const [countries, setCountries] = useState<Array<{ id: number; name: string; name_ar: string | null; code: string; currency_code: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [images, setImages] = useState<CarImage[]>([]);
@@ -349,54 +347,13 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
     const fetchData = async () => {
       if (!car) return;
       
-      setLoading(true);
       try {
-        // Fetch brands
-        const { data: brandsData } = await supabase
-          .from('brands')
+        // Fetch all cities
+        const { data: citiesData } = await supabase
+          .from('cities')
           .select('*')
           .order('name');
-        setBrands(brandsData || []);
-
-        // Fetch countries
-        const { data: countriesData } = await supabase
-          .from('countries')
-          .select('*')
-          .order('name');
-        setCountries(countriesData || []);
-
-        // If we have city data with country_id, use that
-        if (car.city?.country_id) {
-          setSelectedCountry(car.city.country_id);
-          
-          // Fetch cities for the car's country
-          const { data: citiesData } = await supabase
-            .from('cities')
-            .select('*')
-            .eq('country_id', car.city.country_id)
-            .order('name');
-          setCities(citiesData || []);
-        } 
-        // If we only have city_id, fetch the city first to get country_id
-        else if (car.city_id) {
-          const { data: cityData } = await supabase
-            .from('cities')
-            .select('*')
-            .eq('id', car.city_id)
-            .single();
-            
-          if (cityData) {
-            setSelectedCountry(cityData.country_id);
-            
-            // Fetch cities for the country
-            const { data: citiesData } = await supabase
-              .from('cities')
-              .select('*')
-              .eq('country_id', cityData.country_id)
-              .order('name');
-            setCities(citiesData || []);
-          }
-        }
+        setCities(citiesData || []);
 
         // If we have a brand_id, fetch models
         if (car.brand?.id) {
@@ -423,15 +380,27 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
     if (images.length > 0 && mainPhotoIndex !== 0) {
       setMainPhotoIndex(0);
     }
-  }, [images, mainPhotoIndex]);
+  }, [images.length, mainPhotoIndex]);
 
-  // Handle country change - prevent changing country
-  const handleCountryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    // Don't allow changing the country
-    e.preventDefault();
-    // Keep the original country selected
-    if (car?.city?.country_id) {
-      setSelectedCountry(car.city.country_id);
+
+  // Fetch models when brand changes
+  useEffect(() => {
+    if (formData.brand_id) {
+      fetchModels(parseInt(formData.brand_id));
+    }
+  }, [formData.brand_id]);
+
+  // Fetch models
+  const fetchModels = async (brandId: number) => {
+    try {
+      const { data } = await supabase
+        .from('models')
+        .select('*')
+        .eq('brand_id', brandId)
+        .order('name');
+      setModels(data || []);
+    } catch (error) {
+      console.error('Error fetching models:', error);
     }
   };
 
@@ -895,25 +864,7 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
                       </select>
                     </div>
 
-                    <div>
-                      <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-                        {t('car.country')}
-                      </label>
-                      <select
-                        value={selectedCountry}
-                        onChange={handleCountryChange}
-                        className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-qatar-maroon focus:border-qatar-maroon sm:text-sm bg-white dark:bg-gray-700 transition-colors duration-200"
-                        required
-                      >
-                        <option value="">{t('car.select')}</option>
-                        {countries.map(country => (
-                          <option key={country.id} value={country.id}>
-                            {language === 'ar' ? country.name_ar : country.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
+                    <div className="col-span-2">
                       <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
                         {t('car.city')}
                       </label>
