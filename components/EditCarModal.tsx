@@ -1,61 +1,10 @@
-import { Fragment, useEffect, useState, useRef, useMemo } from 'react';
-import dynamic from 'next/dynamic';
+import { Fragment, useEffect, useState } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSupabase } from '@/contexts/SupabaseContext';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
-import { ImageFile } from '@/types/image';
-
-// Dynamically import components that use browser APIs
-const DndProviderWrapper = dynamic(
-  async () => {
-    const { DndProvider } = await import('react-dnd');
-    const { HTML5Backend } = await import('react-dnd-html5-backend');
-    
-    // Create a wrapper component that will be rendered on the client side
-    return function Wrapper({ children }: { children: React.ReactNode }) {
-      return <DndProvider backend={HTML5Backend}>{children}</DndProvider>;
-    };
-  },
-  { 
-    ssr: false,
-    loading: () => null // Show nothing while loading
-  }
-);
-
-const ImageUpload = dynamic(() => import('./ImageUpload'), { 
-  ssr: false,
-  loading: () => <div>Loading image uploader...</div>
-});
-
-const DraggableImage = dynamic(() => import('./DraggableImage'), { 
-  ssr: false,
-  loading: () => <div>Loading image editor...</div>
-});
-
-// Create a no-op function for SSR
-const noop = () => Promise.resolve();
-
-// Only import browser-specific modules on the client side
-const [imageCompression, setImageCompression] = useState<{default: any}>({ default: noop });
-const [heic2any, setHeic2any] = useState<{default: any}>({ default: noop });
-
-useEffect(() => {
-  // These will only be imported on the client side
-  if (typeof window !== 'undefined') {
-    import('browser-image-compression').then(mod => {
-      setImageCompression({ default: mod.default });
-    });
-    
-    import('heic2any').then(mod => {
-      setHeic2any({ default: mod.default });
-    });
-  }
-}, []);
-
-// Add a check for browser environment
-const isBrowser = typeof window !== 'undefined';
+import ImageUpload from './ImageUpload';
 
 interface CarImage {
   url: string;
