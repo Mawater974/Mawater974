@@ -1,10 +1,11 @@
-import { Fragment, useEffect, useState, useRef } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSupabase } from '@/contexts/SupabaseContext';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import ImageUpload from './ImageUpload';
+import { FormData } from '@/app/[countryCode]/sell/page';
 
 interface CarImage {
   url: string;
@@ -96,9 +97,6 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [images, setImages] = useState<CarImage[]>([]);
-  const [imageFiles, setImageFiles] = useState<ImageFile[]>([]);
-  const [mainPhotoIndex, setMainPhotoIndex] = useState<number | null>(null);
-  const objectUrls = useRef<Set<string>>(new Set());
   const [formData, setFormData] = useState<FormData>({
     brand_id: '',
     model_id: '',
