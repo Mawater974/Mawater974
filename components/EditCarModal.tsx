@@ -6,14 +6,11 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useSupabase } from '@/contexts/SupabaseContext';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
-import ImageCarousel from './ImageCarousel';
 import ImageUpload from './ImageUpload';
-import Image from 'next/image';
 import { DraggableImage } from './DraggableImage';
 import imageCompression from 'browser-image-compression';
 import heic2any from 'heic2any';
 import { ImageFile } from '@/types/image';
-import { scrollToTop } from '@/utils/scrollToTop';
 
 interface CarImage {
   url: string;
