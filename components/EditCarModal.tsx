@@ -534,6 +534,26 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
     }
   };
 
+  // Handle moving images in the array
+  const handleMoveImage = (currentIndex: number, newIndex: number) => {
+    setImages(prev => {
+      const newImages = [...prev];
+      const [movedImage] = newImages.splice(currentIndex, 1);
+      newImages.splice(newIndex, 0, movedImage);
+      
+      // If we moved an image to the first position, update it as main
+      if (newIndex === 0) {
+        handleSetMainImage(movedImage.url);
+      }
+      // If we moved the first image away, update the new first image as main
+      else if (currentIndex === 0) {
+        handleSetMainImage(newImages[0].url);
+      }
+      
+      return newImages;
+    });
+  };
+
   // Handle delete image
   const handleDeleteImage = async (imageUrl: string) => {
     if (!car?.id) return;
@@ -1059,29 +1079,58 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
                                     index === 0 ? 'ring-2 ring-qatar-maroon' : ''
                                   }`}
                                 />
-                                <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
-                                  {index !== 0 && (
+                                <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex flex-col items-center justify-between p-2">
+                                  <div className="flex gap-2">
+                                    {index !== 0 && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleSetMainImage(image.url)}
+                                        className="p-2 bg-white rounded-full hover:bg-qatar-maroon hover:text-white transition-colors"
+                                        title={t('car.images.setAsMain')}
+                                      >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                        </svg>
+                                      </button>
+                                    )}
                                     <button
                                       type="button"
-                                      onClick={() => handleSetMainImage(image.url)}
-                                      className="p-2 bg-white rounded-full hover:bg-qatar-maroon hover:text-white transition-colors"
-                                      title={t('car.images.setAsMain')}
+                                      onClick={() => handleDeleteImage(image.url)}
+                                      className="p-2 bg-white rounded-full hover:bg-red-500 hover:text-white transition-colors"
+                                      title={t('common.delete')}
                                     >
                                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
                                       </svg>
                                     </button>
-                                  )}
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDeleteImage(image.url)}
-                                    className="p-2 bg-white rounded-full hover:bg-red-500 hover:text-white transition-colors"
-                                    title={t('common.delete')}
-                                  >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                                    </svg>
-                                  </button>
+                                  </div>
+                                  
+                                  <div className="flex gap-2">
+                                    {index > 0 && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleMoveImage(index, index - 1)}
+                                        className="p-2 bg-white rounded-full hover:bg-qatar-maroon hover:text-white transition-colors"
+                                        title={t('car.images.moveUp')}
+                                      >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                          <path fillRule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clipRule="evenodd" />
+                                        </svg>
+                                      </button>
+                                    )}
+                                    {index < images.length - 1 && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleMoveImage(index, index + 1)}
+                                        className="p-2 bg-white rounded-full hover:bg-qatar-maroon hover:text-white transition-colors"
+                                        title={t('car.images.moveDown')}
+                                      >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                                        </svg>
+                                      </button>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                               {index === 0 && (
