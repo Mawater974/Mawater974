@@ -1,3 +1,5 @@
+'use client';
+
 import { Fragment, useEffect, useState, useRef, useMemo } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import dynamic from 'next/dynamic';
@@ -5,46 +7,66 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useSupabase } from '@/contexts/SupabaseContext';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
-import ImageCarousel from './ImageCarousel';
-import ImageUpload from './ImageUpload';
 import Image from 'next/image';
 import imageCompression from 'browser-image-compression';
 import heic2any from 'heic2any';
 import { ImageFile } from '@/types/image';
 import { scrollToTop } from '@/utils/scrollToTop';
 
-// Import DnD provider and types
-import { DndProvider } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
+// Dynamically import components that use browser APIs
+const ImageCarousel = dynamic(() => import('./ImageCarousel'), { ssr: false });
+const ImageUpload = dynamic(() => import('./ImageUpload'), { ssr: false });
 
-// Dynamically import DraggableImage with SSR disabled
+// Dynamically import DnD related components with SSR disabled
 const DraggableImage = dynamic(
   () => import('./DraggableImage').then(mod => mod.DraggableImage),
   { 
-    ssr: false, 
-    loading: () => <div className="p-4 text-center">Loading image editor...</div> 
+    ssr: false,
+    loading: () => <div className="p-4 text-center">Loading image editor...</div>
   }
 );
 
-// Create a wrapper component for the DnD provider
-const DndProviderWrapper = ({ children }: { children: React.ReactNode }) => {
-  const [isMounted, setIsMounted] = useState(false);
+const DndProviderWrapper = dynamic(
+  () => import('react-dnd').then(mod => ({
+    default: function DndProviderWrapper({ children }: { children: React.ReactNode }) {
+      const [isMounted, setIsMounted] = useState(false);
+      const [DndProvider, setDndProvider] = useState<any>(null);
+      const [backend, setBackend] = useState<any>(null);
 
-  useEffect(() => {
-    setIsMounted(true);
-    return () => setIsMounted(false);
-  }, []);
+      useEffect(() => {
+        setIsMounted(true);
+        
+        // Only run on client side
+        if (typeof window !== 'undefined') {
+          Promise.all([
+            import('react-dnd'),
+            import('react-dnd-html5-backend')
+          ]).then(([dndModule, backendModule]) => {
+            setDndProvider(() => dndModule.DndProvider);
+            setBackend(backendModule.HTML5Backend);
+          }).catch(error => {
+            console.error('Failed to load DnD dependencies:', error);
+          });
+        }
 
-  if (!isMounted) {
-    return <>{children}</>;
-  }
+        return () => {
+          setIsMounted(false);
+        };
+      }, []);
 
-  return (
-    <DndProvider backend={HTML5Backend}>
-      {children}
-    </DndProvider>
-  );
-};
+      if (!isMounted || !DndProvider || !backend) {
+        return <>{children}</>;
+      }
+
+      return (
+        <DndProvider backend={backend}>
+          {children}
+        </DndProvider>
+      );
+    }
+  })),
+  { ssr: false }
+);
 
 
 interface CarImage {
