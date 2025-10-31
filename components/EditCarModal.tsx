@@ -1,9 +1,5 @@
 import { Fragment, useEffect, useState, useRef, useMemo } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
-import { DndProvider } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
-import { TouchBackend } from 'react-dnd-touch-backend';
-import { MultiBackend } from 'react-dnd-multi-backend';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSupabase } from '@/contexts/SupabaseContext';
 import { XMarkIcon } from '@heroicons/react/24/outline';
@@ -1036,70 +1032,57 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
                           </p>
                         </div>
 
-                        <DndProvider backend={MultiBackend} options={{
-                          backends: [
-                            {
-                              backend: HTML5Backend,
-                              options: { enableMouseEvents: true },
-                            },
-                            {
-                              backend: TouchBackend,
-                              options: { enableMouseEvents: true },
-                            },
-                          ],
-                        }}>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
-                            {images.map((image, index) => (
-                              <DraggableImage
-                                key={image.url}
-                                id={image.url}
-                                index={index}
-                                preview={image.url}
-                                isMain={index === 0} // Main photo is always at index 0
-                                onRemove={(id, idx) => handleDeleteImage(id)}
-                                onSetMain={(idx) => {
-                                  // Move the selected image to be main by updating both state and database
-                                  if (idx !== 0) {
-                                    // Move image to first position in array
-                                    const newImages = [...images];
-                                    const [movedImage] = newImages.splice(idx, 1);
-                                    newImages.unshift(movedImage);
-                                    setImages(newImages);
-
-                                    // Update main photo index (always 0)
-                                    setMainPhotoIndex(0);
-
-                                    // Update database
-                                    handleSetMainImage(movedImage.url);
-                                  }
-                                }}
-                                moveImage={(dragIndex, hoverIndex) => {
-                                  // Move image in array
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
+                          {images.map((image, index) => (
+                            <DraggableImage
+                              key={image.url}
+                              id={image.url}
+                              index={index}
+                              preview={image.url}
+                              isMain={index === 0} // Main photo is always at index 0
+                              onRemove={(id, idx) => handleDeleteImage(id)}
+                              onSetMain={(idx) => {
+                                // Move the selected image to be main by updating both state and database
+                                if (idx !== 0) {
+                                  // Move image to first position in array
                                   const newImages = [...images];
-                                  const [movedImage] = newImages.splice(dragIndex, 1);
-                                  newImages.splice(hoverIndex, 0, movedImage);
+                                  const [movedImage] = newImages.splice(idx, 1);
+                                  newImages.unshift(movedImage);
                                   setImages(newImages);
 
-                                  // Handle main photo logic - main photo is always at index 0
-                                  if (hoverIndex === 0) {
-                                    // If moved to first position, set as main
-                                    setMainPhotoIndex(0);
-                                    handleSetMainImage(movedImage.url);
-                                  } else if (dragIndex === 0) {
-                                    // If main photo was moved away from first position, set new first photo as main
-                                    setMainPhotoIndex(0);
-                                    handleSetMainImage(newImages[0].url);
-                                  }
-                                }}
-                                t={(key: string) => {
-                                  // Use proper translation function with fallback
-                                  return t(key) || key;
-                                }}
-                                totalImages={images.length}
-                              />
-                            ))}
-                          </div>
-                        </DndProvider>
+                                  // Update main photo index (always 0)
+                                  setMainPhotoIndex(0);
+
+                                  // Update database
+                                  handleSetMainImage(movedImage.url);
+                                }
+                              }}
+                              moveImage={(dragIndex, hoverIndex) => {
+                                // Move image in array
+                                const newImages = [...images];
+                                const [movedImage] = newImages.splice(dragIndex, 1);
+                                newImages.splice(hoverIndex, 0, movedImage);
+                                setImages(newImages);
+
+                                // Handle main photo logic - main photo is always at index 0
+                                if (hoverIndex === 0) {
+                                  // If moved to first position, set as main
+                                  setMainPhotoIndex(0);
+                                  handleSetMainImage(movedImage.url);
+                                } else if (dragIndex === 0) {
+                                  // If main photo was moved away from first position, set new first photo as main
+                                  setMainPhotoIndex(0);
+                                  handleSetMainImage(newImages[0].url);
+                                }
+                              }}
+                              t={(key: string) => {
+                                // Use proper translation function with fallback
+                                return t(key) || key;
+                              }}
+                              totalImages={images.length}
+                            />
+                          ))}
+                        </div>
                       </>
                     ) : (
                       <div className="text-gray-500 dark:text-gray-400 text-center py-8">
