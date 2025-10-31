@@ -2,6 +2,8 @@ import { Fragment, useEffect, useState, useRef, useMemo } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
+import { TouchBackend } from 'react-dnd-touch-backend';
+import { MultiBackend } from 'react-dnd-multi-backend';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSupabase } from '@/contexts/SupabaseContext';
 import { XMarkIcon } from '@heroicons/react/24/outline';
@@ -1034,7 +1036,18 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
                           </p>
                         </div>
 
-                        <DndProvider backend={HTML5Backend}>
+                        <DndProvider backend={MultiBackend} options={{
+                          backends: [
+                            {
+                              backend: HTML5Backend,
+                              options: { enableMouseEvents: true },
+                            },
+                            {
+                              backend: TouchBackend,
+                              options: { enableMouseEvents: true },
+                            },
+                          ],
+                        }}>
                           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
                             {images.map((image, index) => (
                               <DraggableImage
