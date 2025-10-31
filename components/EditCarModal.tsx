@@ -1,13 +1,11 @@
 import { Fragment, useEffect, useState, useRef, useMemo } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
-import { DndProvider } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSupabase } from '@/contexts/SupabaseContext';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import ImageUpload from './ImageUpload';
-import { DraggableImage } from './DraggableImage';
+import { ImageThumbnail } from './ImageThumbnail';
 import imageCompression from 'browser-image-compression';
 import heic2any from 'heic2any';
 import { ImageFile } from '@/types/image';
@@ -302,13 +300,9 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
       }));
       setImageFiles(initialImageFiles);
 
-      // Set main photo index (always 0)
-      const mainIndex = initialImageFiles.findIndex(img => img.isMain);
-      setMainPhotoIndex(mainIndex >= 0 ? mainIndex : (initialImageFiles.length > 0 ? 0 : null));
     } else {
       setImages([]);
       setImageFiles([]);
-      setMainPhotoIndex(null);
     }
 
     // Initialize form data
@@ -1048,32 +1042,15 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
                           </p>
                         </div>
 
-                        <DndProvider backend={HTML5Backend}>
                           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
                             {images.map((image, index) => (
-                              <DraggableImage
+                              <ImageThumbnail
                                 key={image.url}
-                                id={image.url}
-                                index={index}
                                 preview={image.url}
-                                isMain={false}
-                                onRemove={(id, idx) => handleDeleteImage(id)}
-                                moveImage={(dragIndex, hoverIndex) => {
-                                  // Move image in array
-                                  const newImages = [...images];
-                                  const [movedImage] = newImages.splice(dragIndex, 1);
-                                  newImages.splice(hoverIndex, 0, movedImage);
-                                  setImages(newImages);
-                                }}
-                                t={(key: string) => {
-                                  // Use proper translation function with fallback
-                                  return t(key) || key;
-                                }}
-                                totalImages={images.length}
+                                onRemove={() => handleDeleteImage(image.url)}
                               />
                             ))}
                           </div>
-                        </DndProvider>
                       </>
                     ) : (
                       <div className="text-gray-500 dark:text-gray-400 text-center py-8">
