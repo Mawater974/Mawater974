@@ -283,25 +283,8 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
       })));
 
       // Initialize image files for existing images
-      const initialImageFiles = car.images.map((img, index) => ({
-        preview: typeof img === 'string' ? img : img?.url || '',
-        isMain: typeof img === 'string' ? false : Boolean(img?.is_main),
-        id: `existing-${index}`,
-        type: 'existing' as const,
-        raw: new File([], 'temp.jpg', { type: 'image/jpeg' }),
-        name: `image-${index}.jpg`,
-        size: 0,
-        lastModified: Date.now()
-      }));
-      setImageFiles(initialImageFiles);
-
-      // Set main photo index (always 0)
-      const mainIndex = initialImageFiles.findIndex(img => img.isMain);
-      setMainPhotoIndex(mainIndex >= 0 ? mainIndex : (initialImageFiles.length > 0 ? 0 : null));
     } else {
       setImages([]);
-      setImageFiles([]);
-      setMainPhotoIndex(null);
     }
 
     // Initialize form data
@@ -410,13 +393,6 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
     fetchData();
   }, [car, supabase, t]);
 
-  // Ensure main photo index is always 0 when images are present
-  useEffect(() => {
-    if (images.length > 0 && mainPhotoIndex !== 0) {
-      setMainPhotoIndex(0);
-    }
-  }, [images.length, mainPhotoIndex]);
-
   // Handle country change
   const handleCountryChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const countryId = e.target.value;
@@ -507,28 +483,8 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
 
       setImages(prev => [...prev, ...uploadedImages]);
 
-      // Update image files for new uploads
-      const newImageFiles = files.map((file, index) => ({
-        preview: URL.createObjectURL(file),
-        isMain: images.length === 0 && index === 0,
-        id: `new-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-        type: 'new' as const,
-        raw: file,
-        name: file.name,
-        size: file.size,
-        lastModified: file.lastModified
-      }));
-
-      setImageFiles(prev => [...prev, ...newImageFiles]);
-
-      // Update main photo index
-      if (images.length === 0) {
-        // If no images existed before, set the first new image as main
-        setMainPhotoIndex(0);
-      }
-      // If images already existed, main photo stays at index 0
-
       toast.success(t('car.images.uploadSuccess'));
+      // The first image is always the main photo (index 0)
     } catch (error) {
       console.error('Error uploading images:', error);
       toast.error(t('car.images.uploadError'));
@@ -555,20 +511,20 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
         .eq('car_id', car.id)
         .eq('url', imageUrl);
 
-      // Update local state
-      setImages(prev =>
-        prev.map(img => ({
+      // Update local state - move the selected image to the first position
+      setImages(prev => {
+        const newImages = [...prev];
+        const imageIndex = newImages.findIndex(img => img.url === imageUrl);
+        if (imageIndex > 0) {
+          const [movedImage] = newImages.splice(imageIndex, 1);
+          newImages.unshift({ ...movedImage, is_main: true });
+        }
+        return newImages.map((img, idx) => ({
           ...img,
-          is_main: img.url === imageUrl
-        }))
-      );
-
-      // Update main photo index
-      const imageIndex = images.findIndex(img => img.url === imageUrl);
-      if (imageIndex >= 0) {
-        setMainPhotoIndex(imageIndex);
-      }
-
+          is_main: idx === 0
+        }));
+      });
+      
       toast.success(t('car.images.setMainSuccess'));
     } catch (error) {
       console.error('Error setting main image:', error);
@@ -607,21 +563,16 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
       const imageIndex = images.findIndex(img => img.url === imageUrl);
       setImages(prev => prev.filter(img => img.url !== imageUrl));
 
-      // Update image files
-      setImageFiles(prev => prev.filter(img => img.preview !== imageUrl));
-
-      // Update main photo index (always stays at 0 if images remain)
-      if (images.length > 1) {
-        // If multiple images remain, main photo stays at index 0
-        setMainPhotoIndex(0);
-      } else if (images.length === 1) {
-        // If only one image remains, it's automatically the main photo at index 0
-        setMainPhotoIndex(0);
-      } else {
-        // No images left
-        setMainPhotoIndex(null);
-      }
-
+      // Update local state and ensure first image is main
+      setImages(prev => {
+        const newImages = prev.filter(img => img.url !== imageUrl);
+        // If we deleted the main image (index 0), the new first image becomes main
+        if (newImages.length > 0 && prev[0]?.url === imageUrl) {
+          newImages[0] = { ...newImages[0], is_main: true };
+        }
+        return newImages;
+      });
+      
       toast.success(t('car.images.deleteSuccess'));
     } catch (error) {
       console.error('Error deleting image:', error);
@@ -1097,66 +1048,50 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
                     </h3>
                     {images.length > 0 ? (
                       <>
-                        {/* Main Photo Guidance */}
-                        <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                          <p className="text-sm text-gray-600 dark:text-gray-300">
-                            {t('myAds.edit.images.guidance')}
-                          </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
+                          {images.map((image, index) => (
+                            <div key={image.url} className="relative group">
+                              <div className="relative aspect-[4/3] w-full rounded-lg overflow-hidden">
+                                <img
+                                  src={image.url}
+                                  alt="Car"
+                                  className={`w-full h-full object-cover ${
+                                    index === 0 ? 'ring-2 ring-qatar-maroon' : ''
+                                  }`}
+                                />
+                                <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
+                                  {index !== 0 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleSetMainImage(image.url)}
+                                      className="p-2 bg-white rounded-full hover:bg-qatar-maroon hover:text-white transition-colors"
+                                      title={t('car.images.setAsMain')}
+                                    >
+                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                      </svg>
+                                    </button>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteImage(image.url)}
+                                    className="p-2 bg-white rounded-full hover:bg-red-500 hover:text-white transition-colors"
+                                    title={t('common.delete')}
+                                  >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                    </svg>
+                                  </button>
+                                </div>
+                              </div>
+                              {index === 0 && (
+                                <div className="absolute top-2 left-2 bg-qatar-maroon text-white text-xs px-2 py-1 rounded">
+                                  {t('car.images.main')}
+                                </div>
+                              )}
+                            </div>
+                          ))}
                         </div>
-
-                        <DndProvider backend={HTML5Backend}>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
-                            {images.map((image, index) => (
-                              <DraggableImage
-                                key={image.url}
-                                id={image.url}
-                                index={index}
-                                preview={image.url}
-                                isMain={index === 0} // Main photo is always at index 0
-                                onRemove={(id, idx) => handleDeleteImage(id)}
-                                onSetMain={(idx) => {
-                                  // Move the selected image to be main by updating both state and database
-                                  if (idx !== 0) {
-                                    // Move image to first position in array
-                                    const newImages = [...images];
-                                    const [movedImage] = newImages.splice(idx, 1);
-                                    newImages.unshift(movedImage);
-                                    setImages(newImages);
-
-                                    // Update main photo index (always 0)
-                                    setMainPhotoIndex(0);
-
-                                    // Update database
-                                    handleSetMainImage(movedImage.url);
-                                  }
-                                }}
-                                moveImage={(dragIndex, hoverIndex) => {
-                                  // Move image in array
-                                  const newImages = [...images];
-                                  const [movedImage] = newImages.splice(dragIndex, 1);
-                                  newImages.splice(hoverIndex, 0, movedImage);
-                                  setImages(newImages);
-
-                                  // Handle main photo logic - main photo is always at index 0
-                                  if (hoverIndex === 0) {
-                                    // If moved to first position, set as main
-                                    setMainPhotoIndex(0);
-                                    handleSetMainImage(movedImage.url);
-                                  } else if (dragIndex === 0) {
-                                    // If main photo was moved away from first position, set new first photo as main
-                                    setMainPhotoIndex(0);
-                                    handleSetMainImage(newImages[0].url);
-                                  }
-                                }}
-                                t={(key: string) => {
-                                  // Use proper translation function with fallback
-                                  return t(key) || key;
-                                }}
-                                totalImages={images.length}
-                              />
-                            ))}
-                          </div>
-                        </DndProvider>
                       </>
                     ) : (
                       <div className="text-gray-500 dark:text-gray-400 text-center py-8">
