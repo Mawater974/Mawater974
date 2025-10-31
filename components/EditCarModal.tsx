@@ -1,20 +1,20 @@
   import { Fragment, useEffect, useState } from 'react';
-  import { Dialog, Transition } from '@headlessui/react';
-  import { useLanguage } from '@/contexts/LanguageContext';
-  import { useSupabase } from '@/contexts/SupabaseContext';
-  import { XMarkIcon } from '@heroicons/react/24/outline';
-  import toast from 'react-hot-toast';
-  import ImageUpload from './ImageUpload';
+import { Dialog, Transition } from '@headlessui/react';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useSupabase } from '@/contexts/SupabaseContext';
+import { XMarkIcon } from '@heroicons/react/24/outline';
+import toast from 'react-hot-toast';
+import ImageUpload from './ImageUpload';
 
-  interface CarImage {
-    url: string;
-    is_main?: boolean;
-  }
+interface CarImage {
+  url: string;
+  is_main?: boolean;
+}
 
-  interface Car {
-    id: number;
-    brand_id?: string | number;
-    model_id?: string | number;
+interface Car {
+  id: number;
+  brand_id?: string | number;
+  model_id?: string | number;
     year?: number;
     mileage?: string | number;
     price?: string | number;
