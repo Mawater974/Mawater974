@@ -94,7 +94,7 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
   const { t, language } = useLanguage();
   const { supabase } = useSupabase();
   // State for form data and UI
-  const [selectedCountry, setSelectedCountry] = useState<string | number | null>(null);
+  const [selectedCountry, setSelectedCountry] = useState<string | number>('');
   const [cities, setCities] = useState<Array<{ id: number; name: string; name_ar: string | null; country_id: number }>>([]);
   const [brands, setBrands] = useState<Array<{ id: number; name: string; name_ar: string | null }>>([]);
   const [models, setModels] = useState<Array<{ id: number; name: string; name_ar: string | null; brand_id: number }>>([]);
@@ -423,44 +423,15 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
     if (images.length > 0 && mainPhotoIndex !== 0) {
       setMainPhotoIndex(0);
     }
-  }, [images.length, mainPhotoIndex]);
+  }, [images, mainPhotoIndex]);
 
-  // Handle country change
-  const handleCountryChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const countryId = e.target.value;
-    setSelectedCountry(countryId);
-    setFormData(prev => ({ ...prev, city_id: '' }));
-
-    if (countryId) {
-      const { data } = await supabase
-        .from('cities')
-        .select('*')
-        .eq('country_id', Number(countryId))
-        .order('name');
-      setCities(data || []);
-    } else {
-      setCities([]);
-    }
-  };
-
-  // Fetch models when brand changes
-  useEffect(() => {
-    if (formData.brand_id) {
-      fetchModels(parseInt(formData.brand_id));
-    }
-  }, [formData.brand_id]);
-
-  // Fetch models
-  const fetchModels = async (brandId: number) => {
-    try {
-      const { data } = await supabase
-        .from('models')
-        .select('*')
-        .eq('brand_id', brandId)
-        .order('name');
-      setModels(data || []);
-    } catch (error) {
-      console.error('Error fetching models:', error);
+  // Handle country change - prevent changing country
+  const handleCountryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    // Don't allow changing the country
+    e.preventDefault();
+    // Keep the original country selected
+    if (car?.city?.country_id) {
+      setSelectedCountry(car.city.country_id);
     }
   };
 
