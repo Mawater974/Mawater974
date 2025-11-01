@@ -1,14 +1,21 @@
 import { Fragment, useEffect, useState, useRef, useMemo } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
+import { DndProvider } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSupabase } from '@/contexts/SupabaseContext';
 import { XMarkIcon } from '@heroicons/react/24/outline';
-import toast from 'react-hot-toast';
-import ImageUpload from './ImageUpload';
-import { ImageThumbnail } from './ImageThumbnail';
+import { toast } from 'react-hot-toast';
+import { CarImage } from '@/types/car';
+import { Image as ImageIcon, Upload, Loader2 } from 'lucide-react';
+import { ImageFile } from '@/types/image';
+import { DraggableImage } from './DraggableImage';
 import imageCompression from 'browser-image-compression';
 import heic2any from 'heic2any';
-import { ImageFile } from '@/types/image';
+import { scrollToTop } from '@/utils/scrollToTop';
+import ImageCarousel from './ImageCarousel';
+import ImageUpload from './ImageUpload';
+import Image from 'next/image';
 
 interface CarImage {
   url: string;
@@ -101,6 +108,7 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
   const [uploading, setUploading] = useState(false);
   const [images, setImages] = useState<CarImage[]>([]);
   const [imageFiles, setImageFiles] = useState<ImageFile[]>([]);
+  const [mainPhotoIndex, setMainPhotoIndex] = useState<number | null>(null);
   const objectUrls = useRef<Set<string>>(new Set());
   const [formData, setFormData] = useState<FormData>({
     brand_id: '',
@@ -127,130 +135,6 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
   const safeString = (value: string | number | undefined | null): string => {
     if (value === undefined || value === null) return '';
     return String(value);
-  };
-  const SUPPORTED_IMAGE_TYPES = [
-    'image/jpeg',
-    'image/jpg',
-    'image/png',
-    'image/webp',
-    'image/gif',
-    'image/bmp',
-    'image/tiff',
-    'image/svg+xml',
-    'image/avif',
-    'image/apng',
-    'image/heic',
-    'image/heif',
-    'image/heic-sequence',
-    'image/heif-sequence',
-    'image/x-heic',
-    'image/x-heif'
-  ];
-
-  // Get file extension from MIME type
-  const getFileExtension = (mimeType: string): string => {
-    const extensionMap: Record<string, string> = {
-      'image/jpeg': 'jpg',
-      'image/jpg': 'jpg',
-      'image/png': 'png',
-      'image/webp': 'webp',
-      'image/gif': 'gif',
-      'image/bmp': 'bmp',
-      'image/tiff': 'tiff',
-      'image/svg+xml': 'svg',
-      'image/avif': 'avif',
-      'image/apng': 'apng',
-      'image/heic': 'heic',
-      'image/heif': 'heif',
-      'image/heic-sequence': 'heic',
-      'image/heif-sequence': 'heif',
-      'image/x-heic': 'heic',
-      'image/x-heif': 'heif'
-    };
-    return extensionMap[mimeType.toLowerCase()] || 'jpg';
-  };
-
-  // Convert HEIC/HEIF to JPEG for better compatibility
-  const convertHeicToJpeg = async (file: File): Promise<File> => {
-    try {
-      const jpegBlob = await heic2any({
-        blob: file,
-        toType: 'image/jpeg',
-        quality: 0.9
-      }) as Blob;
-
-      return new File(
-        [jpegBlob],
-        file.name.replace(/\.[^/.]+$/, '.jpg'),
-        { type: 'image/jpeg', lastModified: Date.now() }
-      );
-    } catch (error) {
-      console.error('Error converting HEIC/HEIF to JPEG:', error);
-      return file; // Return original if conversion fails
-    }
-  };
-
-  // Compress image with optimized settings
-  const compressImage = async (file: File): Promise<File> => {
-    const fileType = file.type.toLowerCase();
-
-    // Skip non-image files or unsupported image types
-    if (!fileType.startsWith('image/') || !SUPPORTED_IMAGE_TYPES.includes(fileType)) {
-      console.warn(`Unsupported file type: ${fileType}. File will be uploaded as-is.`);
-      return file;
-    }
-
-    // Convert HEIC/HEIF to JPEG first
-    let processedFile = file;
-    if (fileType.includes('heic') || fileType.includes('heif')) {
-      processedFile = await convertHeicToJpeg(file);
-    }
-
-    try {
-      const options = {
-        maxSizeMB: 1.0,
-        maxWidthOrHeight: 2560,
-        useWebWorker: true,
-        maxIteration: 15,
-        fileType: 'image/webp',
-        initialQuality: 0.95,
-        alwaysKeepResolution: true,
-        onProgress: (progress: number) => {
-          console.log(`Image compression progress: ${Math.round(progress)}%`);
-        },
-        preserveExif: false,
-      };
-
-      console.log('Original file name:', file.name);
-      console.log('Original file type:', file.type);
-      console.log('Original file size:', (file.size / 1024 / 1024).toFixed(2), 'MB');
-
-      const compressedBlob = await imageCompression(processedFile, options) as Blob;
-
-      // Determine output format (convert all to webp for better compression, except for SVG)
-      const outputFormat = fileType === 'image/svg+xml' ? 'image/svg+xml' : 'image/webp';
-      const extension = getFileExtension(outputFormat);
-
-      // Create a new File object with the correct MIME type and extension
-      const compressedFile = new File(
-        [compressedBlob],
-        `${file.name.replace(/\.[^/.]+$/, '')}.${extension}`,
-        {
-          type: outputFormat,
-          lastModified: Date.now()
-        }
-      );
-
-      console.log('Compressed file type:', compressedFile.type);
-      console.log('Compressed file size:', (compressedFile.size / 1024 / 1024).toFixed(2), 'MB');
-      console.log('Compression ratio:', ((file.size - compressedFile.size) / file.size * 100).toFixed(2) + '%');
-
-      return compressedFile;
-    } catch (error) {
-      console.error('Error compressing image:', error);
-      // In case of error, return the original file
-      return file;
-    }
   };
 
   // Initialize form data and images when car changes
@@ -286,23 +170,8 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
         url: typeof img === 'string' ? img : img?.url || '',
         is_main: typeof img === 'string' ? false : Boolean(img?.is_main)
       })));
-
-      // Initialize image files for existing images
-      const initialImageFiles = car.images.map((img, index) => ({
-        preview: typeof img === 'string' ? img : img?.url || '',
-        isMain: typeof img === 'string' ? false : Boolean(img?.is_main),
-        id: `existing-${index}`,
-        type: 'existing' as const,
-        raw: new File([], 'temp.jpg', { type: 'image/jpeg' }),
-        name: `image-${index}.jpg`,
-        size: 0,
-        lastModified: Date.now()
-      }));
-      setImageFiles(initialImageFiles);
-
     } else {
       setImages([]);
-      setImageFiles([]);
     }
 
     // Initialize form data
@@ -411,7 +280,6 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
     fetchData();
   }, [car, supabase, t]);
 
-
   // Handle country change
   const handleCountryChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const countryId = e.target.value;
@@ -468,55 +336,67 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
     }
   };
 
-  // Handle image upload
+  // Handle image upload with compression and HEIC/HEIF support
   const handleImageUpload = async (files: File[]): Promise<void> => {
     if (!car) return;
-
+    
     setUploading(true);
     try {
       const uploadedImages: CarImage[] = [];
-
+      const newImageFiles: ImageFile[] = [];
+      
       for (const file of files) {
         // Compress the image first
         const compressedFile = await compressImage(file);
-
         const fileExt = compressedFile.name.split('.').pop();
         const fileName = `${Math.random()}.${fileExt}`;
         const filePath = `cars/${car.id}/${fileName}`;
-
+        
+        // Upload the compressed file
         const { error: uploadError } = await supabase.storage
           .from('car-images')
           .upload(filePath, compressedFile);
-
+        
         if (uploadError) throw uploadError;
-
+        
+        // Get the public URL
         const { data: { publicUrl } } = supabase.storage
           .from('car-images')
           .getPublicUrl(filePath);
-
+        
+        // Create preview URL for the UI
+        const previewUrl = URL.createObjectURL(compressedFile);
+        objectUrls.current.add(previewUrl);
+        
+        // Add to uploaded images
+        const isMain = images.length === 0; // First image is main by default
         uploadedImages.push({
           url: publicUrl,
-          is_main: images.length === 0 // Set as main only if no other images exist
+          is_main: isMain
+        });
+        
+        // Add to image files for local state management
+        newImageFiles.push({
+          preview: previewUrl,
+          isMain,
+          id: `new-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+          type: 'new',
+          raw: compressedFile,
+          name: compressedFile.name,
+          size: compressedFile.size,
+          lastModified: compressedFile.lastModified
         });
       }
-
+      
+      // Update state
       setImages(prev => [...prev, ...uploadedImages]);
-
-      // Update image files for new uploads
-      const newImageFiles = files.map((file, index) => ({
-        preview: URL.createObjectURL(file),
-        isMain: images.length === 0 && index === 0,
-        id: `new-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-        type: 'new' as const,
-        raw: file,
-        name: file.name,
-        size: file.size,
-        lastModified: file.lastModified
-      }));
-
       setImageFiles(prev => [...prev, ...newImageFiles]);
-
-
+      
+      // If this is the first image, set it as main
+      if (images.length === 0 && uploadedImages.length > 0) {
+        setMainPhotoIndex(0);
+      }
+      
       toast.success(t('car.images.uploadSuccess'));
     } catch (error) {
       console.error('Error uploading images:', error);
@@ -526,40 +406,179 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
     }
   };
 
+  // Set an image as the main photo and update display order
+  const handleSetMainImage = async (imageUrl: string) => {
+    if (!car?.id) return;
+    
+    setLoading(true);
+    try {
+      const imageIndex = images.findIndex(img => img.url === imageUrl);
+      if (imageIndex === -1) return;
+      
+      // Update all images in a single transaction
+      await supabase.rpc('update_car_images_order', {
+        p_car_id: car.id,
+        p_new_main_image_url: imageUrl,
+        p_images: images.map((img, idx) => ({
+          url: img.url,
+          display_order: img.url === imageUrl ? 0 : idx + 1, // Main image gets order 0
+          is_main: img.url === imageUrl
+        }))
+      });
+      
+      // Reorder images to put the main one first
+      const newImages = [...images];
+      const [movedImage] = newImages.splice(imageIndex, 1);
+      newImages.unshift({ ...movedImage, is_main: true });
+      
+      // Update local state with new order
+      const updatedImages = newImages.map((img, idx) => ({
+        ...img,
+        display_order: idx,
+        is_main: idx === 0
+      }));
+      
+      setImages(updatedImages);
+      setMainPhotoIndex(0);
+      
+      // Update imageFiles to maintain consistency
+      setImageFiles(prev => {
+        const newImageFiles = [...prev];
+        const [movedFile] = newImageFiles.splice(imageIndex, 1);
+        newImageFiles.unshift({ ...movedFile, isMain: true });
+        return newImageFiles.map((file, idx) => ({
+          ...file,
+          isMain: idx === 0,
+          display_order: idx
+        }));
+      });
+      
+      toast.success(t('car.images.setMainSuccess'));
+    } catch (error) {
+      console.error('Error setting main image:', error);
+      toast.error(t('car.images.setMainError'));
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // Handle delete image
+  // Move an image to a new position and update display_order
+const moveImage = async (dragIndex: number, hoverIndex: number) => {
+  if (!car?.id) return;
+  
+  try {
+    setImages(prev => {
+      const newImages = [...prev];
+      const [movedImage] = newImages.splice(dragIndex, 1);
+      newImages.splice(hoverIndex, 0, movedImage);
+      
+      // Update display_order for all images
+      const updatedImages = newImages.map((img, idx) => ({
+        ...img,
+        display_order: idx
+      }));
+      
+      // Update display_order in database
+      supabase.rpc('update_car_images_order', {
+        p_car_id: car.id,
+        p_images: updatedImages.map(img => ({
+          url: img.url,
+          display_order: img.display_order,
+          is_main: img.is_main
+        }))
+      }).catch(console.error);
+      
+      return updatedImages;
+    });
+    
+    // Update imageFiles to maintain consistency
+    setImageFiles(prev => {
+      const newImageFiles = [...prev];
+      const [movedFile] = newImageFiles.splice(dragIndex, 1);
+      newImageFiles.splice(hoverIndex, 0, movedFile);
+      
+      // Update display_order in imageFiles
+      return newImageFiles.map((file, idx) => ({
+        ...file,
+        display_order: idx,
+        isMain: idx === 0
+      }));
+    });
+    
+    // If moved to first position, set as main
+    if (hoverIndex === 0) {
+      await handleSetMainImage(images[dragIndex].url);
+    } else if (dragIndex === 0) {
+      // If main photo was moved away, set new first photo as main
+      await handleSetMainImage(images[1].url); // The new first image after move
+    }
+    
+  } catch (error) {
+    console.error('Error moving image:', error);
+    toast.error(t('car.images.moveError'));
+  }
+};
+
+  // Handle delete image with cleanup
   const handleDeleteImage = async (imageUrl: string) => {
     if (!car?.id) return;
-
+    
     setLoading(true);
     try {
       // Delete from storage
       const urlParts = imageUrl.split('/');
       const fileName = urlParts[urlParts.length - 1];
-
+      
       const { error: storageError } = await supabase.storage
         .from('car-images')
         .remove([`cars/${car.id}/${fileName}`]);
-
+      
       if (storageError) throw storageError;
-
+      
       // Delete from database
       const { error: dbError } = await supabase
         .from('car_images')
         .delete()
         .eq('car_id', car.id)
         .eq('url', imageUrl);
-
+      
       if (dbError) throw dbError;
-
+      
       // Update local state
-      const imageIndex = images.findIndex(img => img.url === imageUrl);
-      setImages(prev => prev.filter(img => img.url !== imageUrl));
-
+      setImages(prev => {
+        const newImages = prev.filter(img => img.url !== imageUrl);
+        
+        // If we deleted the main photo and there are still images left,
+        // set the first image as main
+        if (mainPhotoIndex === 0 && newImages.length > 0) {
+          handleSetMainImage(newImages[0].url);
+        }
+        
+        return newImages;
+      });
+      
+      // Clean up object URL if it exists
+      const imageFile = imageFiles.find(img => img.preview === imageUrl || img.preview === imageUrl);
+      if (imageFile && objectUrls.current.has(imageFile.preview as string)) {
+        URL.revokeObjectURL(imageFile.preview as string);
+        objectUrls.current.delete(imageFile.preview as string);
+      }
+      
       // Update image files
-      setImageFiles(prev => prev.filter(img => img.preview !== imageUrl));
-
-
+      setImageFiles(prev => {
+        const newImageFiles = prev.filter(img => img.preview !== imageUrl && img.preview !== imageUrl);
+        
+        // If we deleted the main photo and there are still images left,
+        // update mainPhotoIndex
+        if (mainPhotoIndex === 0 && newImageFiles.length > 0) {
+          setMainPhotoIndex(0);
+        } else if (newImageFiles.length === 0) {
+          setMainPhotoIndex(null);
+        }
+        
+        return newImageFiles;
+      });
+      
       toast.success(t('car.images.deleteSuccess'));
     } catch (error) {
       console.error('Error deleting image:', error);
@@ -568,6 +587,21 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
       setLoading(false);
     }
   };
+  
+  // Clean up object URLs on unmount
+  useEffect(() => {
+    return () => {
+      objectUrls.current.forEach(url => URL.revokeObjectURL(url));
+      objectUrls.current.clear();
+    };
+  }, []);
+  
+  // Ensure main photo index is always 0 when images are present
+  useEffect(() => {
+    if (images.length > 0 && mainPhotoIndex !== 0) {
+      setMainPhotoIndex(0);
+    }
+  }, [images.length, mainPhotoIndex]);
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1042,25 +1076,85 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
                           </p>
                         </div>
 
+                        <DndProvider backend={HTML5Backend}>
                           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
                             {images.map((image, index) => (
-                              <ImageThumbnail
+                              <DraggableImage
                                 key={image.url}
+                                id={image.url}
+                                index={index}
                                 preview={image.url}
-                                onRemove={() => handleDeleteImage(image.url)}
+                                isMain={index === 0}
+                                onRemove={handleDeleteImage}
+                                onSetMain={() => {
+                                  if (index !== 0) {
+                                    const newImages = [...images];
+                                    const [movedImage] = newImages.splice(index, 1);
+                                    newImages.unshift(movedImage);
+                                    setImages(newImages);
+                                    setMainPhotoIndex(0);
+                                    handleSetMainImage(movedImage.url);
+                                  }
+                                }}
+                                moveImage={(dragIndex, hoverIndex) => {
+                                  const newImages = [...images];
+                                  const [movedImage] = newImages.splice(dragIndex, 1);
+                                  newImages.splice(hoverIndex, 0, movedImage);
+                                  setImages(newImages);
+
+                                  if (hoverIndex === 0) {
+                                    setMainPhotoIndex(0);
+                                    handleSetMainImage(movedImage.url);
+                                  } else if (dragIndex === 0) {
+                                    setMainPhotoIndex(0);
+                                    handleSetMainImage(newImages[0].url);
+                                  }
+                                }}
+                                t={t}
+                                totalImages={images.length}
                               />
                             ))}
                           </div>
+                        </DndProvider>
                       </>
                     ) : (
-                      <div className="text-gray-500 dark:text-gray-400 text-center py-8">
-                        {t('common.noImages')}
+                      <div className="text-center py-8 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg">
+                        <div className="flex flex-col items-center justify-center">
+                          <ImageIcon className="h-12 w-12 text-gray-400 mb-2" />
+                          <p className="text-gray-500 dark:text-gray-400">
+                            {t('car.images.uploadPrompt')}
+                          </p>
+                          <p className="text-sm text-gray-400 mt-1">
+                            {t('car.images.supportedFormats')}
+                          </p>
+                        </div>
                       </div>
                     )}
-                  </div>
 
-                  <div className="mb-6">
-                    <ImageUpload onUpload={handleImageUpload} loading={loading} />
+                    <div className="mt-4">
+                      <label className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-qatar-maroon hover:bg-qatar-maroon/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon cursor-pointer">
+                        <Upload className="h-4 w-4 mr-2" />
+                        {t('car.images.uploadButton')}
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept="image/*"
+                          multiple
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files.length > 0) {
+                              handleImageUpload(Array.from(e.target.files));
+                            }
+                          }}
+                          disabled={uploading}
+                        />
+                      </label>
+                      {uploading && (
+                        <div className="mt-2 text-sm text-gray-500 dark:text-gray-400 flex items-center">
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          {t('car.images.uploading')}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div className="flex justify-end gap-3 mt-6">
