@@ -1,0 +1,10 @@
+export interface ImageFile {
+  preview: string;
+  isMain: boolean;
+  id: string;
+  type: 'new' | 'existing';
+  raw: File;
+  name: string;
+  size: number;
+  lastModified: number;
+}
