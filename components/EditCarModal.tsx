@@ -447,9 +447,11 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
         try {
           // Compress the image first with appropriate settings based on featured status
           const compressedFile = await compressImage(file, formData.is_featured);
-          const fileExt = compressedFile.name.split('.').pop() || 'webp';
-          const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
-          const filePath = `cars/${car.id}/${fileName}`;
+          const fileExt = 'webp'; // Always use webp extension for consistency
+          const timestamp = Date.now();
+          const randomStr = Math.random().toString(36).substring(2, 8);
+          const fileName = `${timestamp}-${randomStr}.${fileExt}`;
+          const filePath = `${car.id}/${fileName}`;
           
           // Upload the compressed file
           const { error: uploadError } = await supabase.storage
@@ -598,72 +600,71 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
     });
   };
 
-  // Handle delete image with cleanup
+  // Handle remove image from the UI (immediate removal)
+  const handleRemoveImage = (id: string, index: number) => {
+    const imageUrl = images[index]?.url || '';
+
+    // Remove from local state first for immediate UI update
+    setImages(prev => {
+      const newImages = [...prev];
+      newImages.splice(index, 1);
+      return newImages;
+    });
+
+    // Clean up object URL if it exists (for new images)
+    setImageFiles(prev => {
+      const newImageFiles = prev.filter((_, i) => i !== index);
+      const removedFile = prev[index];
+      
+      if (removedFile?.preview && objectUrls.current.has(removedFile.preview)) {
+        URL.revokeObjectURL(removedFile.preview);
+        objectUrls.current.delete(removedFile.preview);
+      }
+      
+      return newImageFiles;
+    });
+  };
+
+  // Handle delete image from storage and database
   const handleDeleteImage = async (imageUrl: string) => {
-    if (!car?.id) return;
+    if (!car?.id) {
+      console.error('No car ID available for image deletion');
+      return false;
+    }
     
-    setLoading(true);
     try {
-      // Delete from storage
+      // Extract filename from URL
       const urlParts = imageUrl.split('/');
       const fileName = urlParts[urlParts.length - 1];
+      const storagePath = `car-images/${car.id}/${fileName}`;
       
+      // 1. Delete from storage
       const { error: storageError } = await supabase.storage
         .from('car-images')
-        .remove([`cars/${car.id}/${fileName}`]);
+        .remove([storagePath]);
       
-      if (storageError) throw storageError;
+      if (storageError) {
+        console.error('Storage deletion error:', storageError);
+        return false;
+      }
       
-      // Delete from database
+      // 2. Delete from database
       const { error: dbError } = await supabase
         .from('car_images')
         .delete()
         .eq('car_id', car.id)
         .eq('url', imageUrl);
       
-      if (dbError) throw dbError;
-      
-      // Update local state
-      setImages(prev => {
-        const newImages = prev.filter(img => img.url !== imageUrl);
-        
-        // If we deleted the main photo and there are still images left,
-        // set the first image as main
-        if (mainPhotoIndex === 0 && newImages.length > 0) {
-          handleSetMainImage(newImages[0].url);
-        }
-        
-        return newImages;
-      });
-      
-      // Clean up object URL if it exists
-      const imageFile = imageFiles.find(img => img.preview === imageUrl || img.preview === imageUrl);
-      if (imageFile && objectUrls.current.has(imageFile.preview as string)) {
-        URL.revokeObjectURL(imageFile.preview as string);
-        objectUrls.current.delete(imageFile.preview as string);
+      if (dbError) {
+        console.error('Database deletion error:', dbError);
+        return false;
       }
       
-      // Update image files
-      setImageFiles(prev => {
-        const newImageFiles = prev.filter(img => img.preview !== imageUrl && img.preview !== imageUrl);
-        
-        // If we deleted the main photo and there are still images left,
-        // update mainPhotoIndex
-        if (mainPhotoIndex === 0 && newImageFiles.length > 0) {
-          setMainPhotoIndex(0);
-        } else if (newImageFiles.length === 0) {
-          setMainPhotoIndex(null);
-        }
-        
-        return newImageFiles;
-      });
+      return true;
       
-      toast.success(t('car.images.deleteSuccess'));
     } catch (error) {
-      console.error('Error deleting image:', error);
-      toast.error(t('car.images.deleteError'));
-    } finally {
-      setLoading(false);
+      console.error('Error during image deletion:', error);
+      return false;
     }
   };
   
@@ -1088,7 +1089,7 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
                         value={formData.doors}
                         onChange={(e) => setFormData(prev => ({ ...prev, doors: e.target.value }))}
                         className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-qatar-maroon focus:border-qatar-maroon sm:text-sm bg-white dark:bg-gray-700 transition-colors duration-200"
-                        required
+                        
                       >
                         <option value="">{t('car.select')}</option>
                         <option value="2">{t('car.doors.2')}</option>
@@ -1177,7 +1178,7 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
               index={index}
               preview={image.url}
               isMain={index === 0}
-              onRemove={handleDeleteImage}
+              onRemove={(id, idx) => handleRemoveImage(id, idx)}
               onSetMain={() => {
                 if (index !== 0) {
                   const newImages = [...images];
@@ -1338,14 +1339,7 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
     </div>
   )}
 
-  {images.length > 0 && images.length < 3 && (
-    <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 text-sm rounded-lg flex items-start">
-      <svg className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-      </svg>
-      <span>{t('car.images.recommendMore', { count: 3 - images.length })}</span>
-    </div>
-  )}
+  {/* Removed recommend more section */}
 </div>
 
                   <div className="flex justify-end gap-3 mt-6">
