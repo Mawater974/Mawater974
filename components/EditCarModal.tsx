@@ -406,38 +406,41 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
     }
   };
 
-  // Set an image as the main photo and update display order
+  // Set an image as the main photo
   const handleSetMainImage = async (imageUrl: string) => {
     if (!car?.id) return;
     
     setLoading(true);
     try {
+      // Find the index of the image to set as main
       const imageIndex = images.findIndex(img => img.url === imageUrl);
       if (imageIndex === -1) return;
       
-      // Update all images in a single transaction
-      await supabase.rpc('update_car_images_order', {
-        p_car_id: car.id,
-        p_new_main_image_url: imageUrl,
-        p_images: images.map((img, idx) => ({
-          url: img.url,
-          display_order: img.url === imageUrl ? 0 : idx + 1, // Main image gets order 0
-          is_main: img.url === imageUrl
-        }))
-      });
+      // Update all images to set is_main = false in the database
+      await supabase
+        .from('car_images')
+        .update({ is_main: false })
+        .eq('car_id', car.id);
+      
+      // Set the selected image as main in the database
+      await supabase
+        .from('car_images')
+        .update({ is_main: true })
+        .eq('car_id', car.id)
+        .eq('url', imageUrl);
       
       // Reorder images to put the main one first
       const newImages = [...images];
       const [movedImage] = newImages.splice(imageIndex, 1);
       newImages.unshift({ ...movedImage, is_main: true });
       
-      // Update local state with new order
+      // Update other images to set is_main = false
       const updatedImages = newImages.map((img, idx) => ({
         ...img,
-        display_order: idx,
         is_main: idx === 0
       }));
       
+      // Update local state
       setImages(updatedImages);
       setMainPhotoIndex(0);
       
@@ -448,8 +451,7 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
         newImageFiles.unshift({ ...movedFile, isMain: true });
         return newImageFiles.map((file, idx) => ({
           ...file,
-          isMain: idx === 0,
-          display_order: idx
+          isMain: idx === 0
         }));
       });
       
@@ -462,62 +464,34 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
     }
   };
 
-  // Move an image to a new position and update display_order
-const moveImage = async (dragIndex: number, hoverIndex: number) => {
-  if (!car?.id) return;
-  
-  try {
+  // Move an image to a new position
+  const moveImage = (dragIndex: number, hoverIndex: number) => {
+    if (!car?.id) return;
+    
     setImages(prev => {
       const newImages = [...prev];
       const [movedImage] = newImages.splice(dragIndex, 1);
       newImages.splice(hoverIndex, 0, movedImage);
       
-      // Update display_order for all images
-      const updatedImages = newImages.map((img, idx) => ({
-        ...img,
-        display_order: idx
-      }));
+      // If moved to first position, set as main
+      if (hoverIndex === 0) {
+        handleSetMainImage(movedImage.url);
+      } else if (dragIndex === 0) {
+        // If main photo was moved away, set new first photo as main
+        handleSetMainImage(newImages[0].url);
+      }
       
-      // Update display_order in database
-      supabase.rpc('update_car_images_order', {
-        p_car_id: car.id,
-        p_images: updatedImages.map(img => ({
-          url: img.url,
-          display_order: img.display_order,
-          is_main: img.is_main
-        }))
-      }).catch(console.error);
-      
-      return updatedImages;
+      return newImages;
     });
     
-    // Update imageFiles to maintain consistency
+    // Also update imageFiles to maintain consistency
     setImageFiles(prev => {
       const newImageFiles = [...prev];
       const [movedFile] = newImageFiles.splice(dragIndex, 1);
       newImageFiles.splice(hoverIndex, 0, movedFile);
-      
-      // Update display_order in imageFiles
-      return newImageFiles.map((file, idx) => ({
-        ...file,
-        display_order: idx,
-        isMain: idx === 0
-      }));
+      return newImageFiles;
     });
-    
-    // If moved to first position, set as main
-    if (hoverIndex === 0) {
-      await handleSetMainImage(images[dragIndex].url);
-    } else if (dragIndex === 0) {
-      // If main photo was moved away, set new first photo as main
-      await handleSetMainImage(images[1].url); // The new first image after move
-    }
-    
-  } catch (error) {
-    console.error('Error moving image:', error);
-    toast.error(t('car.images.moveError'));
-  }
-};
+  };
 
   // Handle delete image with cleanup
   const handleDeleteImage = async (imageUrl: string) => {
@@ -658,11 +632,12 @@ const moveImage = async (dragIndex: number, hoverIndex: number) => {
           .delete()
           .eq('car_id', car.id);
         
-        // Then insert the new ones
-        const imagesToInsert = images.map(img => ({
+        // Then insert the new ones with display_order
+        const imagesToInsert = images.map((img, index) => ({
           car_id: car.id,
           url: img.url,
-          is_main: img.is_main || false
+          is_main: img.is_main || false,
+          display_order: index  // Add display_order based on array index
         }));
         
         const { error: imagesError } = await supabase
