@@ -6,114 +6,16 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useSupabase } from '@/contexts/SupabaseContext';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { toast } from 'react-hot-toast';
+import { CarImage } from '@/types/car';
 import { Image as ImageIcon, Upload, Loader2 } from 'lucide-react';
+import { ImageFile } from '@/types/image';
 import { DraggableImage } from './DraggableImage';
-import { scrollToTop } from '@/utils/scrollToTop';
-import ImageCarousel from './ImageCarousel';
-import Image from 'next/image';
 import imageCompression from 'browser-image-compression';
 import heic2any from 'heic2any';
-
-type CarImage = {
-  url: string;
-  is_main?: boolean;
-};
-
-type ImageFile = {
-  preview: string;
-  isMain: boolean;
-  id: string;
-  type: 'new' | 'existing';
-  raw?: File;
-  name: string;
-  size: number;
-  lastModified: number;
-};
-
-// Convert HEIC/HEIF to JPEG for better compatibility
-const convertHeicToJpeg = async (file: File): Promise<File> => {
-  try {
-    const jpegBlob = await heic2any({
-      blob: file,
-      toType: 'image/jpeg',
-      quality: 0.9
-    }) as Blob;
-    
-    return new File(
-      [jpegBlob],
-      file.name.replace(/\.[^/.]+$/, '.jpg'),
-      { type: 'image/jpeg', lastModified: Date.now() }
-    );
-  } catch (error) {
-    console.error('Error converting HEIC/HEIF to JPEG:', error);
-    return file; // Return original if conversion fails
-  }
-};
-
-// Compress image with optimized settings
-const compressImage = async (file: File, isFeatured: boolean = false): Promise<File> => {
-  const fileType = file.type.toLowerCase();
-  
-  // Skip non-image files or unsupported image types
-  if (!fileType.startsWith('image/') || 
-      (fileType !== 'image/jpeg' && 
-       fileType !== 'image/png' && 
-       fileType !== 'image/webp' &&
-       !fileType.includes('heic') && 
-       !fileType.includes('heif'))) {
-    console.warn(`Unsupported file type: ${fileType}. File will be uploaded as-is.`);
-    return file;
-  }
-  
-  // Convert HEIC/HEIF to JPEG first
-  let processedFile = file;
-  if (fileType.includes('heic') || fileType.includes('heif')) {
-    processedFile = await convertHeicToJpeg(file);
-  }
-  
-  try {
-    const options = isFeatured ? {
-      // Higher quality settings for featured listings
-      maxSizeMB: 1.0, // Larger max size for better quality
-      maxWidthOrHeight: 2560, // Higher resolution for featured
-      useWebWorker: true,
-      maxIteration: 15,
-      fileType: 'image/webp',
-      initialQuality: 0.95, // Higher quality for featured
-      alwaysKeepResolution: true,
-      preserveExif: false,
-    } : {
-      // Standard compression for regular listings
-      maxSizeMB: 0.6,
-      maxWidthOrHeight: 1920,
-      useWebWorker: true,
-      maxIteration: 15,
-      fileType: 'image/webp',
-      initialQuality: 0.90,
-      alwaysKeepResolution: true,
-      preserveExif: false,
-    };
-    
-    const compressedBlob = await imageCompression(processedFile, options) as Blob;
-    
-    // Determine output format (convert all to webp for better compression, except for SVG)
-    const outputFormat = 'image/webp';
-    
-    // Create a new File object with the correct MIME type and extension
-    return new File(
-      [compressedBlob],
-      `${file.name.replace(/\.[^/.]+$/, '')}.webp`,
-      { 
-        type: outputFormat,
-        lastModified: Date.now()
-      }
-    );
-  } catch (error) {
-    console.error('Error compressing image:', error);
-    // In case of error, return the original file
-    return file;
-  }
-};
+import { scrollToTop } from '@/utils/scrollToTop';
+import ImageCarousel from './ImageCarousel';
+import ImageUpload from './ImageUpload';
+import Image from 'next/image';
 
 interface CarImage {
   url: string;
@@ -444,67 +346,58 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
       const newImageFiles: ImageFile[] = [];
       
       for (const file of files) {
-        try {
-          // Compress the image first with appropriate settings based on featured status
-          const compressedFile = await compressImage(file, formData.is_featured);
-          const fileExt = 'webp'; // Always use webp extension for consistency
-          const timestamp = Date.now();
-          const randomStr = Math.random().toString(36).substring(2, 8);
-          const fileName = `${timestamp}-${randomStr}.${fileExt}`;
-          const filePath = `${car.id}/${fileName}`;
-          
-          // Upload the compressed file
-          const { error: uploadError } = await supabase.storage
-            .from('car-images')
-            .upload(filePath, compressedFile);
-          
-          if (uploadError) throw uploadError;
-          
-          // Get the public URL
-          const { data: { publicUrl } } = supabase.storage
-            .from('car-images')
-            .getPublicUrl(filePath);
-          
-          // Create preview URL for the UI
-          const previewUrl = URL.createObjectURL(compressedFile);
-          objectUrls.current.add(previewUrl);
-          
-          // Add to uploaded images
-          const isMain = images.length === 0; // First image is main by default
-          uploadedImages.push({
-            url: publicUrl,
-            is_main: isMain
-          });
-          
-          // Add to image files for local state management
-          newImageFiles.push({
-            preview: previewUrl,
-            isMain,
-            id: `new-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-            type: 'new' as const,
-            raw: compressedFile,
-            name: compressedFile.name,
-            size: compressedFile.size,
-            lastModified: compressedFile.lastModified
-          });
-        } catch (error) {
-          console.error('Error processing image:', error);
-          toast.error(t('car.images.uploadError'));
-        }
+        // Compress the image first
+        const compressedFile = await compressImage(file);
+        const fileExt = compressedFile.name.split('.').pop();
+        const fileName = `${Math.random()}.${fileExt}`;
+        const filePath = `cars/${car.id}/${fileName}`;
+        
+        // Upload the compressed file
+        const { error: uploadError } = await supabase.storage
+          .from('car-images')
+          .upload(filePath, compressedFile);
+        
+        if (uploadError) throw uploadError;
+        
+        // Get the public URL
+        const { data: { publicUrl } } = supabase.storage
+          .from('car-images')
+          .getPublicUrl(filePath);
+        
+        // Create preview URL for the UI
+        const previewUrl = URL.createObjectURL(compressedFile);
+        objectUrls.current.add(previewUrl);
+        
+        // Add to uploaded images
+        const isMain = images.length === 0; // First image is main by default
+        uploadedImages.push({
+          url: publicUrl,
+          is_main: isMain
+        });
+        
+        // Add to image files for local state management
+        newImageFiles.push({
+          preview: previewUrl,
+          isMain,
+          id: `new-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+          type: 'new',
+          raw: compressedFile,
+          name: compressedFile.name,
+          size: compressedFile.size,
+          lastModified: compressedFile.lastModified
+        });
       }
       
-      if (uploadedImages.length > 0) {
-        // Update state with new images
-        setImages(prev => [...prev, ...uploadedImages]);
-        setImageFiles(prev => [...prev, ...newImageFiles]);
-        
-        // If this is the first image, set it as main
-        if (images.length === 0 && uploadedImages.length > 0) {
-          setMainPhotoIndex(0);
-        }
-        
-        toast.success(t('car.images.uploadSuccess'));
+      // Update state
+      setImages(prev => [...prev, ...uploadedImages]);
+      setImageFiles(prev => [...prev, ...newImageFiles]);
+      
+      // If this is the first image, set it as main
+      if (images.length === 0 && uploadedImages.length > 0) {
+        setMainPhotoIndex(0);
       }
+      
+      toast.success(t('car.images.uploadSuccess'));
     } catch (error) {
       console.error('Error uploading images:', error);
       toast.error(t('car.images.uploadError'));
@@ -513,41 +406,38 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
     }
   };
 
-  // Set an image as the main photo
+  // Set an image as the main photo and update display order
   const handleSetMainImage = async (imageUrl: string) => {
     if (!car?.id) return;
     
     setLoading(true);
     try {
-      // Find the index of the image to set as main
       const imageIndex = images.findIndex(img => img.url === imageUrl);
       if (imageIndex === -1) return;
       
-      // Update all images to set is_main = false in the database
-      await supabase
-        .from('car_images')
-        .update({ is_main: false })
-        .eq('car_id', car.id);
-      
-      // Set the selected image as main in the database
-      await supabase
-        .from('car_images')
-        .update({ is_main: true })
-        .eq('car_id', car.id)
-        .eq('url', imageUrl);
+      // Update all images in a single transaction
+      await supabase.rpc('update_car_images_order', {
+        p_car_id: car.id,
+        p_new_main_image_url: imageUrl,
+        p_images: images.map((img, idx) => ({
+          url: img.url,
+          display_order: img.url === imageUrl ? 0 : idx + 1, // Main image gets order 0
+          is_main: img.url === imageUrl
+        }))
+      });
       
       // Reorder images to put the main one first
       const newImages = [...images];
       const [movedImage] = newImages.splice(imageIndex, 1);
       newImages.unshift({ ...movedImage, is_main: true });
       
-      // Update other images to set is_main = false
+      // Update local state with new order
       const updatedImages = newImages.map((img, idx) => ({
         ...img,
+        display_order: idx,
         is_main: idx === 0
       }));
       
-      // Update local state
       setImages(updatedImages);
       setMainPhotoIndex(0);
       
@@ -558,7 +448,8 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
         newImageFiles.unshift({ ...movedFile, isMain: true });
         return newImageFiles.map((file, idx) => ({
           ...file,
-          isMain: idx === 0
+          isMain: idx === 0,
+          display_order: idx
         }));
       });
       
@@ -571,100 +462,129 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
     }
   };
 
-  // Move an image to a new position
-  const moveImage = (dragIndex: number, hoverIndex: number) => {
-    if (!car?.id) return;
-    
+  // Move an image to a new position and update display_order
+const moveImage = async (dragIndex: number, hoverIndex: number) => {
+  if (!car?.id) return;
+  
+  try {
     setImages(prev => {
       const newImages = [...prev];
       const [movedImage] = newImages.splice(dragIndex, 1);
       newImages.splice(hoverIndex, 0, movedImage);
       
-      // If moved to first position, set as main
-      if (hoverIndex === 0) {
-        handleSetMainImage(movedImage.url);
-      } else if (dragIndex === 0) {
-        // If main photo was moved away, set new first photo as main
-        handleSetMainImage(newImages[0].url);
-      }
+      // Update display_order for all images
+      const updatedImages = newImages.map((img, idx) => ({
+        ...img,
+        display_order: idx
+      }));
       
-      return newImages;
+      // Update display_order in database
+      supabase.rpc('update_car_images_order', {
+        p_car_id: car.id,
+        p_images: updatedImages.map(img => ({
+          url: img.url,
+          display_order: img.display_order,
+          is_main: img.is_main
+        }))
+      }).catch(console.error);
+      
+      return updatedImages;
     });
     
-    // Also update imageFiles to maintain consistency
+    // Update imageFiles to maintain consistency
     setImageFiles(prev => {
       const newImageFiles = [...prev];
       const [movedFile] = newImageFiles.splice(dragIndex, 1);
       newImageFiles.splice(hoverIndex, 0, movedFile);
-      return newImageFiles;
-    });
-  };
-
-  // Handle remove image from the UI (immediate removal)
-  const handleRemoveImage = (id: string, index: number) => {
-    const imageUrl = images[index]?.url || '';
-
-    // Remove from local state first for immediate UI update
-    setImages(prev => {
-      const newImages = [...prev];
-      newImages.splice(index, 1);
-      return newImages;
-    });
-
-    // Clean up object URL if it exists (for new images)
-    setImageFiles(prev => {
-      const newImageFiles = prev.filter((_, i) => i !== index);
-      const removedFile = prev[index];
       
-      if (removedFile?.preview && objectUrls.current.has(removedFile.preview)) {
-        URL.revokeObjectURL(removedFile.preview);
-        objectUrls.current.delete(removedFile.preview);
-      }
-      
-      return newImageFiles;
+      // Update display_order in imageFiles
+      return newImageFiles.map((file, idx) => ({
+        ...file,
+        display_order: idx,
+        isMain: idx === 0
+      }));
     });
-  };
-
-  // Handle delete image from storage and database
-  const handleDeleteImage = async (imageUrl: string) => {
-    if (!car?.id) {
-      console.error('No car ID available for image deletion');
-      return false;
+    
+    // If moved to first position, set as main
+    if (hoverIndex === 0) {
+      await handleSetMainImage(images[dragIndex].url);
+    } else if (dragIndex === 0) {
+      // If main photo was moved away, set new first photo as main
+      await handleSetMainImage(images[1].url); // The new first image after move
     }
     
+  } catch (error) {
+    console.error('Error moving image:', error);
+    toast.error(t('car.images.moveError'));
+  }
+};
+
+  // Handle delete image with cleanup
+  const handleDeleteImage = async (imageUrl: string) => {
+    if (!car?.id) return;
+    
+    setLoading(true);
     try {
-      // Extract filename from URL
+      // Delete from storage
       const urlParts = imageUrl.split('/');
       const fileName = urlParts[urlParts.length - 1];
-      const storagePath = `car-images/${car.id}/${fileName}`;
       
-      // 1. Delete from storage
       const { error: storageError } = await supabase.storage
         .from('car-images')
-        .remove([storagePath]);
+        .remove([`cars/${car.id}/${fileName}`]);
       
-      if (storageError) {
-        console.error('Storage deletion error:', storageError);
-        return false;
-      }
+      if (storageError) throw storageError;
       
-      // 2. Delete from database
+      // Delete from database
       const { error: dbError } = await supabase
         .from('car_images')
         .delete()
         .eq('car_id', car.id)
         .eq('url', imageUrl);
       
-      if (dbError) {
-        console.error('Database deletion error:', dbError);
-        return false;
+      if (dbError) throw dbError;
+      
+      // Update local state
+      setImages(prev => {
+        const newImages = prev.filter(img => img.url !== imageUrl);
+        
+        // If we deleted the main photo and there are still images left,
+        // set the first image as main
+        if (mainPhotoIndex === 0 && newImages.length > 0) {
+          handleSetMainImage(newImages[0].url);
+        }
+        
+        return newImages;
+      });
+      
+      // Clean up object URL if it exists
+      const imageFile = imageFiles.find(img => img.preview === imageUrl || img.preview === imageUrl);
+      if (imageFile && objectUrls.current.has(imageFile.preview as string)) {
+        URL.revokeObjectURL(imageFile.preview as string);
+        objectUrls.current.delete(imageFile.preview as string);
       }
       
-      return true;
+      // Update image files
+      setImageFiles(prev => {
+        const newImageFiles = prev.filter(img => img.preview !== imageUrl && img.preview !== imageUrl);
+        
+        // If we deleted the main photo and there are still images left,
+        // update mainPhotoIndex
+        if (mainPhotoIndex === 0 && newImageFiles.length > 0) {
+          setMainPhotoIndex(0);
+        } else if (newImageFiles.length === 0) {
+          setMainPhotoIndex(null);
+        }
+        
+        return newImageFiles;
+      });
       
+      toast.success(t('car.images.deleteSuccess'));
     } catch (error) {
-      console.error('Error during image deletion:', error);
-      return false;
+      console.error('Error deleting image:', error);
+      toast.error(t('car.images.deleteError'));
+    } finally {
+      setLoading(false);
     }
   };
   
@@ -738,12 +658,11 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
           .delete()
           .eq('car_id', car.id);
         
-        // Then insert the new ones with display_order
-        const imagesToInsert = images.map((img, index) => ({
+        // Then insert the new ones
+        const imagesToInsert = images.map(img => ({
           car_id: car.id,
           url: img.url,
-          is_main: img.is_main || false,
-          display_order: index  // Add display_order based on array index
+          is_main: img.is_main || false
         }));
         
         const { error: imagesError } = await supabase
@@ -1089,7 +1008,7 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
                         value={formData.doors}
                         onChange={(e) => setFormData(prev => ({ ...prev, doors: e.target.value }))}
                         className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-qatar-maroon focus:border-qatar-maroon sm:text-sm bg-white dark:bg-gray-700 transition-colors duration-200"
-                        
+                        required
                       >
                         <option value="">{t('car.select')}</option>
                         <option value="2">{t('car.doors.2')}</option>
@@ -1144,203 +1063,99 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
                     </div>
                   </div>
 
-                  <div className="mb-6">
-  <div className="flex items-center justify-between mb-4">
-    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-      {t('common.images')} <span className="text-sm text-gray-500 font-normal">({images.length}/{formData.is_featured ? 15 : 10})</span>
-    </h3>
-    {images.length > 0 && (
-      <div className="text-sm text-gray-500 dark:text-gray-400">
-        {t('car.images.dragToReorder')}
-      </div>
-    )}
-  </div>
+                  <div className="mb-6 rounded-md">
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+                      {t('common.images')}
+                    </h3>
+                    {images.length > 0 ? (
+                      <>
+                        {/* Main Photo Guidance */}
+                        <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                          <p className="text-sm text-gray-600 dark:text-gray-300">
+                            {t('myAds.edit.images.guidance')}
+                          </p>
+                        </div>
 
-  {images.length > 0 ? (
-    <>
-      <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/50 rounded-lg">
-        <div className="flex items-start">
-          <svg className="h-5 w-5 text-blue-500 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h.01a1 1 0 100-2H10V9z" clipRule="evenodd" />
-          </svg>
-          <p className="text-sm text-blue-700 dark:text-blue-300">
-            {t('myAds.edit.images.guidance')}
-          </p>
-        </div>
-      </div>
+                        <DndProvider backend={HTML5Backend}>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
+                            {images.map((image, index) => (
+                              <DraggableImage
+                                key={image.url}
+                                id={image.url}
+                                index={index}
+                                preview={image.url}
+                                isMain={index === 0}
+                                onRemove={handleDeleteImage}
+                                onSetMain={() => {
+                                  if (index !== 0) {
+                                    const newImages = [...images];
+                                    const [movedImage] = newImages.splice(index, 1);
+                                    newImages.unshift(movedImage);
+                                    setImages(newImages);
+                                    setMainPhotoIndex(0);
+                                    handleSetMainImage(movedImage.url);
+                                  }
+                                }}
+                                moveImage={(dragIndex, hoverIndex) => {
+                                  const newImages = [...images];
+                                  const [movedImage] = newImages.splice(dragIndex, 1);
+                                  newImages.splice(hoverIndex, 0, movedImage);
+                                  setImages(newImages);
 
-      <DndProvider backend={HTML5Backend}>
-        <div className="grid grid-cols-2 sm:grid-cols-3  gap-3">
-          {images.map((image, index) => (
-            <DraggableImage
-              key={image.url}
-              id={image.url}
-              index={index}
-              preview={image.url}
-              isMain={index === 0}
-              onRemove={(id, idx) => handleRemoveImage(id, idx)}
-              onSetMain={() => {
-                if (index !== 0) {
-                  const newImages = [...images];
-                  const [movedImage] = newImages.splice(index, 1);
-                  newImages.unshift(movedImage);
-                  setImages(newImages);
-                  setMainPhotoIndex(0);
-                  handleSetMainImage(movedImage.url);
-                }
-              }}
-              moveImage={(dragIndex, hoverIndex) => {
-                const newImages = [...images];
-                const [movedImage] = newImages.splice(dragIndex, 1);
-                newImages.splice(hoverIndex, 0, movedImage);
-                setImages(newImages);
+                                  if (hoverIndex === 0) {
+                                    setMainPhotoIndex(0);
+                                    handleSetMainImage(movedImage.url);
+                                  } else if (dragIndex === 0) {
+                                    setMainPhotoIndex(0);
+                                    handleSetMainImage(newImages[0].url);
+                                  }
+                                }}
+                                t={t}
+                                totalImages={images.length}
+                              />
+                            ))}
+                          </div>
+                        </DndProvider>
+                      </>
+                    ) : (
+                      <div className="text-center py-8 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg">
+                        <div className="flex flex-col items-center justify-center">
+                          <ImageIcon className="h-12 w-12 text-gray-400 mb-2" />
+                          <p className="text-gray-500 dark:text-gray-400">
+                            {t('car.images.uploadPrompt')}
+                          </p>
+                          <p className="text-sm text-gray-400 mt-1">
+                            {t('car.images.supportedFormats')}
+                          </p>
+                        </div>
+                      </div>
+                    )}
 
-                if (hoverIndex === 0) {
-                  setMainPhotoIndex(0);
-                  handleSetMainImage(movedImage.url);
-                } else if (dragIndex === 0) {
-                  setMainPhotoIndex(0);
-                  handleSetMainImage(newImages[0].url);
-                }
-              }}
-              t={t}
-              totalImages={images.length}
-            />
-          ))}
-          {images.length < (formData.is_featured ? 15 : 10) && (
-            <label 
-              className="relative group flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:border-qatar-maroon/50 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors duration-200"
-              onDragOver={(e) => {
-                e.preventDefault();
-                e.currentTarget.classList.add('ring-2', 'ring-qatar-maroon/50', 'border-qatar-maroon');
-              }}
-              onDragLeave={(e) => {
-                e.preventDefault();
-                e.currentTarget.classList.remove('ring-2', 'ring-qatar-maroon/50', 'border-qatar-maroon');
-              }}
-              onDrop={(e) => {
-                e.preventDefault();
-                e.currentTarget.classList.remove('ring-2', 'ring-qatar-maroon/50', 'border-qatar-maroon');
-                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-                  handleImageUpload(Array.from(e.dataTransfer.files));
-                }
-              }}
-            >
-              <div className="flex flex-col items-center justify-center p-4 text-center">
-                <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-full mb-2 group-hover:bg-qatar-maroon/10 dark:group-hover:bg-qatar-maroon/20 transition-colors">
-                  <Upload className="h-5 w-5 text-gray-500 dark:text-gray-400 group-hover:text-qatar-maroon transition-colors" />
-                </div>
-                <p className="text-sm text-gray-600 dark:text-gray-300 group-hover:text-qatar-maroon dark:group-hover:text-qatar-maroon transition-colors">
-                  {t('car.images.addMore')}
-                </p>
-                <p className="text-xs text-gray-400 mt-1">
-                  {(formData.is_featured ? 15 : 10) - images.length} {t('car.images.remaining')}
-                </p>
-              </div>
-              <input
-                type="file"
-                className="hidden"
-                accept="image/*"
-                multiple
-                onChange={(e) => {
-                  if (e.target.files && e.target.files.length > 0) {
-                    const maxImages = formData.is_featured ? 15 : 10;
-                    const remainingSlots = maxImages - images.length;
-                    const filesToUpload = Array.from(e.target.files).slice(0, remainingSlots);
-                    if (filesToUpload.length > 0) {
-                      handleImageUpload(filesToUpload);
-                    }
-                    if (filesToUpload.length < e.target.files.length) {
-                      toast.error(t('car.images.maxReached', { max: maxImages }));
-                    }
-                  }
-                }}
-                disabled={uploading || images.length >= (formData.is_featured ? 15 : 10)}
-              />
-            </label>
-          )}
-        </div>
-      </DndProvider>
-    </>
-  ) : (
-    <div 
-      className="relative w-full p-8 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800/50 hover:border-qatar-maroon/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200"
-      onDragOver={(e) => {
-        e.preventDefault();
-        e.currentTarget.classList.add('ring-2', 'ring-qatar-maroon/50', 'border-qatar-maroon');
-      }}
-      onDragLeave={(e) => {
-        e.preventDefault();
-        e.currentTarget.classList.remove('ring-2', 'ring-qatar-maroon/50', 'border-qatar-maroon');
-      }}
-      onDrop={(e) => {
-        e.preventDefault();
-        e.currentTarget.classList.remove('ring-2', 'ring-qatar-maroon/50', 'border-qatar-maroon');
-        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-          const maxImages = formData.is_featured ? 15 : 10;
-          const remainingSlots = maxImages - images.length;
-          const filesToUpload = Array.from(e.dataTransfer.files).slice(0, remainingSlots);
-          if (filesToUpload.length > 0) {
-            handleImageUpload(filesToUpload);
-          }
-          if (filesToUpload.length < e.dataTransfer.files.length) {
-            toast.error(t('car.images.maxReached', { max: maxImages }));
-          }
-        }
-      }}
-    >
-      <div className="flex flex-col items-center justify-center text-center">
-        <div className="p-3 bg-gray-100 dark:bg-gray-700 rounded-full mb-4">
-          <ImageIcon className="h-8 w-8 text-gray-400" />
-        </div>
-        <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-1">
-          {t('car.images.dragAndDrop')}
-        </h4>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-          {t('car.images.or')}
-        </p>
-        <label className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-qatar-maroon hover:bg-qatar-maroon/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon cursor-pointer transition-colors">
-          <Upload className="h-4 w-4 mr-2" />
-          {t('car.images.uploadButton')}
-          <input
-            type="file"
-            className="hidden"
-            accept="image/*"
-            multiple
-            onChange={(e) => {
-              if (e.target.files && e.target.files.length > 0) {
-                const maxImages = formData.is_featured ? 15 : 10;
-                const remainingSlots = Math.max(0, maxImages - images.length);
-                const filesToUpload = Array.from(e.target.files).slice(0, remainingSlots);
-                
-                if (filesToUpload.length > 0) {
-                  handleImageUpload(filesToUpload);
-                }
-                
-                if (e.target.files.length > remainingSlots) {
-                  toast.error(t('car.images.maxReached', { max: maxImages }));
-                }
-              }
-            }}
-            disabled={uploading || images.length >= (formData.is_featured ? 15 : 10)}
-          />
-        </label>
-        <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
-          {t('car.images.supportedFormats')} • {t('car.images.maxSize')}
-        </p>
-      </div>
-    </div>
-  )}
-
-  {uploading && (
-    <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-sm rounded-lg flex items-center">
-      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-      {t('car.images.uploading')}...
-    </div>
-  )}
-
-  {/* Removed recommend more section */}
-</div>
+                    <div className="mt-4">
+                      <label className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-qatar-maroon hover:bg-qatar-maroon/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon cursor-pointer">
+                        <Upload className="h-4 w-4 mr-2" />
+                        {t('car.images.uploadButton')}
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept="image/*"
+                          multiple
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files.length > 0) {
+                              handleImageUpload(Array.from(e.target.files));
+                            }
+                          }}
+                          disabled={uploading}
+                        />
+                      </label>
+                      {uploading && (
+                        <div className="mt-2 text-sm text-gray-500 dark:text-gray-400 flex items-center">
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          {t('car.images.uploading')}
+                        </div>
+                      )}
+                    </div>
+                  </div>
 
                   <div className="flex justify-end gap-3 mt-6">
                     <button
