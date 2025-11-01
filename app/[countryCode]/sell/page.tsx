@@ -26,6 +26,114 @@ type City = Database['public']['Tables']['cities']['Row'];
 import { ImageFile } from '@/types/image';
 import { getCountryFromIP } from '@/utils/geoLocation';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import imageCompression from 'browser-image-compression';
+import heic2any from 'heic2any';
+
+// Helper function to get image dimensions
+const getImageDimensions = (file: File): Promise<{ width: number; height: number }> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    
+    img.onload = () => {
+      resolve({
+        width: img.width,
+        height: img.height
+      });
+      URL.revokeObjectURL(objectUrl);
+    };
+    
+    img.onerror = () => {
+      resolve({ width: 0, height: 0 });
+      URL.revokeObjectURL(objectUrl);
+    };
+    
+    img.src = objectUrl;
+  });
+};
+
+// Convert HEIC/HEIF to JPEG for better compatibility
+const convertHeicToJpeg = async (file: File): Promise<File> => {
+  try {
+    const jpegBlob = await heic2any({
+      blob: file,
+      toType: 'image/jpeg',
+      quality: 0.9
+    }) as Blob;
+    
+    return new File(
+      [jpegBlob],
+      file.name.replace(/\.[^/.]+$/, '.jpg'),
+      { type: 'image/jpeg', lastModified: Date.now() }
+    );
+  } catch (error) {
+    console.error('Error converting HEIC/HEIF to JPEG:', error);
+    return file; // Return original if conversion fails
+  }
+};
+
+// Compress image with optimized settings
+const compressImage = async (file: File, isFeatured: boolean = false): Promise<File> => {
+  const fileType = file.type.toLowerCase();
+  
+  // Skip non-image files or unsupported image types
+  if (!fileType.startsWith('image/') ||
+      (fileType !== 'image/jpeg' &&
+       fileType !== 'image/png' &&
+       fileType !== 'image/webp' &&
+       !fileType.includes('heic') &&
+       !fileType.includes('heif'))) {
+    console.warn(`Unsupported file type: ${fileType}. File will be uploaded as-is.`);
+    return file;
+  }
+
+  // Convert HEIC/HEIF to JPEG first
+  let processedFile = file;
+  if (fileType.includes('heic') || fileType.includes('heif')) {
+    processedFile = await convertHeicToJpeg(file);
+  }
+
+  try {
+    const options = isFeatured ? {
+      // Higher quality settings for featured listings
+      maxSizeMB: 1.0, // Larger max size for better quality
+      maxWidthOrHeight: 2560, // Higher resolution for featured
+      useWebWorker: true,
+      maxIteration: 15,
+      fileType: 'image/webp',
+      initialQuality: 0.95, // Higher quality for featured
+      alwaysKeepResolution: true,
+      preserveExif: false,
+    } : {
+      // Standard compression for regular listings
+      maxSizeMB: 0.6,
+      maxWidthOrHeight: 1920,
+      useWebWorker: true,
+      maxIteration: 15,
+      fileType: 'image/webp',
+      initialQuality: 0.90,
+      alwaysKeepResolution: true,
+      preserveExif: false,
+    };
+
+    const compressedBlob = await imageCompression(processedFile, options);
+    
+    // Create a new File object with the correct MIME type and extension
+    return new File(
+      [compressedBlob],
+      `${file.name.replace(/\.[^/.]+$/, '')}.webp`,
+      { 
+        type: 'image/webp',
+        lastModified: Date.now()
+      }
+    );
+  } catch (error) {
+    console.error('Error compressing image:', error);
+    // In case of error, return the original file
+    return file;
+  }
+};
+
 
 export type FormData = {
   is_featured?: boolean | null;
@@ -443,35 +551,50 @@ export default function NewSellPage() {
         throw new Error(t('errors.images_required'));
       }
       
+      // Helper function to safely parse numeric values
+      const parseNumber = (value: string | number | undefined | null): number | null => {
+        if (value === undefined || value === null || value === '') return null;
+        const num = typeof value === 'string' ? parseInt(value, 10) : Math.floor(Number(value));
+        return isNaN(num) ? null : num;
+      };
+
+      // Helper function to safely parse float values
+      const parseFloatValue = (value: string | number | undefined | null): number | null => {
+        if (value === undefined || value === null || value === '') return null;
+        const num = typeof value === 'string' ? parseFloat(value) : Number(value);
+        return isNaN(num) ? null : num;
+      };
+
       // Prepare listing data for database (without images)
       const listingData = {
         user_id: user?.id,
         brand_id: formData.brand_id || null,
         model_id: formData.model_id || null,
         exact_model: formData.exact_model || null,
-        year: formData.year ? parseInt(formData.year) : null,
-        mileage: formData.mileage ? parseInt(formData.mileage.toString()) : null,
-        price: formData.price ? parseFloat(formData.price.toString()) : null,
-        description: formData.description || '',
+        year: parseNumber(formData.year),
+        mileage: parseNumber(formData.mileage),
+        price: parseFloatValue(formData.price),
+        description: formData.description || null,
         country_id: formData.country_id || currentCountry?.id,
         city_id: formData.city_id || null,
-        fuel_type: formData.fuel_type || '',
-        gearbox_type: formData.gearbox_type || '',
-        body_type: formData.body_type || '',
-        condition: formData.condition || '',
-        color: formData.color || '',
-        cylinders: formData.cylinders || '',
-        doors: formData.doors || '',
-        drive_type: formData.drive_type || '',
-        warranty: formData.warranty || '',
-        is_featured: formData.is_featured || false,
+        fuel_type: formData.fuel_type || null,
+        gearbox_type: formData.gearbox_type || null,
+        body_type: formData.body_type || null,
+        condition: formData.condition || null,
+        color: formData.color || null,
+        cylinders: formData.cylinders || null,
+        doors: formData.doors ? parseInt(formData.doors) : null,
+        drive_type: formData.drive_type || null,
+        warranty: formData.warranty || null,
+        warranty_months_remaining: formData.warranty_months_remaining ? parseInt(formData.warranty_months_remaining) : null,
+        is_featured: Boolean(formData.is_featured),
         payment_intent_id: formData.payment_intent_id || null,
         payment_method_id: formData.payment_method_id || null,
         payment_status: formData.payment_status || null,
-        payment_amount: formData.payment_amount || null,
+        payment_amount: formData.payment_amount ? parseFloat(formData.payment_amount.toString()) : null,
         payment_currency: formData.payment_currency || null,
         payment_session_id: formData.payment_session_id || null,
-        payment_metadata: formData.payment_metadata || { payment_method: '', listing_type: '' },
+        payment_metadata: formData.payment_metadata || null,
         status: 'pending',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -563,56 +686,72 @@ export default function NewSellPage() {
         console.log('Starting image uploads...');
         const imagePromises = formData.images.map(async (file, index) => {
           try {
-            // Convert to a proper File object
+            // Convert to a proper File object and compress
             const fileToUpload = await convertToFile(file);
+            const compressedFile = await compressImage(fileToUpload, Boolean(formData.is_featured));
             
-            const fileExt = fileToUpload.name.split('.').pop();
-            const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-            const filePath = `${user?.id}/${listing.id}/${fileName}`;
+            // Generate consistent file name with WebP extension
+            const fileExt = 'webp';
+            const timestamp = Date.now();
+            const randomStr = Math.random().toString(36).substring(2, 8);
+            const fileName = `${timestamp}-${randomStr}.${fileExt}`;
+            const filePath = `${listing.id}/${fileName}`;
 
-            console.log('Uploading image:', filePath, 'Type:', fileToUpload.type);
+            console.log('Uploading image:', filePath, 'Type:', compressedFile.type, 'Size:', (compressedFile.size / 1024).toFixed(2) + 'KB');
 
-            // Upload the image with correct MIME type
-            const { error: uploadError } = await supabase.storage
-              .from('car-images')
-              .upload(filePath, fileToUpload, {
-                contentType: fileToUpload.type || 'image/jpeg',
-                upsert: false,
-                cacheControl: '3600'
+            try {
+              // Upload the compressed image with WebP format
+              const { error: uploadError } = await supabase.storage
+                .from('car-images')
+                .upload(filePath, compressedFile, {
+                  contentType: 'image/webp',
+                  upsert: false,
+                  cacheControl: '3600'
+                });
+
+              if (uploadError) {
+                console.error('Error uploading image:', uploadError);
+                throw uploadError;
+              }
+
+              // Get the public URL
+              const { data: urlData } = supabase.storage
+                .from('car-images')
+                .getPublicUrl(filePath);
+
+              if (!urlData?.publicUrl) {
+                throw new Error('Failed to get public URL for uploaded image');
+              }
+
+              const imageUrl = urlData.publicUrl;
+              const imageDimensions = await getImageDimensions(compressedFile);
+              
+              console.log('Image uploaded successfully:', {
+                url: imageUrl,
+                size: (compressedFile.size / 1024).toFixed(2) + 'KB',
+                dimensions: imageDimensions
               });
 
-            if (uploadError) {
-              console.error('Error uploading image:', uploadError);
-              throw uploadError;
+              // Insert image record
+              const { error: insertError } = await supabase
+                .from('car_images')
+                .insert([{
+                  car_id: listing.id,
+                  url: imageUrl,
+                  is_main: index === formData.mainPhotoIndex,
+                  display_order: index
+                }]);
+
+              if (insertError) {
+                console.error('Error inserting image record:', insertError);
+                throw insertError;
+              }
+
+              return imageUrl;
+            } catch (error) {
+              console.error('Error in image upload process:', error);
+              throw error;
             }
-
-            // Get the public URL
-            const { data: urlData } = supabase.storage
-              .from('car-images')
-              .getPublicUrl(filePath);
-
-            if (!urlData?.publicUrl) {
-              throw new Error('Failed to get public URL for uploaded image');
-            }
-
-            console.log('Image uploaded successfully, public URL:', urlData.publicUrl);
-
-            // Insert image record
-            const { error: insertError } = await supabase
-              .from('car_images')
-              .insert([{
-                car_id: listing.id,
-                url: urlData.publicUrl,
-                is_main: index === formData.mainPhotoIndex,
-                display_order: index
-              }]);
-
-            if (insertError) {
-              console.error('Error inserting image record:', insertError);
-              throw insertError;
-            }
-
-            return urlData.publicUrl;
           } catch (error) {
             console.error('Error processing image:', error);
             throw error;
