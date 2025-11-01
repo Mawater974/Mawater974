@@ -10,7 +10,7 @@ interface CountryInfo {
   code: string;
   name: string;
 }
-
+export const getUserCountry = getCountryFromIP;
 // Function to get country from IP using a third-party service
 export async function getCountryFromIP(): Promise<CountryInfo> {
   try {

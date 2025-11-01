@@ -1,26 +1,57 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: false,
+  output: 'export',
+  distDir: 'out',
+  // Skip TypeScript and ESLint during build
   typescript: {
     ignoreBuildErrors: true
   },
   eslint: {
     ignoreDuringBuilds: true
   },
+  // Disable image optimization during export
   images: {
-    domains: ['eyhpjdnfeetmlayyxshx.supabase.co'],
-    unoptimized: true
+    unoptimized: true,
+    loader: 'imgix',
+    path: '',
+    domains: ['eyhpjdnfeetmlayyxshx.supabase.co']
   },
+  // Disable minification for easier debugging
+  swcMinify: false,
   compiler: {
-    removeConsole: false
+    removeConsole: false // Keep console logs for now
   },
-  webpack: (config) => {
-    config.resolve.fallback = { fs: false };
+  // Handle webpack configurations
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+        dns: false,
+        child_process: false,
+        http2: false,
+        dgram: false,
+        module: false,
+        path: false,
+        os: false,
+        crypto: false,
+      };
+    }
     return config;
   },
-  env: {
-    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  // Disable static page generation for problematic pages
+  exportPathMap: async function() {
+    return {
+      '/': { page: '/' },
+      // Add other pages that work well statically
+    };
+  },
+  // Disable server components
+  experimental: {
+    serverComponents: false,
   }
 };
 
