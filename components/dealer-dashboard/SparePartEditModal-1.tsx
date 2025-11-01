@@ -332,14 +332,42 @@ export default function SparePartEditModal1({
     }
   };
   
-  const handleSetPrimary = (index: number) => {
-    setImages(prev =>
-      prev.map((img, i) => ({
-        ...img,
-        is_primary: i === index,
-      }))
-    );
-  };
+ const handleSetPrimary = async (index: number) => {
+  if (!supabase || !sparePart?.id) {
+    console.error('Missing supabase client or spare part ID');
+    toast.error(t('common.error'));
+    return;
+  }
+  
+  setLoading(true);
+  try {
+    // Create a new array with the selected image moved to the first position
+    const newImages = [...images];
+    if (index === 0) {
+      setLoading(false);
+      return;
+    }
+    
+    const [movedImage] = newImages.splice(index, 1);
+    newImages.unshift(movedImage);
+
+    // Update local state immediately for better UX
+    const updatedImages = newImages.map((img, idx) => ({
+      ...img,
+      is_primary: idx === 0 // First image is always primary
+    }));
+    
+    setImages(updatedImages);
+
+    // Rest of your code...
+  } catch (error) {
+    console.error('Error setting primary image:', error);
+    toast.error(t('common.error'));
+    setImages(images); // Revert on error
+  } finally {
+    setLoading(false);
+  }
+};
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
