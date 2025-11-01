@@ -1,16 +1,10 @@
 import { Fragment, useEffect, useState, useRef, useMemo } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
-import { DndProvider } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSupabase } from '@/contexts/SupabaseContext';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { toast } from 'react-hot-toast';
 import { Image as ImageIcon, Upload, Loader2 } from 'lucide-react';
-import { DraggableImage } from './DraggableImage';
-import { scrollToTop } from '@/utils/scrollToTop';
-import ImageCarousel from './ImageCarousel';
-import Image from 'next/image';
 import imageCompression from 'browser-image-compression';
 import heic2any from 'heic2any';
 
@@ -1173,3 +1167,4 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
 }
 
 export default EditCarModal;
+
