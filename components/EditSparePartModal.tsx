@@ -1119,7 +1119,7 @@ const [formData, setFormData] = useState({
                         
 
                               {/* Country */}
-                        <div>
+                      {/*  <div>
                           <label htmlFor="country_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                             {t('spareParts.add.countryLabel')} *
                           </label>
@@ -1138,8 +1138,8 @@ const [formData, setFormData] = useState({
                               </option>
                             ))}
                           </select>
-                        </div>
-
+                        </div>*/}
+                        
                         {/* City */}
                         <div>
                           <label htmlFor="city_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
