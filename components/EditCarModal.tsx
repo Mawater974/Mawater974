@@ -6,16 +6,114 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useSupabase } from '@/contexts/SupabaseContext';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { toast } from 'react-hot-toast';
-import { CarImage } from '@/types/car';
 import { Image as ImageIcon, Upload, Loader2 } from 'lucide-react';
-import { ImageFile } from '@/types/image';
 import { DraggableImage } from './DraggableImage';
-import imageCompression from 'browser-image-compression';
-import heic2any from 'heic2any';
 import { scrollToTop } from '@/utils/scrollToTop';
 import ImageCarousel from './ImageCarousel';
-import ImageUpload from './ImageUpload';
 import Image from 'next/image';
+import imageCompression from 'browser-image-compression';
+import heic2any from 'heic2any';
+
+type CarImage = {
+  url: string;
+  is_main?: boolean;
+};
+
+type ImageFile = {
+  preview: string;
+  isMain: boolean;
+  id: string;
+  type: 'new' | 'existing';
+  raw?: File;
+  name: string;
+  size: number;
+  lastModified: number;
+};
+
+// Convert HEIC/HEIF to JPEG for better compatibility
+const convertHeicToJpeg = async (file: File): Promise<File> => {
+  try {
+    const jpegBlob = await heic2any({
+      blob: file,
+      toType: 'image/jpeg',
+      quality: 0.9
+    }) as Blob;
+    
+    return new File(
+      [jpegBlob],
+      file.name.replace(/\.[^/.]+$/, '.jpg'),
+      { type: 'image/jpeg', lastModified: Date.now() }
+    );
+  } catch (error) {
+    console.error('Error converting HEIC/HEIF to JPEG:', error);
+    return file; // Return original if conversion fails
+  }
+};
+
+// Compress image with optimized settings
+const compressImage = async (file: File, isFeatured: boolean = false): Promise<File> => {
+  const fileType = file.type.toLowerCase();
+  
+  // Skip non-image files or unsupported image types
+  if (!fileType.startsWith('image/') || 
+      (fileType !== 'image/jpeg' && 
+       fileType !== 'image/png' && 
+       fileType !== 'image/webp' &&
+       !fileType.includes('heic') && 
+       !fileType.includes('heif'))) {
+    console.warn(`Unsupported file type: ${fileType}. File will be uploaded as-is.`);
+    return file;
+  }
+  
+  // Convert HEIC/HEIF to JPEG first
+  let processedFile = file;
+  if (fileType.includes('heic') || fileType.includes('heif')) {
+    processedFile = await convertHeicToJpeg(file);
+  }
+  
+  try {
+    const options = isFeatured ? {
+      // Higher quality settings for featured listings
+      maxSizeMB: 1.0, // Larger max size for better quality
+      maxWidthOrHeight: 2560, // Higher resolution for featured
+      useWebWorker: true,
+      maxIteration: 15,
+      fileType: 'image/webp',
+      initialQuality: 0.95, // Higher quality for featured
+      alwaysKeepResolution: true,
+      preserveExif: false,
+    } : {
+      // Standard compression for regular listings
+      maxSizeMB: 0.6,
+      maxWidthOrHeight: 1920,
+      useWebWorker: true,
+      maxIteration: 15,
+      fileType: 'image/webp',
+      initialQuality: 0.90,
+      alwaysKeepResolution: true,
+      preserveExif: false,
+    };
+    
+    const compressedBlob = await imageCompression(processedFile, options) as Blob;
+    
+    // Determine output format (convert all to webp for better compression, except for SVG)
+    const outputFormat = 'image/webp';
+    
+    // Create a new File object with the correct MIME type and extension
+    return new File(
+      [compressedBlob],
+      `${file.name.replace(/\.[^/.]+$/, '')}.webp`,
+      { 
+        type: outputFormat,
+        lastModified: Date.now()
+      }
+    );
+  } catch (error) {
+    console.error('Error compressing image:', error);
+    // In case of error, return the original file
+    return file;
+  }
+};
 
 interface CarImage {
   url: string;
@@ -346,58 +444,65 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
       const newImageFiles: ImageFile[] = [];
       
       for (const file of files) {
-        // Compress the image first
-        const compressedFile = await compressImage(file);
-        const fileExt = compressedFile.name.split('.').pop();
-        const fileName = `${Math.random()}.${fileExt}`;
-        const filePath = `${car.id}/${fileName}`;
-        
-        // Upload the compressed file
-        const { error: uploadError } = await supabase.storage
-          .from('car-images')
-          .upload(filePath, compressedFile);
-        
-        if (uploadError) throw uploadError;
-        
-        // Get the public URL
-        const { data: { publicUrl } } = supabase.storage
-          .from('car-images')
-          .getPublicUrl(filePath);
-        
-        // Create preview URL for the UI
-        const previewUrl = URL.createObjectURL(compressedFile);
-        objectUrls.current.add(previewUrl);
-        
-        // Add to uploaded images
-        const isMain = images.length === 0; // First image is main by default
-        uploadedImages.push({
-          url: publicUrl,
-          is_main: isMain
-        });
-        
-        // Add to image files for local state management
-        newImageFiles.push({
-          preview: previewUrl,
-          isMain,
-          id: `new-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-          type: 'new',
-          raw: compressedFile,
-          name: compressedFile.name,
-          size: compressedFile.size,
-          lastModified: compressedFile.lastModified
-        });
+        try {
+          // Compress the image first with appropriate settings based on featured status
+          const compressedFile = await compressImage(file, formData.is_featured);
+          const fileExt = compressedFile.name.split('.').pop() || 'webp';
+          const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+          const filePath = `cars/${car.id}/${fileName}`;
+          
+          // Upload the compressed file
+          const { error: uploadError } = await supabase.storage
+            .from('car-images')
+            .upload(filePath, compressedFile);
+          
+          if (uploadError) throw uploadError;
+          
+          // Get the public URL
+          const { data: { publicUrl } } = supabase.storage
+            .from('car-images')
+            .getPublicUrl(filePath);
+          
+          // Create preview URL for the UI
+          const previewUrl = URL.createObjectURL(compressedFile);
+          objectUrls.current.add(previewUrl);
+          
+          // Add to uploaded images
+          const isMain = images.length === 0; // First image is main by default
+          uploadedImages.push({
+            url: publicUrl,
+            is_main: isMain
+          });
+          
+          // Add to image files for local state management
+          newImageFiles.push({
+            preview: previewUrl,
+            isMain,
+            id: `new-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+            type: 'new' as const,
+            raw: compressedFile,
+            name: compressedFile.name,
+            size: compressedFile.size,
+            lastModified: compressedFile.lastModified
+          });
+        } catch (error) {
+          console.error('Error processing image:', error);
+          toast.error(t('car.images.uploadError'));
+        }
       }
       
-      // Update state
-      setImages(prev => [...prev, ...uploadedImages]);
-      setImageFiles(prev => [...prev, ...newImageFiles]);
-      
-      // If this is the first image, set it as main
-      if (images.length === 0 && uploadedImages.length > 0) {
-        setMainPhotoIndex(0);
+      if (uploadedImages.length > 0) {
+        // Update state with new images
+        setImages(prev => [...prev, ...uploadedImages]);
+        setImageFiles(prev => [...prev, ...newImageFiles]);
+        
+        // If this is the first image, set it as main
+        if (images.length === 0 && uploadedImages.length > 0) {
+          setMainPhotoIndex(0);
+        }
+        
+        toast.success(t('car.images.uploadSuccess'));
       }
-      
-      toast.success(t('car.images.uploadSuccess'));
     } catch (error) {
       console.error('Error uploading images:', error);
       toast.error(t('car.images.uploadError'));
@@ -505,7 +610,7 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
       
       const { error: storageError } = await supabase.storage
         .from('car-images')
-        .remove([`${car.id}/${fileName}`]);
+        .remove([`cars/${car.id}/${fileName}`]);
       
       if (storageError) throw storageError;
       
