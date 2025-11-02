@@ -850,7 +850,7 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
                   <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     <div>
                       <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-                        {t('car.brand')}
+                        {t('car.brand')} *
                       </label>
                       <select
                         value={formData.brand_id}
@@ -875,7 +875,7 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
 
                     <div>
                       <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-                        {t('car.model')}
+                        {t('car.model')} *
                       </label>
                       <select
                         value={formData.model_id}
@@ -906,7 +906,7 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
 
                     <div>
                       <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-                        {t('car.year')}
+                        {t('car.year')} *
                       </label>
                       <input
                         type="number"
@@ -921,7 +921,7 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
 
                     <div>
                       <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-                        {t('car.mileage')}
+                        {t('car.mileage')} *
                       </label>
                       <input
                         type="number"
@@ -949,7 +949,7 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
                     </div>
                     <div>
                       <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-                        {t('car.color')}
+                        {t('car.color')} *
                       </label>
                       <select
                         value={formData.color}
@@ -979,7 +979,7 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
 
                     <div>
                       <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-                        {t('car.cylinders')}
+                        {t('car.cylinders')} 
                       </label>
                       <select
                         value={formData.cylinders}
@@ -998,7 +998,7 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
                       </select>
                     </div>
 
-                    <div>
+                    {/* <div>
                       <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
                         {t('car.country')}
                       </label>
@@ -1015,10 +1015,10 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
                           </option>
                         ))}
                       </select>
-                    </div>
+                    </div> */}
                     <div>
                       <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-                        {t('car.city')}
+                        {t('car.city')} *
                       </label>
                       <select
                         value={formData.city_id}
@@ -1036,7 +1036,7 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
                     </div>
                     <div>
                       <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-                        {t('car.fuelType.label')}
+                        {t('car.fuelType.label')} *
                       </label>
                       <select
                         value={formData.fuel_type}
@@ -1054,7 +1054,7 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
 
                     <div>
                       <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-                        {t('car.gearboxType')}
+                        {t('car.gearboxType')} *
                       </label>
                       <select
                         value={formData.gearbox_type}
@@ -1071,7 +1071,7 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
                     
                     <div>
                       <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-                        {t('car.bodyType')}
+                        {t('car.bodyType')} 
                       </label>
                       <select
                         value={formData.body_type}
@@ -1095,7 +1095,7 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
 
                     <div>
                       <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-                        {t('car.condition')}
+                        {t('car.condition')} *
                       </label>
                       <select
                         value={formData.condition}
@@ -1199,7 +1199,7 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
       </div>
 
       <DndProvider backend={HTML5Backend}>
-        <div className="grid grid-cols-2 sm:grid-cols-3  gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-3">
           {images.map((image, index) => (
             <DraggableImage
               key={image.url}
