@@ -63,8 +63,6 @@ const convertHeicToJpeg = async (file: File): Promise<File> => {
   }
 };
 
-// Remove duplicate CarImage interface since it's already defined above
-
 // Compress image with optimized settings
 const compressImage = async (file: File, isFeatured: boolean = false): Promise<File> => {
   const fileType = file.type.toLowerCase();
@@ -619,6 +617,10 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
     
     setLoading(true);
     try {
+      // First, check if this is the main photo
+      const isMainPhoto = mainPhotoIndex === 0 && 
+        (imageFiles[0]?.url === imageUrl || imageFiles[0]?.preview === imageUrl);
+      
       // Delete from storage
       const urlParts = imageUrl.split('/');
       const fileName = urlParts[urlParts.length - 1];
@@ -641,31 +643,31 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
       // Update local state
       setImages(prev => {
         const newImages = prev.filter(img => img.url !== imageUrl);
-        
-        // If we deleted the main photo and there are still images left,
-        // set the first image as main
-        if (mainPhotoIndex === 0 && newImages.length > 0) {
-          handleSetMainImage(newImages[0].url);
-        }
-        
         return newImages;
       });
       
-      // Clean up object URL if it exists
-      const imageFile = imageFiles.find(img => img.preview === imageUrl || img.preview === imageUrl);
-      if (imageFile && objectUrls.current.has(imageFile.preview as string)) {
-        URL.revokeObjectURL(imageFile.preview as string);
-        objectUrls.current.delete(imageFile.preview as string);
-      }
-      
-      // Update image files
+      // Clean up object URL if it exists and update image files state
       setImageFiles(prev => {
-        const newImageFiles = prev.filter(img => img.preview !== imageUrl && img.preview !== imageUrl);
+        const newImageFiles = prev.filter(img => {
+          if (img.preview === imageUrl || img.url === imageUrl) {
+            // Clean up object URL if it exists
+            if (objectUrls.current.has(img.preview)) {
+              URL.revokeObjectURL(img.preview);
+              objectUrls.current.delete(img.preview);
+            }
+            return false;
+          }
+          return true;
+        });
         
         // If we deleted the main photo and there are still images left,
-        // update mainPhotoIndex
-        if (mainPhotoIndex === 0 && newImageFiles.length > 0) {
+        // set the new first image as main
+        if (isMainPhoto && newImageFiles.length > 0) {
           setMainPhotoIndex(0);
+          // Update the first image to be the main in the database
+          if (newImageFiles[0].type === 'existing') {
+            handleSetMainImage(newImageFiles[0].url);
+          }
         } else if (newImageFiles.length === 0) {
           setMainPhotoIndex(null);
         }
@@ -677,6 +679,19 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
     } catch (error) {
       console.error('Error deleting image:', error);
       toast.error(t('car.images.deleteError'));
+      // If there was an error, refresh the images to ensure consistency
+      if (car) {
+        const { data } = await supabase
+          .from('car_images')
+          .select('*')
+          .eq('car_id', car.id)
+          .order('is_main', { ascending: false });
+        
+        if (data) {
+          setImages(data);
+          setMainPhotoIndex(data.length > 0 ? 0 : null);
+        }
+      }
     } finally {
       setLoading(false);
     }
