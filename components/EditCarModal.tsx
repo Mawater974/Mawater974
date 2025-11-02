@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState, useRef, useMemo } from 'react';
+import { Fragment, useEffect, useState, useRef } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -6,21 +6,102 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useSupabase } from '@/contexts/SupabaseContext';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { toast } from 'react-hot-toast';
-import { CarImage } from '@/types/car';
 import { Image as ImageIcon, Upload, Loader2 } from 'lucide-react';
-import { ImageFile } from '@/types/image';
 import { DraggableImage } from './DraggableImage';
 import imageCompression from 'browser-image-compression';
 import heic2any from 'heic2any';
-import { scrollToTop } from '@/utils/scrollToTop';
-import ImageCarousel from './ImageCarousel';
-import ImageUpload from './ImageUpload';
-import Image from 'next/image';
 
-interface CarImage {
+type CarImage = {
   url: string;
   is_main?: boolean;
-}
+};
+
+type ImageFile = {
+  preview: string;
+  isMain: boolean;
+  id: string;
+  type: 'new' | 'existing';
+  raw?: File;
+  name: string;
+  size: number;
+  lastModified: number;
+};
+
+// Convert HEIC/HEIF to JPEG for better compatibility
+const convertHeicToJpeg = async (file: File): Promise<File> => {
+  try {
+    const jpegBlob = await heic2any({
+      blob: file,
+      toType: 'image/jpeg',
+      quality: 0.9
+    }) as Blob;
+    
+    return new File(
+      [jpegBlob],
+      file.name.replace(/\.[^/.]+$/, '.jpg'),
+      { type: 'image/jpeg', lastModified: Date.now() }
+    );
+  } catch (error) {
+    console.error('Error converting HEIC/HEIF to JPEG:', error);
+    return file;
+  }
+};
+
+// Compress image with optimized settings
+const compressImage = async (file: File, isFeatured: boolean = false): Promise<File> => {
+  const fileType = file.type.toLowerCase();
+  
+  if (!fileType.startsWith('image/') || 
+      (fileType !== 'image/jpeg' && 
+       fileType !== 'image/png' && 
+       fileType !== 'image/webp' &&
+       !fileType.includes('heic') && 
+       !fileType.includes('heif'))) {
+    console.warn(`Unsupported file type: ${fileType}. File will be uploaded as-is.`);
+    return file;
+  }
+  
+  let processedFile = file;
+  if (fileType.includes('heic') || fileType.includes('heif')) {
+    processedFile = await convertHeicToJpeg(file);
+  }
+  
+  try {
+    const options = isFeatured ? {
+      maxSizeMB: 1.0,
+      maxWidthOrHeight: 2560,
+      useWebWorker: true,
+      maxIteration: 15,
+      fileType: 'image/webp',
+      initialQuality: 0.95,
+      alwaysKeepResolution: true,
+      preserveExif: false,
+    } : {
+      maxSizeMB: 0.6,
+      maxWidthOrHeight: 1920,
+      useWebWorker: true,
+      maxIteration: 15,
+      fileType: 'image/webp',
+      initialQuality: 0.90,
+      alwaysKeepResolution: true,
+      preserveExif: false,
+    };
+    
+    const compressedBlob = await imageCompression(processedFile, options) as Blob;
+    
+    return new File(
+      [compressedBlob],
+      `${file.name.replace(/\.[^/.]+$/, '')}.webp`,
+      { 
+        type: 'image/webp',
+        lastModified: Date.now()
+      }
+    );
+  } catch (error) {
+    console.error('Error compressing image:', error);
+    return file;
+  }
+};
 
 interface Car {
   id: number;
@@ -94,11 +175,10 @@ interface FormData {
 }
 
 const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCarModalProps): JSX.Element | null => {
-  // Don't render anything if car is not provided
   if (!car) return null;
+  
   const { t, language } = useLanguage();
   const { supabase } = useSupabase();
-  // State for form data and UI
   const [selectedCountry, setSelectedCountry] = useState<string | number | null>(null);
   const [cities, setCities] = useState<Array<{ id: number; name: string; name_ar: string | null; country_id: number }>>([]);
   const [brands, setBrands] = useState<Array<{ id: number; name: string; name_ar: string | null }>>([]);
@@ -131,17 +211,14 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
     is_featured: false,
   });
 
-  // Helper function to safely convert values to strings for form fields
   const safeString = (value: string | number | undefined | null): string => {
     if (value === undefined || value === null) return '';
     return String(value);
   };
 
-  // Initialize form data and images when car changes
   useEffect(() => {
     if (!car) return;
     
-    // Reset form when car is null/undefined
     setFormData({
       brand_id: safeString(car.brand_id),
       model_id: safeString(car.model_id),
@@ -150,7 +227,6 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
       price: safeString(car.price),
       color: car.color || '',
       description: car.description || '',
-      
       fuel_type: car.fuel_type || '',
       gearbox_type: car.gearbox_type || '',
       body_type: car.body_type || '',
@@ -164,7 +240,6 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
       is_featured: car.is_featured || false,
     });
     
-    // Set initial images
     if (Array.isArray(car.images)) {
       setImages(car.images.map(img => ({
         url: typeof img === 'string' ? img : img?.url || '',
@@ -173,74 +248,36 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
     } else {
       setImages([]);
     }
-
-    // Initialize form data
-    setFormData({
-      brand_id: safeString(car.brand_id),
-      model_id: safeString(car.model_id),
-      year: car.year || new Date().getFullYear(),
-      mileage: safeString(car.mileage),
-      price: safeString(car.price),
-      color: car.color || '',
-      description: car.description || '',
-      fuel_type: car.fuel_type || '',
-      gearbox_type: car.gearbox_type || '',
-      body_type: car.body_type || '',
-      condition: car.condition || '',
-      cylinders: car.cylinders || '',
-      doors: car.doors || '',
-      drive_type: car.drive_type || '',
-      warranty: car.warranty || '',
-      exact_model: car.exact_model || '',
-      city_id: safeString(car.city_id),
-      is_featured: car.is_featured || false,
-    });
-
-    // Initialize images
-    const initialImages = Array.isArray(car.images) 
-      ? car.images.map((img) => ({
-          url: typeof img === 'string' ? img : img?.url || '',
-          is_main: typeof img === 'string' ? false : Boolean(img?.is_main)
-        }))
-      : [];
-    setImages(initialImages);
   }, [car]);
 
-  // Fetch initial data
   useEffect(() => {
     const fetchData = async () => {
       if (!car) return;
       
       setLoading(true);
       try {
-        // Fetch brands
         const { data: brandsData } = await supabase
           .from('brands')
           .select('*')
           .order('name');
         setBrands(brandsData || []);
 
-        // Fetch countries
         const { data: countriesData } = await supabase
           .from('countries')
           .select('*')
           .order('name');
         setCountries(countriesData || []);
 
-        // If we have city data with country_id, use that
         if (car.city?.country_id) {
           setSelectedCountry(car.city.country_id);
           
-          // Fetch cities for the car's country
           const { data: citiesData } = await supabase
             .from('cities')
             .select('*')
             .eq('country_id', car.city.country_id)
             .order('name');
           setCities(citiesData || []);
-        } 
-        // If we only have city_id, fetch the city first to get country_id
-        else if (car.city_id) {
+        } else if (car.city_id) {
           const { data: cityData } = await supabase
             .from('cities')
             .select('*')
@@ -250,7 +287,6 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
           if (cityData) {
             setSelectedCountry(cityData.country_id);
             
-            // Fetch cities for the country
             const { data: citiesData } = await supabase
               .from('cities')
               .select('*')
@@ -260,7 +296,6 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
           }
         }
 
-        // If we have a brand_id, fetch models
         if (car.brand?.id) {
           const { data: modelsData } = await supabase
             .from('models')
@@ -280,7 +315,6 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
     fetchData();
   }, [car, supabase, t]);
 
-  // Handle country change
   const handleCountryChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const countryId = e.target.value;
     setSelectedCountry(countryId);
@@ -298,14 +332,12 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
     }
   };
 
-  // Fetch models when brand changes
   useEffect(() => {
     if (formData.brand_id) {
       fetchModels(parseInt(formData.brand_id));
     }
   }, [formData.brand_id]);
 
-  // Fetch models
   const fetchModels = async (brandId: number) => {
     try {
       const { data } = await supabase
@@ -319,7 +351,6 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
     }
   };
 
-  // Handle brand change
   const handleBrandChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const brandId = e.target.value;
     setFormData(prev => ({ ...prev, brand_id: brandId, model_id: '' }));
@@ -336,7 +367,6 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
     }
   };
 
-  // Handle image upload with compression and HEIC/HEIF support
   const handleImageUpload = async (files: File[]): Promise<void> => {
     if (!car) return;
     
@@ -346,58 +376,57 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
       const newImageFiles: ImageFile[] = [];
       
       for (const file of files) {
-        // Compress the image first
-        const compressedFile = await compressImage(file);
-        const fileExt = compressedFile.name.split('.').pop();
-        const fileName = `${Math.random()}.${fileExt}`;
-        const filePath = `cars/${car.id}/${fileName}`;
-        
-        // Upload the compressed file
-        const { error: uploadError } = await supabase.storage
-          .from('car-images')
-          .upload(filePath, compressedFile);
-        
-        if (uploadError) throw uploadError;
-        
-        // Get the public URL
-        const { data: { publicUrl } } = supabase.storage
-          .from('car-images')
-          .getPublicUrl(filePath);
-        
-        // Create preview URL for the UI
-        const previewUrl = URL.createObjectURL(compressedFile);
-        objectUrls.current.add(previewUrl);
-        
-        // Add to uploaded images
-        const isMain = images.length === 0; // First image is main by default
-        uploadedImages.push({
-          url: publicUrl,
-          is_main: isMain
-        });
-        
-        // Add to image files for local state management
-        newImageFiles.push({
-          preview: previewUrl,
-          isMain,
-          id: `new-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-          type: 'new',
-          raw: compressedFile,
-          name: compressedFile.name,
-          size: compressedFile.size,
-          lastModified: compressedFile.lastModified
-        });
+        try {
+          const compressedFile = await compressImage(file, formData.is_featured);
+          const fileExt = compressedFile.name.split('.').pop() || 'webp';
+          const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+          const filePath = `${car.id}/${fileName}`;
+          
+          const { error: uploadError } = await supabase.storage
+            .from('car-images')
+            .upload(filePath, compressedFile);
+          
+          if (uploadError) throw uploadError;
+          
+          const { data: { publicUrl } } = supabase.storage
+            .from('car-images')
+            .getPublicUrl(filePath);
+          
+          const previewUrl = URL.createObjectURL(compressedFile);
+          objectUrls.current.add(previewUrl);
+          
+          const isMain = images.length === 0;
+          uploadedImages.push({
+            url: publicUrl,
+            is_main: isMain
+          });
+          
+          newImageFiles.push({
+            preview: previewUrl,
+            isMain,
+            id: `new-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+            type: 'new' as const,
+            raw: compressedFile,
+            name: compressedFile.name,
+            size: compressedFile.size,
+            lastModified: compressedFile.lastModified
+          });
+        } catch (error) {
+          console.error('Error processing image:', error);
+          toast.error(t('car.images.uploadError'));
+        }
       }
       
-      // Update state
-      setImages(prev => [...prev, ...uploadedImages]);
-      setImageFiles(prev => [...prev, ...newImageFiles]);
-      
-      // If this is the first image, set it as main
-      if (images.length === 0 && uploadedImages.length > 0) {
-        setMainPhotoIndex(0);
+      if (uploadedImages.length > 0) {
+        setImages(prev => [...prev, ...uploadedImages]);
+        setImageFiles(prev => [...prev, ...newImageFiles]);
+        
+        if (images.length === 0 && uploadedImages.length > 0) {
+          setMainPhotoIndex(0);
+        }
+        
+        toast.success(t('car.images.uploadSuccess'));
       }
-      
-      toast.success(t('car.images.uploadSuccess'));
     } catch (error) {
       console.error('Error uploading images:', error);
       toast.error(t('car.images.uploadError'));
@@ -406,45 +435,37 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
     }
   };
 
-  // Set an image as the main photo
   const handleSetMainImage = async (imageUrl: string) => {
     if (!car?.id) return;
     
     setLoading(true);
     try {
-      // Find the index of the image to set as main
       const imageIndex = images.findIndex(img => img.url === imageUrl);
       if (imageIndex === -1) return;
       
-      // Update all images to set is_main = false in the database
       await supabase
         .from('car_images')
         .update({ is_main: false })
         .eq('car_id', car.id);
       
-      // Set the selected image as main in the database
       await supabase
         .from('car_images')
         .update({ is_main: true })
         .eq('car_id', car.id)
         .eq('url', imageUrl);
       
-      // Reorder images to put the main one first
       const newImages = [...images];
       const [movedImage] = newImages.splice(imageIndex, 1);
       newImages.unshift({ ...movedImage, is_main: true });
       
-      // Update other images to set is_main = false
       const updatedImages = newImages.map((img, idx) => ({
         ...img,
         is_main: idx === 0
       }));
       
-      // Update local state
       setImages(updatedImages);
       setMainPhotoIndex(0);
       
-      // Update imageFiles to maintain consistency
       setImageFiles(prev => {
         const newImageFiles = [...prev];
         const [movedFile] = newImageFiles.splice(imageIndex, 1);
@@ -464,7 +485,6 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
     }
   };
 
-  // Move an image to a new position
   const moveImage = (dragIndex: number, hoverIndex: number) => {
     if (!car?.id) return;
     
@@ -473,18 +493,15 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
       const [movedImage] = newImages.splice(dragIndex, 1);
       newImages.splice(hoverIndex, 0, movedImage);
       
-      // If moved to first position, set as main
       if (hoverIndex === 0) {
         handleSetMainImage(movedImage.url);
       } else if (dragIndex === 0) {
-        // If main photo was moved away, set new first photo as main
         handleSetMainImage(newImages[0].url);
       }
       
       return newImages;
     });
     
-    // Also update imageFiles to maintain consistency
     setImageFiles(prev => {
       const newImageFiles = [...prev];
       const [movedFile] = newImageFiles.splice(dragIndex, 1);
@@ -493,23 +510,20 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
     });
   };
 
-  // Handle delete image with cleanup
   const handleDeleteImage = async (imageUrl: string) => {
     if (!car?.id) return;
     
     setLoading(true);
     try {
-      // Delete from storage
       const urlParts = imageUrl.split('/');
       const fileName = urlParts[urlParts.length - 1];
       
       const { error: storageError } = await supabase.storage
         .from('car-images')
-        .remove([`cars/${car.id}/${fileName}`]);
+        .remove([`${car.id}/${fileName}`]);
       
       if (storageError) throw storageError;
       
-      // Delete from database
       const { error: dbError } = await supabase
         .from('car_images')
         .delete()
@@ -518,12 +532,9 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
       
       if (dbError) throw dbError;
       
-      // Update local state
       setImages(prev => {
         const newImages = prev.filter(img => img.url !== imageUrl);
         
-        // If we deleted the main photo and there are still images left,
-        // set the first image as main
         if (mainPhotoIndex === 0 && newImages.length > 0) {
           handleSetMainImage(newImages[0].url);
         }
@@ -531,19 +542,15 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
         return newImages;
       });
       
-      // Clean up object URL if it exists
-      const imageFile = imageFiles.find(img => img.preview === imageUrl || img.preview === imageUrl);
+      const imageFile = imageFiles.find(img => img.preview === imageUrl);
       if (imageFile && objectUrls.current.has(imageFile.preview as string)) {
         URL.revokeObjectURL(imageFile.preview as string);
         objectUrls.current.delete(imageFile.preview as string);
       }
       
-      // Update image files
       setImageFiles(prev => {
-        const newImageFiles = prev.filter(img => img.preview !== imageUrl && img.preview !== imageUrl);
+        const newImageFiles = prev.filter(img => img.preview !== imageUrl);
         
-        // If we deleted the main photo and there are still images left,
-        // update mainPhotoIndex
         if (mainPhotoIndex === 0 && newImageFiles.length > 0) {
           setMainPhotoIndex(0);
         } else if (newImageFiles.length === 0) {
@@ -562,7 +569,6 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
     }
   };
   
-  // Clean up object URLs on unmount
   useEffect(() => {
     return () => {
       objectUrls.current.forEach(url => URL.revokeObjectURL(url));
@@ -570,14 +576,12 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
     };
   }, []);
   
-  // Ensure main photo index is always 0 when images are present
   useEffect(() => {
     if (images.length > 0 && mainPhotoIndex !== 0) {
       setMainPhotoIndex(0);
     }
   }, [images.length, mainPhotoIndex]);
 
-  // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -585,7 +589,6 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
     
     setLoading(true);
     try {
-      // Prepare update data with proper type conversions
       const updateData: Record<string, any> = {
         brand_id: formData.brand_id ? parseInt(formData.brand_id) : null,
         model_id: formData.model_id ? parseInt(formData.model_id) : null,
@@ -597,7 +600,6 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
         fuel_type: formData.fuel_type || null,
         gearbox_type: formData.gearbox_type || null,
         body_type: formData.body_type || null,
-        
         condition: formData.condition || null,
         cylinders: formData.cylinders || null,
         doors: formData.doors || null,
@@ -609,14 +611,12 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
         updated_at: new Date().toISOString()
       };
 
-      // Remove null values to avoid overwriting existing data with null
       Object.keys(updateData).forEach(key => {
         if (updateData[key] === null) {
           delete updateData[key];
         }
       });
 
-      // Update car data
       const { error } = await supabase
         .from('cars')
         .update(updateData)
@@ -624,20 +624,17 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
       
       if (error) throw error;
       
-      // Update images if any
       if (images.length > 0) {
-        // First, delete all existing images for this car
         await supabase
           .from('car_images')
           .delete()
           .eq('car_id', car.id);
         
-        // Then insert the new ones with display_order
         const imagesToInsert = images.map((img, index) => ({
           car_id: car.id,
           url: img.url,
           is_main: img.is_main || false,
-          display_order: index  // Add display_order based on array index
+          display_order: index
         }));
         
         const { error: imagesError } = await supabase
@@ -647,12 +644,10 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
         if (imagesError) throw imagesError;
       }
       
-      // Call the onUpdate callback to refresh the parent component
       if (onUpdate) {
         onUpdate();
       }
       
-      // Call the onEditComplete callback with the updated car data
       if (onEditComplete) {
         onEditComplete({
           ...car,
@@ -671,7 +666,6 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
     }
   };
 
-// ...
   return (
     <Transition appear show={isOpen} as={Fragment}>
       <Dialog as="div" className="relative z-50" onClose={onClose}>
@@ -719,13 +713,7 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
                       </label>
                       <select
                         value={formData.brand_id}
-                        onChange={(e) => {
-                          setFormData(prev => ({
-                            ...prev,
-                            brand_id: e.target.value,
-                            model_id: '' // Reset model when brand changes
-                          }));
-                        }}
+                        onChange={handleBrandChange}
                         className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-qatar-maroon focus:border-qatar-maroon sm:text-sm bg-white dark:bg-gray-700 transition-colors duration-200"
                         required
                       >
@@ -766,7 +754,7 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
                         value={formData.exact_model}
                         onChange={(e) => setFormData(prev => ({ ...prev, exact_model: e.target.value }))}
                         className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-qatar-maroon focus:border-qatar-maroon sm:text-sm bg-white dark:bg-gray-700 transition-colors duration-200"
-                        />
+                      />
                     </div>
 
                     <div>
@@ -812,6 +800,7 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
                         required
                       />
                     </div>
+
                     <div>
                       <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
                         {t('car.color')}
@@ -868,7 +857,7 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
                         {t('car.country')}
                       </label>
                       <select
-                        value={selectedCountry}
+                        value={selectedCountry || ''}
                         onChange={handleCountryChange}
                         className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-qatar-maroon focus:border-qatar-maroon sm:text-sm bg-white dark:bg-gray-700 transition-colors duration-200"
                         required
@@ -881,6 +870,7 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
                         ))}
                       </select>
                     </div>
+
                     <div>
                       <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
                         {t('car.city')}
@@ -899,6 +889,7 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
                         ))}
                       </select>
                     </div>
+
                     <div>
                       <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
                         {t('car.fuelType.label')}
@@ -933,7 +924,6 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
                       </select>
                     </div>
 
-                    
                     <div>
                       <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
                         {t('car.bodyType')}
@@ -975,6 +965,7 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
                         <option value="Not Working">{t('car.condition.not_working')}</option>
                       </select>
                     </div>
+
                     <div>
                       <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
                         {t('car.doors')}
@@ -993,6 +984,7 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
                         <option value="6+">{t('car.doors.6+')}</option>
                       </select>
                     </div>
+
                     <div>
                       <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
                         {t('car.driveType')}
@@ -1010,6 +1002,7 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
                         <option value="4WD">{t('car.driveType.4wd')}</option>
                       </select>
                     </div>
+
                     <div>
                       <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
                         {t('car.warranty')}
@@ -1024,35 +1017,49 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
                         <option value="No">{t('car.warranty.no')}</option>
                       </select>
                     </div>
-                    <div>
-                      <label className="w-full col-span-2 mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+
+                    <div className="md:col-span-3 lg:col-span-4">
+                      <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
                         {t('car.description')}
                       </label>
                       <textarea
                         value={formData.description}
                         onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                         rows={3}
-                        className="appearance-none rounded-md relative block w-full px-3 py-2 col-span-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-qatar-maroon focus:border-qatar-maroon sm:text-sm bg-white dark:bg-gray-700 transition-colors duration-200"
+                        className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-qatar-maroon focus:border-qatar-maroon sm:text-sm bg-white dark:bg-gray-700 transition-colors duration-200"
                         required
                       />
                     </div>
                   </div>
 
-                  <div className="mb-6 rounded-md">
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
-                      {t('common.images')}
-                    </h3>
+                  {/* Image upload section from document 1 */}
+                  <div className="mb-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                        {t('common.images')} <span className="text-sm text-gray-500 font-normal">({images.length}/{formData.is_featured ? 15 : 10})</span>
+                      </h3>
+                      {images.length > 0 && (
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                          {t('car.images.dragToReorder')}
+                        </div>
+                      )}
+                    </div>
+
                     {images.length > 0 ? (
                       <>
-                        {/* Main Photo Guidance */}
-                        <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                          <p className="text-sm text-gray-600 dark:text-gray-300">
-                            {t('myAds.edit.images.guidance')}
-                          </p>
+                        <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/50 rounded-lg">
+                          <div className="flex items-start">
+                            <svg className="h-5 w-5 text-blue-500 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h.01a1 1 0 100-2H10V9z" clipRule="evenodd" />
+                            </svg>
+                            <p className="text-sm text-blue-700 dark:text-blue-300">
+                              {t('myAds.edit.images.guidance')}
+                            </p>
+                          </div>
                         </div>
 
                         <DndProvider backend={HTML5Backend}>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                             {images.map((image, index) => (
                               <DraggableImage
                                 key={image.url}
@@ -1071,65 +1078,111 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
                                     handleSetMainImage(movedImage.url);
                                   }
                                 }}
-                                moveImage={(dragIndex, hoverIndex) => {
-                                  const newImages = [...images];
-                                  const [movedImage] = newImages.splice(dragIndex, 1);
-                                  newImages.splice(hoverIndex, 0, movedImage);
-                                  setImages(newImages);
-
-                                  if (hoverIndex === 0) {
-                                    setMainPhotoIndex(0);
-                                    handleSetMainImage(movedImage.url);
-                                  } else if (dragIndex === 0) {
-                                    setMainPhotoIndex(0);
-                                    handleSetMainImage(newImages[0].url);
-                                  }
-                                }}
+                                moveImage={moveImage}
                                 t={t}
                                 totalImages={images.length}
                               />
                             ))}
+                            {images.length < (formData.is_featured ? 15 : 10) && (
+                              <label 
+                                className="relative group flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:border-qatar-maroon/50 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors duration-200"
+                              >
+                                <div className="flex flex-col items-center justify-center p-4 text-center">
+                                  <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-full mb-2 group-hover:bg-qatar-maroon/10 dark:group-hover:bg-qatar-maroon/20 transition-colors">
+                                    <Upload className="h-5 w-5 text-gray-500 dark:text-gray-400 group-hover:text-qatar-maroon transition-colors" />
+                                  </div>
+                                  <p className="text-sm text-gray-600 dark:text-gray-300 group-hover:text-qatar-maroon dark:group-hover:text-qatar-maroon transition-colors">
+                                    {t('car.images.addMore')}
+                                  </p>
+                                  <p className="text-xs text-gray-400 mt-1">
+                                    {(formData.is_featured ? 15 : 10) - images.length} {t('car.images.remaining')}
+                                  </p>
+                                </div>
+                                <input
+                                  type="file"
+                                  className="hidden"
+                                  accept="image/*"
+                                  multiple
+                                  onChange={(e) => {
+                                    if (e.target.files && e.target.files.length > 0) {
+                                      const maxImages = formData.is_featured ? 15 : 10;
+                                      const remainingSlots = maxImages - images.length;
+                                      const filesToUpload = Array.from(e.target.files).slice(0, remainingSlots);
+                                      if (filesToUpload.length > 0) {
+                                        handleImageUpload(filesToUpload);
+                                      }
+                                      if (filesToUpload.length < e.target.files.length) {
+                                        toast.error(t('car.images.maxReached', { max: maxImages }));
+                                      }
+                                    }
+                                  }}
+                                  disabled={uploading || images.length >= (formData.is_featured ? 15 : 10)}
+                                />
+                              </label>
+                            )}
                           </div>
                         </DndProvider>
                       </>
                     ) : (
-                      <div className="text-center py-8 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg">
-                        <div className="flex flex-col items-center justify-center">
-                          <ImageIcon className="h-12 w-12 text-gray-400 mb-2" />
-                          <p className="text-gray-500 dark:text-gray-400">
-                            {t('car.images.uploadPrompt')}
+                      <div className="relative w-full p-8 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800/50 hover:border-qatar-maroon/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200">
+                        <div className="flex flex-col items-center justify-center text-center">
+                          <div className="p-3 bg-gray-100 dark:bg-gray-700 rounded-full mb-4">
+                            <ImageIcon className="h-8 w-8 text-gray-400" />
+                          </div>
+                          <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-1">
+                            {t('car.images.dragAndDrop')}
+                          </h4>
+                          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                            {t('car.images.or')}
                           </p>
-                          <p className="text-sm text-gray-400 mt-1">
-                            {t('car.images.supportedFormats')}
+                          <label className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-qatar-maroon hover:bg-qatar-maroon/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon cursor-pointer transition-colors">
+                            <Upload className="h-4 w-4 mr-2" />
+                            {t('car.images.uploadButton')}
+                            <input
+                              type="file"
+                              className="hidden"
+                              accept="image/*"
+                              multiple
+                              onChange={(e) => {
+                                if (e.target.files && e.target.files.length > 0) {
+                                  const maxImages = formData.is_featured ? 15 : 10;
+                                  const remainingSlots = Math.max(0, maxImages - images.length);
+                                  const filesToUpload = Array.from(e.target.files).slice(0, remainingSlots);
+                                  
+                                  if (filesToUpload.length > 0) {
+                                    handleImageUpload(filesToUpload);
+                                  }
+                                  
+                                  if (e.target.files.length > remainingSlots) {
+                                    toast.error(t('car.images.maxReached', { max: maxImages }));
+                                  }
+                                }
+                              }}
+                              disabled={uploading || images.length >= (formData.is_featured ? 15 : 10)}
+                            />
+                          </label>
+                          <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
+                            {t('car.images.supportedFormats')} • {t('car.images.maxSize')}
                           </p>
                         </div>
                       </div>
                     )}
 
-                    <div className="mt-4">
-                      <label className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-qatar-maroon hover:bg-qatar-maroon/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon cursor-pointer">
-                        <Upload className="h-4 w-4 mr-2" />
-                        {t('car.images.uploadButton')}
-                        <input
-                          type="file"
-                          className="hidden"
-                          accept="image/*"
-                          multiple
-                          onChange={(e) => {
-                            if (e.target.files && e.target.files.length > 0) {
-                              handleImageUpload(Array.from(e.target.files));
-                            }
-                          }}
-                          disabled={uploading}
-                        />
-                      </label>
-                      {uploading && (
-                        <div className="mt-2 text-sm text-gray-500 dark:text-gray-400 flex items-center">
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                          {t('car.images.uploading')}
-                        </div>
-                      )}
-                    </div>
+                    {uploading && (
+                      <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-sm rounded-lg flex items-center">
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        {t('car.images.uploading')}...
+                      </div>
+                    )}
+
+                    {images.length > 0 && images.length < 3 && (
+                      <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 text-sm rounded-lg flex items-start">
+                        <svg className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                        <span>{t('car.images.recommendMore', { count: 3 - images.length })}</span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex justify-end gap-3 mt-6">
