@@ -329,26 +329,17 @@ const [formData, setFormData] = useState({
     // Initialize images with debug logging
     console.log('Initializing images from sparePart:', sparePart.images);
     
-    if (sparePart.images && Array.isArray(sparePart.images)) {
-      const formattedImages = sparePart.images.map(img => {
-        // Handle different image formats
-        if (typeof img === 'string') {
-          return {
-            id: '',
-            url: img,
-            is_primary: false
-          };
-        } else if (img && typeof img === 'object') {
-          // Handle both { url, is_primary } and { path, is_primary } formats
-          const url = img.url || (img.path ? `https://ljbccbtufshhloprzity.supabase.co/storage/v1/object/public/spare-parts/${img.path}` : '');
-          return {
-            id: img.id || '',
-            url: url,
-            is_primary: !!img.is_primary
-          };
-        }
-        return null;
-      }).filter(Boolean) as SparePartImage[]; // Filter out any null values and assert type
+    if (sparePart.images && sparePart.images.length > 0) {
+      // Convert all images to the correct format and sort them so primary is first
+      const formattedImages = sparePart.images
+        .map((img: any) => ({
+          id: img.id || `img-${Math.random().toString(36).substr(2, 9)}`,
+          url: typeof img === 'string' ? img : img.url,
+          is_primary: typeof img === 'string' ? false : img.is_primary || false,
+          isNew: false
+        }))
+        // Sort to ensure primary image is always first
+        .sort((a, b) => (b.is_primary ? 1 : 0) - (a.is_primary ? 1 : 0));
       
       console.log('Formatted images:', formattedImages);
       setImages(formattedImages);
@@ -462,56 +453,57 @@ const [formData, setFormData] = useState({
   };
 
   const handleSetPrimary = async (index: number) => {
-  if (!supabase || !sparePart?.id) {
-    console.error('Missing supabase client or spare part ID');
-    toast.error(t('common.error'));
-    return;
-  }
-  
-  setLoading(true);
-  try {
-    // Create a new array with the selected image moved to the first position
-    const newImages = [...images];
-    if (index === 0) {
-      setLoading(false);
+    if (!supabase || !sparePart?.id) {
+      console.error('Missing supabase client or spare part ID');
+      toast.error(t('common.error'));
       return;
     }
     
-    const [movedImage] = newImages.splice(index, 1);
-    newImages.unshift(movedImage);
+    setLoading(true);
+    try {
+      // Create a new array with the selected image moved to the first position
+      const newImages = [...images];
+      if (index === 0) {
+        setLoading(false);
+        return;
+      }
+      
+      const [movedImage] = newImages.splice(index, 1);
+      newImages.unshift(movedImage);
 
-    // Update local state immediately for better UX
-    const updatedImages = newImages.map((img, idx) => ({
-      ...img,
-      is_primary: idx === 0 // First image is always primary
-    }));
-    
-    setImages(updatedImages);
+      // Update local state immediately for better UX
+      const updatedImages = newImages.map((img, idx) => ({
+        ...img,
+        is_primary: idx === 0 // First image is always primary
+      }));
+      
+      setImages(updatedImages);
 
-    // Update the database to reflect the primary image change
-    if (movedImage.id) {
-      // First, unset all primary flags
-      await supabase
-        .from('spare_part_images')
-        .update({ is_primary: false })
-        .eq('spare_part_id', sparePart.id);
+      // Update the database to reflect the primary image change
+      if (movedImage.id) {
+        // First, unset all primary flags
+        await supabase
+          .from('spare_part_images')
+          .update({ is_primary: false })
+          .eq('spare_part_id', sparePart.id);
 
-      // Then set the selected image as primary
-      await supabase
-        .from('spare_part_images')
-        .update({ is_primary: true })
-        .eq('id', movedImage.id);
+        // Then set the selected image as primary
+        await supabase
+          .from('spare_part_images')
+          .update({ is_primary: true })
+          .eq('id', movedImage.id);
+      }
+
+      toast.success(t('spareParts.images.primaryUpdated'));
+    } catch (error) {
+      console.error('Error setting primary image:', error);
+      toast.error(t('common.error'));
+      // Revert to previous state on error
+      setImages(images);
+    } finally {
+      setLoading(false);
     }
-
-    toast.success(t('spareParts.images.primaryUpdated'));
-  } catch (error) {
-    console.error('Error setting primary image:', error);
-    toast.error(t('common.error'));
-    setImages(images); // Revert on error
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const handleRemoveImage = async (imageIdOrUrl: string) => {
     if (!supabase || !sparePart?.id) {
@@ -676,15 +668,18 @@ const [formData, setFormData] = useState({
     try {
       // Process each file upload in parallel
       const uploadPromises = Array.from(files).map(async (file) => {
+        // Compress the image first
+        const compressedFile = await compressImage(file);
+        
         // Create a unique file path
-        const fileExt = file.name.split('.').pop();
+        const fileExt = file.name.split('.').pop() || 'jpg';
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
         const filePath = `${sparePart.id}/${fileName}`;
 
         // Upload to Supabase Storage
-        const { data: uploadData, error: uploadError } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
           .from('spare-parts')
-          .upload(filePath, file);
+          .upload(filePath, compressedFile);
 
         if (uploadError) {
           console.error('Error uploading file:', uploadError);
@@ -698,6 +693,8 @@ const [formData, setFormData] = useState({
 
         return {
           id: `new-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          // If this is the first image being uploaded, mark it as primary
+          is_primary: images.length === 0,
           url: publicUrl,
           is_primary: false, // Will be set based on existing images
           isNew: true,
