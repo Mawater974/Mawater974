@@ -1,18 +1,17 @@
-import { Fragment, useEffect, useState, useRef, useMemo } from 'react';
+import { Fragment, useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { useSupabase } from '@/contexts/SupabaseContext';
+import { useLanguage } from '../contexts/LanguageContext';
+import { useSupabase } from '../contexts/SupabaseContext';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { toast } from 'react-hot-toast';
-import { CarImage } from '@/types/car';
 import { Image as ImageIcon, Upload, Loader2 } from 'lucide-react';
-import { ImageFile } from '@/types/image';
+import { ImageFile } from '../types/image';
 import { DraggableImage } from './DraggableImage';
 import imageCompression from 'browser-image-compression';
 import heic2any from 'heic2any';
-import { scrollToTop } from '@/utils/scrollToTop';
+import { scrollToTop } from '../utils/scrollToTop';
 import ImageCarousel from './ImageCarousel';
 import ImageUpload from './ImageUpload';
 import Image from 'next/image';
@@ -311,12 +310,20 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
 
         // If we have a brand_id, fetch models
         if (car.brand?.id) {
-          const { data: modelsData } = await supabase
-            .from('models')
-            .select('*')
-            .eq('brand_id', car.brand.id)
-            .order('name');
-          setModels(modelsData || []);
+          const fetchModels = useCallback(async (brandId: number) => {
+            try {
+              const { data } = await supabase
+                .from('models')
+                .select('*')
+                .eq('brand_id', brandId)
+                .order('name');
+              setModels(data || []);
+            } catch (error) {
+              console.error('Error fetching models:', error);
+            }
+          }, [supabase]);
+
+          await fetchModels(car.brand.id);
         }
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -347,15 +354,8 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
     }
   };
 
-  // Fetch models when brand changes
-  useEffect(() => {
-    if (formData.brand_id) {
-      fetchModels(parseInt(formData.brand_id));
-    }
-  }, [formData.brand_id]);
-
-  // Fetch models
-  const fetchModels = async (brandId: number) => {
+  // Define fetchModels with useCallback to prevent recreation on every render
+  const fetchModels = useCallback(async (brandId: number) => {
     try {
       const { data } = await supabase
         .from('models')
@@ -366,7 +366,14 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
     } catch (error) {
       console.error('Error fetching models:', error);
     }
-  };
+  }, [supabase]);
+
+  // Fetch models when brand changes
+  useEffect(() => {
+    if (formData.brand_id) {
+      fetchModels(parseInt(formData.brand_id));
+    }
+  }, [formData.brand_id, fetchModels]);
 
   // Handle brand change
   const handleBrandChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
