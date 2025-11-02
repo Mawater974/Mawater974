@@ -1118,7 +1118,7 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
                         value={formData.doors}
                         onChange={(e) => setFormData(prev => ({ ...prev, doors: e.target.value }))}
                         className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-qatar-maroon focus:border-qatar-maroon sm:text-sm bg-white dark:bg-gray-700 transition-colors duration-200"
-                        required
+                        
                       >
                         <option value="">{t('car.select')}</option>
                         <option value="2">{t('car.doors.2')}</option>
@@ -1365,15 +1365,6 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
     <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-sm rounded-lg flex items-center">
       <Loader2 className="h-4 w-4 animate-spin mr-2" />
       {t('car.images.uploading')}...
-    </div>
-  )}
-
-  {images.length > 0 && images.length < 3 && (
-    <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 text-sm rounded-lg flex items-start">
-      <svg className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-      </svg>
-      <span>{t('car.images.recommendMore', { count: 3 - images.length })}</span>
     </div>
   )}
 </div>
