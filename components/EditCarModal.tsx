@@ -1,20 +1,56 @@
-import { Fragment, useEffect, useState, useRef, useMemo, useCallback } from 'react';
+import { Fragment, useEffect, useState, useRef, useMemo } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
-import { useLanguage } from '../contexts/LanguageContext';
-import { useSupabase } from '../contexts/SupabaseContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useSupabase } from '@/contexts/SupabaseContext';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { toast } from 'react-hot-toast';
+import { CarImage } from '@/types/car';
 import { Image as ImageIcon, Upload, Loader2 } from 'lucide-react';
-import { ImageFile } from '../types/image';
+import { ImageFile } from '@/types/image';
 import { DraggableImage } from './DraggableImage';
 import imageCompression from 'browser-image-compression';
 import heic2any from 'heic2any';
-import { scrollToTop } from '../utils/scrollToTop';
+import { scrollToTop } from '@/utils/scrollToTop';
 import ImageCarousel from './ImageCarousel';
 import ImageUpload from './ImageUpload';
 import Image from 'next/image';
+
+// Function to compress images before upload
+const compressImage = async (file: File): Promise<File> => {
+  // Skip compression for non-image files
+  if (!file.type.startsWith('image/')) {
+    return file;
+  }
+
+  // Skip compression for WebP images as they're already compressed
+  if (file.type === 'image/webp') {
+    return file;
+  }
+
+  try {
+    const options = {
+      maxSizeMB: 1.0, // Maximum file size in MB
+      maxWidthOrHeight: 2560, // Maximum width or height
+      useWebWorker: true, // Use web worker for better performance
+      fileType: 'image/webp', // Convert to WebP format
+    };
+
+    // Compress the image
+    const compressedFile = await imageCompression(file, options);
+    
+    // Return the compressed file with original name but .webp extension
+    return new File([compressedFile], `${file.name.split('.')[0]}.webp`, {
+      type: 'image/webp',
+      lastModified: Date.now(),
+    });
+  } catch (error) {
+    console.error('Error compressing image:', error);
+    // Return original file if compression fails
+    return file;
+  }
+};
 
 interface CarImage {
   url: string;
@@ -136,93 +172,44 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
     return String(value);
   };
 
-  // Convert HEIC/HEIF to JPEG for better compatibility
-  const convertHeicToJpeg = async (file: File): Promise<File> => {
-    try {
-      const jpegBlob = await heic2any({
-        blob: file,
-        toType: 'image/jpeg',
-        quality: 0.9
-      }) as Blob;
-      
-      return new File(
-        [jpegBlob],
-        file.name.replace(/\.[^/.]+$/, '.jpg'),
-        { type: 'image/jpeg', lastModified: Date.now() }
-      );
-    } catch (error) {
-      console.error('Error converting HEIC/HEIF to JPEG:', error);
-      return file; // Return original if conversion fails
-    }
-  };
-
-  // Compress image with optimized settings
-  const compressImage = async (file: File, isFeatured: boolean = false): Promise<File> => {
-    const fileType = file.type.toLowerCase();
-    
-    // Skip non-image files or unsupported image types
-    if (!fileType.startsWith('image/') || 
-        (fileType !== 'image/jpeg' && 
-         fileType !== 'image/png' && 
-         fileType !== 'image/webp' &&
-         !fileType.includes('heic') && 
-         !fileType.includes('heif'))) {
-      console.warn(`Unsupported file type: ${fileType}. File will be uploaded as-is.`);
-      return file;
-    }
-    
-    // Convert HEIC/HEIF to JPEG first
-    let processedFile = file;
-    if (fileType.includes('heic') || fileType.includes('heif')) {
-      processedFile = await convertHeicToJpeg(file);
-    }
-    
-    try {
-      const options = isFeatured ? {
-        // Higher quality settings for featured listings
-        maxSizeMB: 1.0, // Larger max size for better quality
-        maxWidthOrHeight: 2560, // Higher resolution for featured
-        useWebWorker: true,
-        maxIteration: 15,
-        fileType: 'image/webp',
-        initialQuality: 0.95, // Higher quality for featured
-        alwaysKeepResolution: true,
-        preserveExif: false,
-      } : {
-        // Standard compression for regular listings
-        maxSizeMB: 0.6,
-        maxWidthOrHeight: 1920,
-        useWebWorker: true,
-        maxIteration: 15,
-        fileType: 'image/webp',
-        initialQuality: 0.90,
-        alwaysKeepResolution: true,
-        preserveExif: false,
-      };
-      
-      const compressedBlob = await imageCompression(processedFile, options) as Blob;
-      
-      // Create a new File object with the correct MIME type and extension
-      return new File(
-        [compressedBlob],
-        `${file.name.replace(/\.[^/.]+$/, '')}.webp`,
-        { 
-          type: 'image/webp',
-          lastModified: Date.now()
-        }
-      );
-    } catch (error) {
-      console.error('Error compressing image:', error);
-      // In case of error, return the original file
-      return file;
-    }
-  };
-
   // Initialize form data and images when car changes
   useEffect(() => {
     if (!car) return;
     
-    // Set form data
+    // Reset form when car is null/undefined
+    setFormData({
+      brand_id: safeString(car.brand_id),
+      model_id: safeString(car.model_id),
+      year: car.year || new Date().getFullYear(),
+      mileage: safeString(car.mileage),
+      price: safeString(car.price),
+      color: car.color || '',
+      description: car.description || '',
+      
+      fuel_type: car.fuel_type || '',
+      gearbox_type: car.gearbox_type || '',
+      body_type: car.body_type || '',
+      condition: car.condition || '',
+      cylinders: car.cylinders || '',
+      doors: car.doors || '',
+      drive_type: car.drive_type || '',
+      warranty: car.warranty || '',
+      exact_model: car.exact_model || '',
+      city_id: safeString(car.city_id),
+      is_featured: car.is_featured || false,
+    });
+    
+    // Set initial images
+    if (Array.isArray(car.images)) {
+      setImages(car.images.map(img => ({
+        url: typeof img === 'string' ? img : img?.url || '',
+        is_main: typeof img === 'string' ? false : Boolean(img?.is_main)
+      })));
+    } else {
+      setImages([]);
+    }
+
+    // Initialize form data
     setFormData({
       brand_id: safeString(car.brand_id),
       model_id: safeString(car.model_id),
@@ -243,7 +230,7 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
       city_id: safeString(car.city_id),
       is_featured: car.is_featured || false,
     });
-    
+
     // Initialize images
     const initialImages = Array.isArray(car.images) 
       ? car.images.map((img) => ({
@@ -310,20 +297,12 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
 
         // If we have a brand_id, fetch models
         if (car.brand?.id) {
-          const fetchModels = useCallback(async (brandId: number) => {
-            try {
-              const { data } = await supabase
-                .from('models')
-                .select('*')
-                .eq('brand_id', brandId)
-                .order('name');
-              setModels(data || []);
-            } catch (error) {
-              console.error('Error fetching models:', error);
-            }
-          }, [supabase]);
-
-          await fetchModels(car.brand.id);
+          const { data: modelsData } = await supabase
+            .from('models')
+            .select('*')
+            .eq('brand_id', car.brand.id)
+            .order('name');
+          setModels(modelsData || []);
         }
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -354,8 +333,15 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
     }
   };
 
-  // Define fetchModels with useCallback to prevent recreation on every render
-  const fetchModels = useCallback(async (brandId: number) => {
+  // Fetch models when brand changes
+  useEffect(() => {
+    if (formData.brand_id) {
+      fetchModels(parseInt(formData.brand_id));
+    }
+  }, [formData.brand_id]);
+
+  // Fetch models
+  const fetchModels = async (brandId: number) => {
     try {
       const { data } = await supabase
         .from('models')
@@ -366,14 +352,7 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
     } catch (error) {
       console.error('Error fetching models:', error);
     }
-  }, [supabase]);
-
-  // Fetch models when brand changes
-  useEffect(() => {
-    if (formData.brand_id) {
-      fetchModels(parseInt(formData.brand_id));
-    }
-  }, [formData.brand_id, fetchModels]);
+  };
 
   // Handle brand change
   const handleBrandChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
