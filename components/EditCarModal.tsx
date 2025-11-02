@@ -12,12 +12,19 @@ import { scrollToTop } from '@/utils/scrollToTop';
 import ImageCarousel from './ImageCarousel';
 import Image from 'next/image';
 import imageCompression from 'browser-image-compression';
-import heic2any from 'heic2any';
+// @ts-ignore - heic2any doesn't have proper TypeScript types
+declare const heic2any: any;
 
-type CarImage = {
-  url: string;
-  is_main?: boolean;
-};
+// Dynamic import for heic2any to handle potential loading issues
+let heic2anyPromise: Promise<any> | null = null;
+
+async function getHeic2Any() {
+  if (heic2any) return heic2any;
+  if (!heic2anyPromise) {
+    heic2anyPromise = import('heic2any').then(module => module.default || module);
+  }
+  return heic2anyPromise;
+}
 
 type ImageFile = {
   preview: string;
@@ -33,6 +40,12 @@ type ImageFile = {
 // Convert HEIC/HEIF to JPEG for better compatibility
 const convertHeicToJpeg = async (file: File): Promise<File> => {
   try {
+    const heic2any = await getHeic2Any();
+    if (!heic2any) {
+      console.warn('HEIC conversion not available, returning original file');
+      return file;
+    }
+
     const jpegBlob = await heic2any({
       blob: file,
       toType: 'image/jpeg',
@@ -49,6 +62,8 @@ const convertHeicToJpeg = async (file: File): Promise<File> => {
     return file; // Return original if conversion fails
   }
 };
+
+// Remove duplicate CarImage interface since it's already defined above
 
 // Compress image with optimized settings
 const compressImage = async (file: File, isFeatured: boolean = false): Promise<File> => {
@@ -1143,7 +1158,210 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
                     </div>
                   </div>
 
-                  
+                  <div className="mb-6">
+  <div className="flex items-center justify-between mb-4">
+    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+      {t('common.images')} <span className="text-sm text-gray-500 font-normal">({images.length}/{formData.is_featured ? 15 : 10})</span>
+    </h3>
+    {images.length > 0 && (
+      <div className="text-sm text-gray-500 dark:text-gray-400">
+        {t('car.images.dragToReorder')}
+      </div>
+    )}
+  </div>
+
+  {images.length > 0 ? (
+    <>
+      <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/50 rounded-lg">
+        <div className="flex items-start">
+          <svg className="h-5 w-5 text-blue-500 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h.01a1 1 0 100-2H10V9z" clipRule="evenodd" />
+          </svg>
+          <p className="text-sm text-blue-700 dark:text-blue-300">
+            {t('myAds.edit.images.guidance')}
+          </p>
+        </div>
+      </div>
+
+      <DndProvider backend={HTML5Backend}>
+        <div className="grid grid-cols-2 sm:grid-cols-3  gap-3">
+          {images.map((image, index) => (
+            <DraggableImage
+              key={image.url}
+              id={image.url}
+              index={index}
+              preview={image.url}
+              isMain={index === 0}
+              onRemove={handleDeleteImage}
+              onSetMain={() => {
+                if (index !== 0) {
+                  const newImages = [...images];
+                  const [movedImage] = newImages.splice(index, 1);
+                  newImages.unshift(movedImage);
+                  setImages(newImages);
+                  setMainPhotoIndex(0);
+                  handleSetMainImage(movedImage.url);
+                }
+              }}
+              moveImage={(dragIndex, hoverIndex) => {
+                const newImages = [...images];
+                const [movedImage] = newImages.splice(dragIndex, 1);
+                newImages.splice(hoverIndex, 0, movedImage);
+                setImages(newImages);
+
+                if (hoverIndex === 0) {
+                  setMainPhotoIndex(0);
+                  handleSetMainImage(movedImage.url);
+                } else if (dragIndex === 0) {
+                  setMainPhotoIndex(0);
+                  handleSetMainImage(newImages[0].url);
+                }
+              }}
+              t={t}
+              totalImages={images.length}
+            />
+          ))}
+          {images.length < (formData.is_featured ? 15 : 10) && (
+            <label 
+              className="relative group flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:border-qatar-maroon/50 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors duration-200"
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.currentTarget.classList.add('ring-2', 'ring-qatar-maroon/50', 'border-qatar-maroon');
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                e.currentTarget.classList.remove('ring-2', 'ring-qatar-maroon/50', 'border-qatar-maroon');
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.currentTarget.classList.remove('ring-2', 'ring-qatar-maroon/50', 'border-qatar-maroon');
+                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                  handleImageUpload(Array.from(e.dataTransfer.files));
+                }
+              }}
+            >
+              <div className="flex flex-col items-center justify-center p-4 text-center">
+                <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-full mb-2 group-hover:bg-qatar-maroon/10 dark:group-hover:bg-qatar-maroon/20 transition-colors">
+                  <Upload className="h-5 w-5 text-gray-500 dark:text-gray-400 group-hover:text-qatar-maroon transition-colors" />
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-300 group-hover:text-qatar-maroon dark:group-hover:text-qatar-maroon transition-colors">
+                  {t('car.images.addMore')}
+                </p>
+                <p className="text-xs text-gray-400 mt-1">
+                  {(formData.is_featured ? 15 : 10) - images.length} {t('car.images.remaining')}
+                </p>
+              </div>
+              <input
+                type="file"
+                className="hidden"
+                accept="image/*"
+                multiple
+                onChange={(e) => {
+                  if (e.target.files && e.target.files.length > 0) {
+                    const maxImages = formData.is_featured ? 15 : 10;
+                    const remainingSlots = maxImages - images.length;
+                    const filesToUpload = Array.from(e.target.files).slice(0, remainingSlots);
+                    if (filesToUpload.length > 0) {
+                      handleImageUpload(filesToUpload);
+                    }
+                    if (filesToUpload.length < e.target.files.length) {
+                      toast.error(t('car.images.maxReached', { max: maxImages }));
+                    }
+                  }
+                }}
+                disabled={uploading || images.length >= (formData.is_featured ? 15 : 10)}
+              />
+            </label>
+          )}
+        </div>
+      </DndProvider>
+    </>
+  ) : (
+    <div 
+      className="relative w-full p-8 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800/50 hover:border-qatar-maroon/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200"
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.currentTarget.classList.add('ring-2', 'ring-qatar-maroon/50', 'border-qatar-maroon');
+      }}
+      onDragLeave={(e) => {
+        e.preventDefault();
+        e.currentTarget.classList.remove('ring-2', 'ring-qatar-maroon/50', 'border-qatar-maroon');
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        e.currentTarget.classList.remove('ring-2', 'ring-qatar-maroon/50', 'border-qatar-maroon');
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+          const maxImages = formData.is_featured ? 15 : 10;
+          const remainingSlots = maxImages - images.length;
+          const filesToUpload = Array.from(e.dataTransfer.files).slice(0, remainingSlots);
+          if (filesToUpload.length > 0) {
+            handleImageUpload(filesToUpload);
+          }
+          if (filesToUpload.length < e.dataTransfer.files.length) {
+            toast.error(t('car.images.maxReached', { max: maxImages }));
+          }
+        }
+      }}
+    >
+      <div className="flex flex-col items-center justify-center text-center">
+        <div className="p-3 bg-gray-100 dark:bg-gray-700 rounded-full mb-4">
+          <ImageIcon className="h-8 w-8 text-gray-400" />
+        </div>
+        <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-1">
+          {t('car.images.dragAndDrop')}
+        </h4>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+          {t('car.images.or')}
+        </p>
+        <label className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-qatar-maroon hover:bg-qatar-maroon/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon cursor-pointer transition-colors">
+          <Upload className="h-4 w-4 mr-2" />
+          {t('car.images.uploadButton')}
+          <input
+            type="file"
+            className="hidden"
+            accept="image/*"
+            multiple
+            onChange={(e) => {
+              if (e.target.files && e.target.files.length > 0) {
+                const maxImages = formData.is_featured ? 15 : 10;
+                const remainingSlots = Math.max(0, maxImages - images.length);
+                const filesToUpload = Array.from(e.target.files).slice(0, remainingSlots);
+                
+                if (filesToUpload.length > 0) {
+                  handleImageUpload(filesToUpload);
+                }
+                
+                if (e.target.files.length > remainingSlots) {
+                  toast.error(t('car.images.maxReached', { max: maxImages }));
+                }
+              }
+            }}
+            disabled={uploading || images.length >= (formData.is_featured ? 15 : 10)}
+          />
+        </label>
+        <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
+          {t('car.images.supportedFormats')} • {t('car.images.maxSize')}
+        </p>
+      </div>
+    </div>
+  )}
+
+  {uploading && (
+    <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-sm rounded-lg flex items-center">
+      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+      {t('car.images.uploading')}...
+    </div>
+  )}
+
+  {images.length > 0 && images.length < 3 && (
+    <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 text-sm rounded-lg flex items-start">
+      <svg className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+      </svg>
+      <span>{t('car.images.recommendMore', { count: 3 - images.length })}</span>
+    </div>
+  )}
+</div>
 
                   <div className="flex justify-end gap-3 mt-6">
                     <button
