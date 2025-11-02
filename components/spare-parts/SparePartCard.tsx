@@ -160,17 +160,28 @@ const SparePartCard: React.FC<SparePartCardProps> = ({
       >
         <div className="relative aspect-[16/9] bg-gray-100 dark:bg-gray-800">
           {part.images && part.images.length > 0 ? (
-            <LazyImage 
-              src={part.images.find(img => img.is_primary)?.url || part.images[0]?.url} 
-              alt={part.title} 
-              fallback="/placeholder-spare-part.jpg"
-              className="w-full h-full object-cover"
-            />
+            <div className="relative w-full h-full">
+              <LazyImage 
+                src={part.images.find(img => img.is_primary)?.url || part.images[0]?.url} 
+                alt={part.title} 
+                fallback="/placeholder-spare-part.jpg"
+                className="w-full h-full object-cover"
+              />
+            </div>
           ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <span className="text-gray-400 dark:text-gray-500">
-                {t('common.noImage')}
-              </span>
+            <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-800">
+              <div className="text-center p-4">
+                <Image 
+                  src="/placeholder-spare-part.jpg" 
+                  alt={part.title} 
+                  width={200}
+                  height={150}
+                  className="mx-auto opacity-50"
+                />
+                <span className="text-gray-400 dark:text-gray-500 text-sm mt-2 block">
+                  {t('common.noImage')}
+                </span>
+              </div>
             </div>
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
@@ -224,11 +235,11 @@ const SparePartCard: React.FC<SparePartCardProps> = ({
           {t('common.featured')}
         </div>
       )}
-      {part.user_id && (
+      {/* {part.user_id && (
         <div className="absolute top-2 right-2 z-10 px-2 py-1 bg-blue-500/90 text-white text-xs font-medium rounded-full">
           {t('car.dealer.badge') || 'Dealer'}
         </div>
-      )}
+      )} */}
 
       <button
         onClick={handleFavoriteClick}
