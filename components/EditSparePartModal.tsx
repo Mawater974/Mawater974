@@ -1139,7 +1139,26 @@ const [formData, setFormData] = useState({
                             ))}
                           </select>
                         </div>*/}
-                        
+
+                        {/* Price */}
+                        <div>
+                        <label htmlFor="price" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                          {t('spareParts.add.priceLabel')} ({sparePart?.country?.currency_code}) *
+                        </label>
+                        <div className="relative rounded-md shadow-sm"> 
+                                  <input
+                            type="number"
+                            id="price"
+                            name="price"
+                            min="0"
+                            value={formData.price}
+                            onChange={handleInputChange}
+                            className={`w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-qatar-maroon focus:border-qatar-maroon dark:bg-gray-700 dark:text-white mt-1`}
+                            placeholder="0.00"
+                            dir={language === 'ar' ? 'rtl' : 'ltr'}
+                                  />
+                                </div>
+                              </div>
                         {/* City */}
                         <div>
                           <label htmlFor="city_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -1209,25 +1228,7 @@ const [formData, setFormData] = useState({
                           </select>
                         </div>
                         
-                        {/* Price */}
-                        <div>
-                        <label htmlFor="price" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                          {t('spareParts.add.priceLabel')} ({sparePart?.country?.currency_code}) *
-                        </label>
-                        <div className="relative rounded-md shadow-sm"> 
-                                  <input
-                            type="number"
-                            id="price"
-                            name="price"
-                            min="0"
-                            value={formData.price}
-                            onChange={handleInputChange}
-                            className={`w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-qatar-maroon focus:border-qatar-maroon dark:bg-gray-700 dark:text-white mt-1`}
-                            placeholder="0.00"
-                            dir={language === 'ar' ? 'rtl' : 'ltr'}
-                                  />
-                                </div>
-                              </div>
+                        
 
                         {/* Category */}
                         <div>
