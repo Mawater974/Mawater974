@@ -12,18 +12,23 @@ import { scrollToTop } from '@/utils/scrollToTop';
 import ImageCarousel from './ImageCarousel';
 import Image from 'next/image';
 import imageCompression from 'browser-image-compression';
-// @ts-ignore - heic2any doesn't have proper TypeScript types
-declare const heic2any: any;
-
-// Dynamic import for heic2any to handle potential loading issues
+// Client-side only HEIC conversion
+const isClient = typeof window !== 'undefined';
 let heic2anyPromise: Promise<any> | null = null;
 
 async function getHeic2Any() {
-  if (heic2any) return heic2any;
-  if (!heic2anyPromise) {
-    heic2anyPromise = import('heic2any').then(module => module.default || module);
+  if (!isClient) return null;
+  
+  try {
+    if (!heic2anyPromise) {
+      // @ts-ignore - heic2any doesn't have proper TypeScript types
+      heic2anyPromise = import('heic2any').then(module => module.default || module);
+    }
+    return await heic2anyPromise;
+  } catch (error) {
+    console.error('Failed to load HEIC conversion library:', error);
+    return null;
   }
-  return heic2anyPromise;
 }
 
 type ImageFile = {
@@ -37,12 +42,26 @@ type ImageFile = {
   lastModified: number;
 };
 
-// Convert HEIC/HEIF to JPEG for better compatibility
+// Convert HEIC/HEIF to JPEG for better compatibility (client-side only)
 const convertHeicToJpeg = async (file: File): Promise<File> => {
+  // Skip if not in browser environment
+  if (typeof window === 'undefined') {
+    console.warn('HEIC conversion only available in browser environment');
+    return file;
+  }
+
+  // Skip if not a HEIC/HEIF file
+  const fileType = file.type.toLowerCase();
+  const isHeic = fileType.includes('heic') || fileType.includes('heif') || 
+                file.name.toLowerCase().endsWith('.heic') || 
+                file.name.toLowerCase().endsWith('.heif');
+  
+  if (!isHeic) return file;
+
   try {
     const heic2any = await getHeic2Any();
     if (!heic2any) {
-      console.warn('HEIC conversion not available, returning original file');
+      console.warn('HEIC conversion library not available');
       return file;
     }
 
@@ -67,23 +86,40 @@ const convertHeicToJpeg = async (file: File): Promise<File> => {
 
 // Compress image with optimized settings
 const compressImage = async (file: File, isFeatured: boolean = false): Promise<File> => {
-  const fileType = file.type.toLowerCase();
-  
-  // Skip non-image files or unsupported image types
-  if (!fileType.startsWith('image/') || 
-      (fileType !== 'image/jpeg' && 
-       fileType !== 'image/png' && 
-       fileType !== 'image/webp' &&
-       !fileType.includes('heic') && 
-       !fileType.includes('heif'))) {
-    console.warn(`Unsupported file type: ${fileType}. File will be uploaded as-is.`);
+  // Skip if not in browser environment
+  if (typeof window === 'undefined') {
+    console.warn('Image compression only available in browser environment');
     return file;
   }
+
+  const fileType = file.type.toLowerCase();
+  const fileName = file.name.toLowerCase();
   
+  // Check if file is an image
+  if (!fileType.startsWith('image/')) {
+    console.warn(`Not an image file: ${fileType}. File will be uploaded as-is.`);
+    return file;
+  }
+
   // Convert HEIC/HEIF to JPEG first
   let processedFile = file;
-  if (fileType.includes('heic') || fileType.includes('heif')) {
+  const isHeic = fileType.includes('heic') || fileType.includes('heif') || 
+                fileName.endsWith('.heic') || fileName.endsWith('.heif');
+  
+  if (isHeic) {
     processedFile = await convertHeicToJpeg(file);
+    if (processedFile === file) {
+      console.warn('HEIC conversion failed, trying to process as regular image');
+    }
+  }
+
+  // Skip unsupported image types after HEIC conversion
+  const processedType = processedFile.type.toLowerCase();
+  if (processedType !== 'image/jpeg' && 
+      processedType !== 'image/png' && 
+      processedType !== 'image/webp') {
+    console.warn(`Unsupported image type after conversion: ${processedType}. File will be uploaded as-is.`);
+    return processedFile;
   }
   
   try {
