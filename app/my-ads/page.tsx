@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import { Eye } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCountry } from '@/contexts/CountryContext';
@@ -247,67 +248,74 @@ const CarsTab = ({
 
   const router = useRouter();
 
-  const handleCarClick = (car: ExtendedCarWithStatus, e: React.MouseEvent) => {
-    // Prevent navigation if clicking on buttons or links inside the card
-    const target = e.target as HTMLElement;
-    if (target.closest('button, a')) {
-      return;
-    }
-    router.push(`/${currentCountry?.code.toLowerCase()}/cars/${car.id}`);
-  };
-
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
       {cars.map((car) => (
         <div 
           key={car.id} 
-          className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-200"
-          onClick={(e) => handleCarClick(car, e)}
+          className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-200"
         >
-          <div className="relative h-48 bg-gray-200">
-            {car.images?.[0]?.url && (
-              <Image
-                src={car.images[0].url}
-                alt={`${car.brand?.name || ''} ${car.model?.name || ''}`}
-                fill
-                className="object-cover"
-              />
-            )}
-          </div>
-          <div className="p-4">
-            <div className="flex justify-between items-start">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                {language === 'ar' && car.brand?.name_ar ? car.brand.name_ar : car.brand?.name} {language === 'ar' && car.model?.name_ar ? car.model.name_ar : car.model?.name}
-              </h3>
-              <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                car.status === t('common.status.approved') ? 'bg-green-100 text-green-800' :
-                car.status === t('common.status.pending') ? 'bg-yellow-100 text-yellow-800' :
-                car.status === t('common.status.rejected') ? 'bg-red-100 text-red-800' :
-                car.status === t('common.status.expired') ? 'bg-gray-100 text-gray-800' :
-                'bg-blue-100 text-blue-800'
-              }`}>
-                {t(`common.status.${car.status.toLowerCase()}`)}
-              </span>
+          <Link 
+            href={`/${currentCountry?.code.toLowerCase()}/cars/${car.id}`}
+            className="block group"
+          >
+            <div className="relative h-48 bg-gray-200">
+              {car.images?.[0]?.url && (
+                <Image
+                  src={car.images[0].url}
+                  alt={`${car.brand?.name || ''} ${car.model?.name || ''}`}
+                  fill
+                  className="object-cover group-hover:brightness-90 transition-all duration-200"
+                />
+              )}
             </div>
-            <p className="text-qatar-maroon font-bold text-lg mt-2">
-              {car.price.toLocaleString()} {car.currency || car.country?.currency_code}
-            </p>
-            <div className="mt-4 flex justify-between items-center">
+            <div className="p-4">
+              <div className="flex justify-between items-start">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-qatar-maroon transition-colors">
+                  {language === 'ar' && car.brand?.name_ar ? car.brand.name_ar : car.brand?.name} {language === 'ar' && car.model?.name_ar ? car.model.name_ar : car.model?.name}
+                </h3>
+                <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                  car.status === t('common.status.approved') ? 'bg-green-100 text-green-800' :
+                  car.status === t('common.status.pending') ? 'bg-yellow-100 text-yellow-800' :
+                  car.status === t('common.status.rejected') ? 'bg-red-100 text-red-800' :
+                  car.status === t('common.status.expired') ? 'bg-gray-100 text-gray-800' :
+                  'bg-blue-100 text-blue-800'
+                }`}>
+                  {t(`common.status.${car.status.toLowerCase()}`)}
+                </span>
+              </div>
+              <p className="text-qatar-maroon font-bold text-lg mt-2">
+                {car.price.toLocaleString()} {car.currency || car.country?.currency_code}
+              </p>
+            </div>
+          </Link>
+          
+          <div className="p-4 pt-0">
+            <div className="flex justify-between items-center">
               <button
-                onClick={() => handleEditCar(car)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleEditCar(car);
+                }}
                 className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
               >
                 {t('common.edit')}
               </button>
               <button
-                onClick={() => handleDeleteClick(car)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleDeleteClick(car);
+                }}
                 className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
                 disabled={actionLoading}
               >
                 {t('common.delete')}
               </button>
               <button
-                onClick={() => handleMarkAsSold(car)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleMarkAsSold(car);
+                }}
                 className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm"
                 disabled={actionLoading}
               >
@@ -316,15 +324,18 @@ const CarsTab = ({
             </div>
             {isExpired(car) && (
               <button
-                onClick={() => handleRenew(car.id)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleRenew(car.id);s
+                }}
                 className="w-full mt-3 px-3 py-1.5 bg-qatar-maroon text-white rounded hover:bg-qatar-maroon/90 text-sm flex items-center justify-center"
                 disabled={renewingCarId === car.id}
               >
                 {renewingCarId === car.id ? (
-                  <>
-                    <LoadingSpinner className="h-4 w-4 mr-2 ml-2" />
-                    {t('common.renewing')}
-                  </>
+                  <div className="flex items-center">
+                    <LoadingSpinner />
+                    <span className="ml-2">{t('common.renewing')}</span>
+                  </div>
                 ) : (
                   t('common.renewAd')
                 )}
@@ -403,36 +414,43 @@ const SparePartsTab = ({
           className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-200"
           onClick={(e) => handleSparePartClick(part, e)}
         >
-          <div className="relative h-48 bg-gray-200">
-            {part.images?.length > 0 && (
-              <Image
-                src={part.images.find(img => img.is_primary)?.url || part.images[0]?.url}
-                alt={part.title}
-                fill
-                className="object-cover"
-              />
-            )}
-          </div>
-          <div className="p-4">
-            <div className="flex justify-between items-start">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                {language === 'ar' && part.name_ar ? part.name_ar : part.title}
-              </h3>
-              <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                part.status === t('common.status.approved') ? 'bg-green-100 text-green-800' :
-                part.status === t('common.status.pending') ? 'bg-yellow-100 text-yellow-800' :
-                part.status === t('common.status.rejected') ? 'bg-red-100 text-red-800' :
-                part.status === t('common.status.expired') ? 'bg-gray-100 text-gray-800' :
-                'bg-blue-100 text-blue-800'
-              }`}>
-                {t(`common.status.${part.status.toLowerCase()}`)}
-              </span>
+          <Link 
+            href={`/${currentCountry?.code.toLowerCase()}/spare-parts/${part.id}`}
+            className="block group"
+          >
+            <div className="relative h-48 bg-gray-200">
+              {part.images?.length > 0 && (
+                <Image
+                  src={part.images.find(img => img.is_primary)?.url || part.images[0]?.url}
+                  alt={part.title}
+                  fill
+                  className="object-cover group-hover:brightness-90 transition-all duration-200"
+                />
+              )}
             </div>
-            <p className="text-qatar-maroon font-bold text-lg mt-2">
-              {part.price.toLocaleString()} {part.currency || part.country?.currency_code}
-            </p>
-            
-            <div className="mt-4 flex justify-between items-center">
+            <div className="p-4">
+              <div className="flex justify-between items-start">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-qatar-maroon transition-colors">
+                  {language === 'ar' && part.name_ar ? part.name_ar : part.title}
+                </h3>
+                <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                  part.status === t('common.status.approved') ? 'bg-green-100 text-green-800' :
+                  part.status === t('common.status.pending') ? 'bg-yellow-100 text-yellow-800' :
+                  part.status === t('common.status.rejected') ? 'bg-red-100 text-red-800' :
+                  part.status === t('common.status.expired') ? 'bg-gray-100 text-gray-800' :
+                  'bg-blue-100 text-blue-800'
+                }`}>
+                  {t(`common.status.${part.status.toLowerCase()}`)}
+                </span>
+              </div>
+              <p className="text-qatar-maroon font-bold text-lg mt-2">
+                {part.price.toLocaleString()} {part.currency || part.country?.currency_code}
+              </p>
+            </div>
+          </Link>
+          
+          <div className="p-4 pt-0">
+            <div className="flex justify-between items-center">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -474,10 +492,10 @@ const SparePartsTab = ({
                 disabled={renewingSparePartId === part.id}
               >
                 {renewingSparePartId === part.id ? (
-                  <>
-                    <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2 ml-2"></span>
-                    {t('common.renewing')}
-                  </>
+                  <div className="flex items-center">
+                    <LoadingSpinner />
+                    <span className="ml-2">{t('common.renewing')}</span>
+                  </div>
                 ) : (
                   t('common.renewAd')
                 )}
