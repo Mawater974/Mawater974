@@ -436,21 +436,6 @@ const [formData, setFormData] = useState({
     }));
   };
 
-  const compressImage = async (file: File) => {
-    const options = {
-      maxSizeMB: 0.5, // Maximum file size in MB (500KB)
-      maxWidthOrHeight: 1200, // Maximum width or height
-      useWebWorker: true,
-    };
-
-    try {
-      const compressedFile = await imageCompression(file, options);
-      return new File([compressedFile], file.name, { type: file.type });
-    } catch (error) {
-      console.error('Error compressing image:', error);
-      return file; // Return original file if compression fails
-    }
-  };
 
   const handleSetPrimary = async (index: number) => {
     if (!supabase || !sparePart?.id) {
@@ -654,8 +639,52 @@ const [formData, setFormData] = useState({
       
       // Revert state on error
       setImages(currentImages);
-    } finally {
-      setLoading(false);
+    }
+  };
+
+  // Convert HEIC/HEIF to JPEG if needed
+  const convertHeicToJpeg = async (file: File): Promise<File> => {
+    if (!file.type.match(/heic|heif/i)) return file;
+    
+    try {
+      const heic2any = (await import('heic2any')).default;
+      const jpegBlob = await heic2any({
+        blob: file,
+        toType: 'image/jpeg',
+        quality: 0.8
+      }) as Blob;
+      
+      return new File([jpegBlob], file.name.replace(/\.[^/.]+$/, '.jpg'), {
+        type: 'image/jpeg',
+        lastModified: new Date().getTime()
+      });
+    } catch (error) {
+      console.error('Error converting HEIC to JPEG:', error);
+      return file; // Return original if conversion fails
+    }
+  };
+
+  // Compress image with better quality settings
+  const compressImage = async (file: File): Promise<File> => {
+    try {
+      const options = {
+        maxSizeMB: 1.0, // Maximum file size in MB
+        maxWidthOrHeight: 1600, // Maximum width or height
+        useWebWorker: true,
+        fileType: 'image/jpeg',
+        initialQuality: 0.8, // Higher quality
+        maxIteration: 15, // More iterations for better quality
+        alwaysKeepResolution: true
+      };
+      
+      const compressedFile = await imageCompression(file, options);
+      return new File([compressedFile], file.name, {
+        type: 'image/jpeg',
+        lastModified: new Date().getTime()
+      });
+    } catch (error) {
+      console.error('Error compressing image:', error);
+      return file; // Return original if compression fails
     }
   };
 
@@ -668,38 +697,47 @@ const [formData, setFormData] = useState({
     try {
       // Process each file upload in parallel
       const uploadPromises = Array.from(files).map(async (file) => {
-        // Compress the image first
-        const compressedFile = await compressImage(file);
-        
-        // Create a unique file path
-        const fileExt = file.name.split('.').pop() || 'jpg';
-        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
-        const filePath = `${sparePart.id}/${fileName}`;
+        try {
+          // Convert HEIC/HEIF to JPEG first if needed
+          const convertedFile = await convertHeicToJpeg(file);
+          
+          // Compress the image
+          const compressedFile = await compressImage(convertedFile);
+          
+          // Generate a unique path for the file
+          const fileExt = 'jpg'; // Always use jpg after conversion/compression
+          const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+          const filePath = `${sparePart.id}/${fileName}`;
 
-        // Upload to Supabase Storage
-        const { error: uploadError } = await supabase.storage
-          .from('spare-parts')
-          .upload(filePath, compressedFile);
+          // Upload to Supabase Storage
+          const { error: uploadError } = await supabase.storage
+            .from('spare-parts')
+            .upload(filePath, compressedFile, {
+              cacheControl: '3600',
+              upsert: true
+            });
 
-        if (uploadError) {
-          console.error('Error uploading file:', uploadError);
-          throw uploadError;
+          if (uploadError) {
+            console.error('Error uploading file:', uploadError);
+            throw uploadError;
+          }
+
+          // Get the public URL
+          const { data: { publicUrl } } = supabase.storage
+            .from('spare-parts')
+            .getPublicUrl(filePath);
+
+          return {
+            id: `new-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            url: publicUrl,
+            is_primary: images.length === 0, // Mark as primary if it's the first image
+            isNew: true,
+            file: compressedFile
+          };
+        } catch (error) {
+          console.error('Error processing image:', error);
+          throw error;
         }
-
-        // Get the public URL
-        const { data: { publicUrl } } = supabase.storage
-          .from('spare-parts')
-          .getPublicUrl(filePath);
-
-        return {
-          id: `new-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          // If this is the first image being uploaded, mark it as primary
-          is_primary: images.length === 0,
-          url: publicUrl,
-          is_primary: false, // Will be set based on existing images
-          isNew: true,
-          file
-        };
       });
 
       // Wait for all uploads to complete
