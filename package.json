@@ -82,8 +82,11 @@
   },
   "devDependencies": {
     "@netlify/plugin-nextjs": "^5.10.0",
+    "@types/browser-image-compression": "^1.0.1",
     "@types/node": "^20",
     "@types/react": "^18",
+    "@types/react-dnd": "^2.0.36",
+    "@types/react-dnd-html5-backend": "^3.0.2",
     "@types/react-dom": "^18",
     "autoprefixer": "^10.0.1",
     "eslint": "^8",
