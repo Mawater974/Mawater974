@@ -404,9 +404,9 @@ const SparePartsTab = ({
           onClick={(e) => handleSparePartClick(part, e)}
         >
           <div className="relative h-48 bg-gray-200">
-            {part.images?.[0]?.url && (
+            {part.images?.length > 0 && (
               <Image
-                src={part.images[0].url}
+                src={part.images.find(img => img.is_primary)?.url || part.images[0]?.url}
                 alt={part.title}
                 fill
                 className="object-cover"
