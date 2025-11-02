@@ -137,11 +137,93 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
     return String(value);
   };
 
+  // Convert HEIC/HEIF to JPEG for better compatibility
+  const convertHeicToJpeg = async (file: File): Promise<File> => {
+    try {
+      const jpegBlob = await heic2any({
+        blob: file,
+        toType: 'image/jpeg',
+        quality: 0.9
+      }) as Blob;
+      
+      return new File(
+        [jpegBlob],
+        file.name.replace(/\.[^/.]+$/, '.jpg'),
+        { type: 'image/jpeg', lastModified: Date.now() }
+      );
+    } catch (error) {
+      console.error('Error converting HEIC/HEIF to JPEG:', error);
+      return file; // Return original if conversion fails
+    }
+  };
+
+  // Compress image with optimized settings
+  const compressImage = async (file: File, isFeatured: boolean = false): Promise<File> => {
+    const fileType = file.type.toLowerCase();
+    
+    // Skip non-image files or unsupported image types
+    if (!fileType.startsWith('image/') || 
+        (fileType !== 'image/jpeg' && 
+         fileType !== 'image/png' && 
+         fileType !== 'image/webp' &&
+         !fileType.includes('heic') && 
+         !fileType.includes('heif'))) {
+      console.warn(`Unsupported file type: ${fileType}. File will be uploaded as-is.`);
+      return file;
+    }
+    
+    // Convert HEIC/HEIF to JPEG first
+    let processedFile = file;
+    if (fileType.includes('heic') || fileType.includes('heif')) {
+      processedFile = await convertHeicToJpeg(file);
+    }
+    
+    try {
+      const options = isFeatured ? {
+        // Higher quality settings for featured listings
+        maxSizeMB: 1.0, // Larger max size for better quality
+        maxWidthOrHeight: 2560, // Higher resolution for featured
+        useWebWorker: true,
+        maxIteration: 15,
+        fileType: 'image/webp',
+        initialQuality: 0.95, // Higher quality for featured
+        alwaysKeepResolution: true,
+        preserveExif: false,
+      } : {
+        // Standard compression for regular listings
+        maxSizeMB: 0.6,
+        maxWidthOrHeight: 1920,
+        useWebWorker: true,
+        maxIteration: 15,
+        fileType: 'image/webp',
+        initialQuality: 0.90,
+        alwaysKeepResolution: true,
+        preserveExif: false,
+      };
+      
+      const compressedBlob = await imageCompression(processedFile, options) as Blob;
+      
+      // Create a new File object with the correct MIME type and extension
+      return new File(
+        [compressedBlob],
+        `${file.name.replace(/\.[^/.]+$/, '')}.webp`,
+        { 
+          type: 'image/webp',
+          lastModified: Date.now()
+        }
+      );
+    } catch (error) {
+      console.error('Error compressing image:', error);
+      // In case of error, return the original file
+      return file;
+    }
+  };
+
   // Initialize form data and images when car changes
   useEffect(() => {
     if (!car) return;
     
-    // Reset form when car is null/undefined
+    // Set form data
     setFormData({
       brand_id: safeString(car.brand_id),
       model_id: safeString(car.model_id),
@@ -150,7 +232,6 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
       price: safeString(car.price),
       color: car.color || '',
       description: car.description || '',
-      
       fuel_type: car.fuel_type || '',
       gearbox_type: car.gearbox_type || '',
       body_type: car.body_type || '',
@@ -164,38 +245,6 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
       is_featured: car.is_featured || false,
     });
     
-    // Set initial images
-    if (Array.isArray(car.images)) {
-      setImages(car.images.map(img => ({
-        url: typeof img === 'string' ? img : img?.url || '',
-        is_main: typeof img === 'string' ? false : Boolean(img?.is_main)
-      })));
-    } else {
-      setImages([]);
-    }
-
-    // Initialize form data
-    setFormData({
-      brand_id: safeString(car.brand_id),
-      model_id: safeString(car.model_id),
-      year: car.year || new Date().getFullYear(),
-      mileage: safeString(car.mileage),
-      price: safeString(car.price),
-      color: car.color || '',
-      description: car.description || '',
-      fuel_type: car.fuel_type || '',
-      gearbox_type: car.gearbox_type || '',
-      body_type: car.body_type || '',
-      condition: car.condition || '',
-      cylinders: car.cylinders || '',
-      doors: car.doors || '',
-      drive_type: car.drive_type || '',
-      warranty: car.warranty || '',
-      exact_model: car.exact_model || '',
-      city_id: safeString(car.city_id),
-      is_featured: car.is_featured || false,
-    });
-
     // Initialize images
     const initialImages = Array.isArray(car.images) 
       ? car.images.map((img) => ({
