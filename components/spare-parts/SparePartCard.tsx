@@ -56,7 +56,7 @@ type SparePart = Omit<SparePartType, 'images' | 'id' | 'user'> & {
 interface SparePartCardProps {
   part: SparePart;
   countryCode: string;
-  onToggleFavorite?: (id: string | number) => void;
+  onToggleFavorite?: (id: string | number, e?: React.MouseEvent) => void;
   isFavorite?: boolean;
   featured?: boolean;
 }
@@ -106,9 +106,9 @@ const SparePartCard: React.FC<SparePartCardProps> = ({
   const [isLoading, setIsLoading] = React.useState(false);
   const [isFavorited, setIsFavorited] = React.useState(isFavorite);
 
-  const handleFavoriteClick = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleFavoriteClick = async (e?: React.MouseEvent) => {
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
     
     if (!user) {
       toast.error(t('car.favorite.login'));
@@ -121,7 +121,8 @@ const SparePartCard: React.FC<SparePartCardProps> = ({
     
     try {
       if (onToggleFavorite) {
-        onToggleFavorite(part.id as string);
+        // Pass both partId and event to the onToggleFavorite callback
+        onToggleFavorite(part.id as string, e as React.MouseEvent);
       } else {
         const { error } = await supabase.rpc('toggle_favorite', {
           p_item_id: part.id.toString(),

@@ -372,7 +372,7 @@ const translations = {
     'car.images.dragToReorder': 'Drag to reorder',
     'common.saving': 'Saving',
     'common.save': 'Save',
-
+    'common.viewAd': 'View Ad',
 
     // Login Page
     'login.welcome': 'Welcome back',
@@ -2342,6 +2342,7 @@ const translations = {
     'common.privacy_policy': 'سياسة الخصوصية',
     'common.terms_of_service': 'شروط الخدمة',
     'common.and': 'و',
+    'common.viewAd': 'عرض الإعلان',
     // My Ads Page
     'myAds.title': 'إعلاناتي',
     'myAds.subtitle': 'إدارة إعلانات سياراتك وتتبع حالتها',
