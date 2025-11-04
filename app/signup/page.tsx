@@ -326,7 +326,7 @@ export default function SignUp() {
                   )}
                 </button>
               </div>
-              <PasswordStrengthIndicator password={password} />
+              {/*<PasswordStrengthIndicator password={password} />*/}
             </div>
           </div>
 
