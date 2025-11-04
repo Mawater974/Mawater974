@@ -197,9 +197,9 @@ export default function SpareParts() {
     }
   };
 
-  const toggleFavorite = async (partId: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const toggleFavorite = async (partId: string, e?: React.MouseEvent) => {
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
     
     if (!user) {
       toast.error(t('common.signInToSaveFavorites'));
