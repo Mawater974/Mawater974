@@ -228,7 +228,7 @@ const driveTypeOptions = ['FWD', 'RWD', 'AWD', '4WD'];
 const warrantyOptions = ['Yes', 'No'];
 const fuelTypes = ['Petrol', 'Diesel', 'Hybrid', 'Electric'];
 const gearboxTypes = ['Manual', 'Automatic'];
-const bodyTypes = ['Sedan', 'SUV', 'Hatchback', 'Coupe', 'Truck', 'Van', 'Wagon', 'Convertible', 'Other'];
+const bodyTypes = ['Sedan', 'SUV', 'Hatchback', 'Coupe', 'Pickup', 'Truck', 'Van', 'Wagon', 'Convertible', 'Other'];
 const conditions = ['New', 'Excellent', 'Good', 'Not Working'];
 const colors =['White', 'Black', 'Silver', 'Gray', 'Red', 'Blue', 'Green', 'Yellow', 'Orange', 'Brown', 'Purple', 'Gold', 'Beige', 'Maroon', 'Navy', 'Bronze', 'Other'];
 

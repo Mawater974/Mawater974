@@ -29,7 +29,7 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 import LoginPopup from '@/components/LoginPopup';
 
 type CarCondition = 'Good' | 'Excellent' | 'New' | 'Not Working';
-type BodyType = 'Sedan' | 'SUV' | 'Coupe' | 'Hatchback' | 'Wagon' | 'Van' | 'Truck' | 'Convertible' | 'Other';
+type BodyType = 'Sedan' | 'SUV' | 'Coupe' | 'Hatchback' | 'Wagon' | 'Van' | 'Pickup' | 'Convertible' | 'Truck' | 'Other';
 type FuelType = 'Petrol' | 'Diesel' | 'Electric' | 'Hybrid';
 type SellerType = 'dealer' | 'private';
 type Door = '2' | '3' | '4' | '5' | '6' | '7+';
@@ -1389,7 +1389,7 @@ export default function CarsPage() {
                             {t('car.filters.bodyType')}
                           </label>
                           <div className="grid grid-cols-2 gap-2">
-                            {(['Sedan', 'SUV', 'Coupe', 'Hatchback', 'Wagon', 'Van', 'Truck', 'Convertible', 'Other'] as BodyType[]).map((type) => (
+                            {(['Sedan', 'SUV', 'Coupe', 'Hatchback', 'Wagon', 'Pickup', 'Truck', 'Convertible', 'Van', 'Other'] as BodyType[]).map((type) => (
                               <button
                                 key={type}
                                 onClick={() => toggleBodyType(type)}

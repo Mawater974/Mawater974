@@ -84,7 +84,7 @@ const years = Array.from({ length: 50 }, (_, i) => (currentYear - i).toString())
 
 const fuelTypes = ['Petrol', 'Diesel', 'Hybrid', 'Electric'];
 const gearboxTypes = ['Manual', 'Automatic'];
-const bodyTypes = ['Sedan', 'SUV', 'Hatchback', 'Coupe', 'Truck', 'Van', 'Wagon', 'Convertible', 'Other'];
+const bodyTypes = ['Sedan', 'SUV', 'Hatchback', 'Coupe', 'Pickup', 'Truck', 'Van', 'Wagon', 'Convertible', 'Other'];
 const conditions = ['New', 'Excellent', 'Good', 'Not Working'];
 const colors =['White', 'Black', 'Silver', 'Gray', 'Red', 'Blue', 'Green', 'Yellow', 'Orange', 'Brown', 'Purple', 'Gold', 'Beige', 'Maroon', 'Navy', 'Bronze', 'Other'];
 const cylinderOptions = ['Electric', '3', '4', '5', '6', '8', '10', '12', '16'];
