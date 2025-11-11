@@ -48,7 +48,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-12 mb-12" dir={dir}>
           {/* Logo and Description */}
           <div className={`space-y-6 ${language === 'ar' ? 'lg:order-last' : ''}`}>
-            <Link href="/" className="block w-fit">
+            <Link href={`/${currentCountry?.code.toLowerCase()}`} className="block w-fit">
               <Image
                 src="/logo.png"
                 alt="Mawater974 Logo"
