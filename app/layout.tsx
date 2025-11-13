@@ -76,31 +76,50 @@ const languageScript = `
   })()
 `
 
+// Create absolute URLs for all assets to ensure they work in all environments
+const baseUrl = new URL('https://mawater974.com');
+const logoUrl = new URL('/Mawater974Logo.png', baseUrl).toString();
+
 export const metadata = {
   title: 'Mawater974',
   description: 'Your premier destination for cars',
+  metadataBase: baseUrl,
   icons: {
-    icon: '/Mawater974Logo.png',
-    shortcut: '/Mawater974Logo.png',
-    apple: '/Mawater974Logo.png',
+    icon: [
+      { url: logoUrl, type: 'image/png' },
+      { url: '/favicon.ico', type: 'image/x-icon' }  // Fallback for older browsers
+    ],
+    shortcut: logoUrl,
+    apple: logoUrl,
   },
-  metadataBase: new URL('https://mawater974.com'),
   openGraph: {
     title: 'Mawater974',
     description: 'Your premier destination for cars',
     images: [{
-      url: '/Mawater974Logo.png',
+      url: logoUrl,
       width: 1200,
       height: 630,
       alt: 'Mawater974 Logo'
     }],
     type: 'website',
+    siteName: 'Mawater974',
+    url: baseUrl.toString(),
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Mawater974',
     description: 'Your premier destination for cars',
-    images: ['/Mawater974Logo.png'],
+    images: [logoUrl],
+  },
+  manifest: '/site.webmanifest',  // Consider adding a web manifest file
+  themeColor: '#ffffff',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Mawater974',
+  },
+  formatDetection: {
+    telephone: false,
   }
 }
 
