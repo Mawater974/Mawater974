@@ -17,16 +17,9 @@ export default function RootPage() {
   useEffect(() => {
     const redirectToCountry = async () => {
       try {
+        // Always get the real location from IP first
+        const geoInfo = await getCountryFromIP();
         let redirectCountry = 'qa'; // Default to Qatar
-        let geoInfo;
-
-        try {
-          // Get the real location from IP
-          geoInfo = await getCountryFromIP();
-          console.log('Geo IP info:', geoInfo);
-        } catch (geoError) {
-          console.warn('Could not get geolocation:', geoError);
-        }
         
         // Determine redirect country
         if (user && profile?.country_id) {
@@ -39,7 +32,6 @@ export default function RootPage() {
             
           if (!countryError && countryData) {
             redirectCountry = countryData.code.toLowerCase();
-            console.log('Using user profile country:', redirectCountry);
           }
         } else {
           // Check local storage first
@@ -54,46 +46,35 @@ export default function RootPage() {
               
             if (!countryError && countryData) {
               redirectCountry = countryData.code.toLowerCase();
-              console.log('Using saved country from localStorage:', redirectCountry);
             }
-          } else if (geoInfo?.code) {
+          } else {
             // Use IP location if valid, otherwise default to Qatar
-            try {
-              const isValid = await isValidCountryCode(geoInfo.code, supabase);
-              redirectCountry = isValid ? geoInfo.code.toLowerCase() : 'qa';
-              console.log('Using IP-based country:', redirectCountry, 'isValid:', isValid);
-            } catch (validationError) {
-              console.warn('Error validating country code:', validationError);
-            }
+            const isValid = await isValidCountryCode(geoInfo.code, supabase);
+            redirectCountry = isValid ? geoInfo.code.toLowerCase() : 'qa';
           }
         }
         
-        // Don't block redirect on analytics failure
-        try {
-          await fetch('/api/analytics/page-view', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              countryCode: geoInfo?.code ? geoInfo.code.toLowerCase() : '--',
-              countryName: geoInfo?.name || '--',
-              userId: user?.id,
-              pageType: 'root',
-              page_path: '/',
-              redirect_to: `/${redirectCountry}`
-            })
-          });
-        } catch (analyticsError) {
-          console.warn('Analytics error:', analyticsError);
-          // Don't fail the redirect if analytics fails
-        }
+        // Track only the initial root visit with both real and redirect country
+        await fetch('/api/analytics/page-view', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            countryCode: geoInfo?.code ? geoInfo.code.toLowerCase() : '--', // Default to -- if no geo
+            countryName: geoInfo?.name || '--', // Default to -- if no geo
+            userId: user?.id,
+            pageType: 'root', // Explicitly mark as root page visit
+            page_path: '/', // Record as root visit
+            redirect_to: `/${redirectCountry}` // Store where they were redirected
+          })
+        });
 
-        console.log('Redirecting to:', `/${redirectCountry}`);
+        // Redirect to the country-specific page
         router.push(`/${redirectCountry}`);
       } catch (error) {
-        console.error('Error in redirectToCountry:', error);
-        // Ensure we always redirect even in case of errors
+        console.error('Error redirecting to country:', error);
+        // Default to Qatar if there's an error
         router.push('/qa');
       } finally {
         setIsLoading(false);
