@@ -76,50 +76,31 @@ const languageScript = `
   })()
 `
 
-// Create absolute URLs for all assets to ensure they work in all environments
-const baseUrl = new URL('https://mawater974.com');
-const logoUrl = new URL('/Mawater974Logo.png', baseUrl).toString();
-
 export const metadata = {
   title: 'Mawater974',
   description: 'Your premier destination for cars',
-  metadataBase: baseUrl,
   icons: {
-    icon: [
-      { url: logoUrl, type: 'image/png' },
-      { url: '/favicon.ico', type: 'image/x-icon' }  // Fallback for older browsers
-    ],
-    shortcut: logoUrl,
-    apple: logoUrl,
+    icon: '/Mawater974Logo.png',
+    shortcut: '/Mawater974Logo.png',
+    apple: '/Mawater974Logo.png',
   },
+  metadataBase: new URL('https://mawater974.com'),
   openGraph: {
     title: 'Mawater974',
     description: 'Your premier destination for cars',
     images: [{
-      url: logoUrl,
+      url: '/Mawater974Logo.png',
       width: 1200,
       height: 630,
       alt: 'Mawater974 Logo'
     }],
     type: 'website',
-    siteName: 'Mawater974',
-    url: baseUrl.toString(),
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Mawater974',
     description: 'Your premier destination for cars',
-    images: [logoUrl],
-  },
-  manifest: '/site.webmanifest',  // Consider adding a web manifest file
-  themeColor: '#ffffff',
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: 'default',
-    title: 'Mawater974',
-  },
-  formatDetection: {
-    telephone: false,
+    images: ['/Mawater974Logo.png'],
   }
 }
 
@@ -131,7 +112,6 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <link rel="icon" href="/favicon.ico" type="image/x-icon" />
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <script dangerouslySetInnerHTML={{ __html: languageScript }} />
         <script dangerouslySetInnerHTML={{ __html: gaDebugScript }} />
