@@ -313,7 +313,8 @@ export function CountryProvider({ children }: { children: React.ReactNode }) {
         // If no country in profile or not logged in, use IP geolocation
         try {
           const countryInfo = await getCountryFromIP();
-          if (countryInfo && countryInfo.code !== '--') {
+          if (countryInfo && countryInfo.code) {
+            // Find the country in our database that matches the country code
             const matchedCountry = countries.find(c => c.code.toLowerCase() === countryInfo.code.toLowerCase());
             if (matchedCountry) {
               setCurrentCountry(matchedCountry);
@@ -322,17 +323,16 @@ export function CountryProvider({ children }: { children: React.ReactNode }) {
               if (firstCity) {
                 setCurrentCity(firstCity);
               }
-              setIsLoading(false);
               return;
             }
           }
         } catch (error) {
           console.error('Error getting country from IP:', error);
         }
-        
-        // Default to Qatar if no country detected or error occurred
-        const defaultCountry = countries.find(c => c.code === 'QA');
-        if (defaultCountry) {
+        } else {
+          // Default to Qatar if no country detected
+          const defaultCountry = countries.find(c => c.code === 'QA');
+          if (defaultCountry) {
             setCurrentCountry(defaultCountry);
             // Set default city (Doha)
             const defaultCity = cities.find(c => c.country_id === defaultCountry.id && c.name === 'Doha');
