@@ -7,7 +7,24 @@ const SUPPORTED_COUNTRIES = ['qa', 'sa', 'ae', 'kw', 'sy', 'eg']
 const DEFAULT_COUNTRY = 'qa' // Default to Qatar if no match found
 
 // List of paths that should not be redirected
-const PUBLIC_PATHS = ['/api', '/_next', '/static', '/favicon.ico']
+const PUBLIC_PATHS = [
+  '/api',
+  '/_next',
+  '/static',
+  '/favicon.ico',
+  '/images',
+  '/assets',
+  '/fonts',
+  '/sitemap.xml',
+  '/robots.txt',
+  '/manifest.json',
+  '/sw.js',
+  '/workbox-',
+  '/worker-',
+  '/Mawater974Logo.png',
+  '/Mawater974LogoWhite.png',
+  '/Mawater974LogoBlack.png'
+]
 
 // Function to get country from IP address
 async function getCountryFromIP() {
@@ -24,8 +41,13 @@ async function getCountryFromIP() {
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
   
+  // Debug log for all requests
+  console.log('Middleware processing:', pathname)
+  
   // Skip middleware for API routes, static files, etc.
-  if (PUBLIC_PATHS.some(path => pathname.startsWith(path))) {
+  const isPublicPath = PUBLIC_PATHS.some(path => pathname.startsWith(path))
+  if (isPublicPath) {
+    console.log('Skipping middleware for public path:', pathname)
     const res = NextResponse.next()
     const supabase = createMiddlewareClient({ req, res })
     await supabase.auth.getSession()
@@ -65,19 +87,25 @@ export async function middleware(req: NextRequest) {
   return res
 }
 
+// Only run middleware on document requests (not for static files, images, etc.)
 export const config = {
   matcher: [
     /*
-     * Match all request paths except for the ones starting with:
+     * Match all document requests (HTML) that don't start with:
      * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
-     * - images
-     * - fonts
-     * - assets
+     * - _next (Next.js internals)
+     * - static (static files)
+     * - favicon.ico
+     * - images/
+     * - assets/
+     * - fonts/
+     * - sitemap.xml
+     * - robots.txt
+     * - manifest files
+     * - service worker files
+     * - image files
+     * - font files
      */
-    '/((?!api|_next|_vercel|public|images|fonts|assets|favicon\.ico|sitemap\.xml|robots\.txt|sw\.js|workbox-.*\.js|worker-.*\.js|manifest\.webmanifest).*)',
+    '/((?!api|_next|static|favicon.ico|images|assets|fonts|sitemap|robots.txt|manifest|sw|workbox|worker-|Mawater974Logo\.(png|svg|jpg|jpeg|webp|gif)|.*\.(css|js|json|txt|ico|png|jpg|jpeg|gif|svg|webp|woff|woff2|ttf|eot|otf)$).*)',
   ],
 }
