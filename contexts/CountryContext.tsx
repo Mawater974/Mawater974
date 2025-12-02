@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { useSupabase } from './SupabaseContext';
 import { useAuth } from './AuthContext';
-import { getUserCountry } from '@/utils/geoLocation';
+import { getCountryFromIP } from '@/utils/geoLocation';
 import { Country, City } from '@/types/supabase';
 import { useLanguage } from './LanguageContext';
 
@@ -311,7 +311,8 @@ export function CountryProvider({ children }: { children: React.ReactNode }) {
         }
 
         // If no country in profile or not logged in, use IP geolocation
-        const detectedCountry = await getUserCountry(countries);
+        const countryInfo = await getCountryFromIP();
+        const detectedCountry = countries.find(c => c.code === countryInfo.code.toUpperCase());
         
         if (detectedCountry) {
           setCurrentCountry(detectedCountry);
