@@ -201,7 +201,7 @@ export default function Navbar() {
           {/* Logo and main nav */}
           <div className="flex-1 flex items-center justify-between">
             <Link href={`/${currentCountry?.code.toLowerCase()}`} className="flex items-center">
-              <Image src="/logo.png" alt="Mawater974 Logo" width={150} height={40} className="h-150 w-40" priority />
+              <Image src="/Mawater974Logo1.png" alt="Mawater974 Logo" width={150} height={40} className="h-150 w-40" priority />
             </Link>
 
             {/* Navigation Links */}
