@@ -41,14 +41,14 @@ export async function middleware(req: NextRequest) {
 // Configure which paths the middleware should run on
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - api routes
-     * - public folder
-     */
-    '/((?!_next/static|_next/image|favicon.ico|api/|images/).*)',
+    // Match all request paths except for:
+    // - _next/static (static files)
+    // - _next/image (image optimization files)
+    // - favicon.ico (favicon file)
+    // - api routes
+    // - public folder
+    // - image files
+    // - fonts
+    '/((?!_next/static|_next/image|favicon.ico|api/|images/|.*\\.(?:ico|png|jpg|jpeg|gif|svg|webp|css|js|woff|woff2|ttf|eot)$).*)',
   ],
 };
