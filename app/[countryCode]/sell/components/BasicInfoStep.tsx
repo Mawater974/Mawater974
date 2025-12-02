@@ -184,7 +184,8 @@ export default function BasicInfoStep({
   const supabase = createClientComponentClient<Database>();
   const currentYear = new Date().getFullYear();
   const { currentLanguage } = useLanguage();
-  const years = Array.from({ length: 30 }, (_, i) => (currentYear - i).toString());
+  // Extend the range to include next year (2026)
+  const years = Array.from({ length: 31 }, (_, i) => (currentYear + 1 - i).toString());
 
   const handleBrandChange = async (value: string) => {
     const brandId = value;
