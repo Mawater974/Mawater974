@@ -15,7 +15,25 @@ const PUBLIC_PATHS = [
   '/images',
   '/assets',
   '/fonts',
-  '/icons'
+  '/icons',
+  '/Mawater974Logo.png',
+  '/sitemap.xml',
+  '/robots.txt'
+]
+
+// File extensions that should bypass the middleware
+const FILE_EXTENSIONS = [
+  '.png',
+  '.jpg',
+  '.jpeg',
+  '.gif',
+  '.ico',
+  '.svg',
+  '.css',
+  '.js',
+  '.json',
+  '.xml',
+  '.txt'
 ]
 
 // Function to get country from IP address
@@ -33,6 +51,11 @@ async function getCountryFromIP() {
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
   
+  // Skip middleware for file extensions
+  if (FILE_EXTENSIONS.some(ext => pathname.endsWith(ext))) {
+    return NextResponse.next()
+  }
+  
   // Skip middleware for public paths
   if (PUBLIC_PATHS.some(path => pathname.startsWith(path))) {
     return NextResponse.next()
@@ -40,7 +63,7 @@ export async function middleware(req: NextRequest) {
 
   // Skip if we already have a country code in the URL
   const pathParts = pathname.split('/').filter(Boolean)
-  if (pathParts.length > 0 && SUPPORTED_COUNTRIES.includes(pathParts[0])) {
+  if (pathParts.length > 0 && SUPPORTED_COUNTRIES.includes(pathParts[0].toLowerCase())) {
     const res = NextResponse.next()
     const supabase = createMiddlewareClient({ req, res })
     await supabase.auth.getSession()
@@ -57,9 +80,14 @@ export async function middleware(req: NextRequest) {
     countryCode = countryCode.toLowerCase()
   }
 
+  // Don't redirect if this is an API request or static file
+  if (pathname.startsWith('/api/') || pathname.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg)$/)) {
+    return NextResponse.next()
+  }
+
   // Create a new URL with the country code
   const url = req.nextUrl.clone()
-  url.pathname = `/${countryCode}${pathname}`
+  url.pathname = `/${countryCode}${pathname === '/' ? '' : pathname}`
   
   // Redirect to the new URL
   const res = NextResponse.redirect(url)
@@ -70,6 +98,6 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|api/|images/|assets/|fonts/|icons/).*)',
+    '/((?!_next/static|_next/image|favicon.ico|api/|images/|assets/|fonts/|icons/|sitemap\.xml|robots\.txt).*)',
   ],
 }
