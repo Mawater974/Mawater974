@@ -4,7 +4,7 @@ import type { NextRequest } from 'next/server'
 
 // List of supported country codes
 const supportedCountries = ['ae', 'qa', 'sa', 'kw', 'bh', 'om']
-const defaultCountry = 'ae' // Default country code
+const defaultCountry = 'qa' // Default country code
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
