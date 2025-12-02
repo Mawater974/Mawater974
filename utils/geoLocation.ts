@@ -13,46 +13,26 @@ interface CountryInfo {
 
 // Function to get country from IP using a third-party service
 export async function getCountryFromIP(): Promise<CountryInfo> {
-  // Default to Qatar if anything goes wrong
-  const defaultCountry = {
-    code: 'qa',
-    name: 'Qatar'
-  };
-
   try {
-    // First try ipapi.co
+    // Using ipapi.co for IP geolocation (free tier has limitations)
     const response = await fetch('https://ipapi.co/json/');
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
     const data = await response.json();
     
-    if (data?.country_code && data?.country_name) {
+    if (data && data.country_code && data.country_name) {
       return {
         code: data.country_code.toLowerCase(),
         name: data.country_name
       };
     }
     
-    // If ipapi.co doesn't return valid data, try a fallback service
-    const fallbackResponse = await fetch('https://ipapi.co/country/');
-    if (fallbackResponse.ok) {
-      const countryCode = (await fallbackResponse.text()).trim().toLowerCase();
-      if (countryCode && countryCode.length === 2) {
-        return {
-          code: countryCode,
-          name: countryCode.toUpperCase() // Fallback name is just the uppercase code
-        };
-      }
-    }
-    
     throw new Error('Could not determine country from IP');
-    
   } catch (error) {
-    console.error('Error getting country from IP, using default (Qatar):', error);
-    return defaultCountry;
+    console.error('Error getting country from IP:', error);
+    // Default to Qatar if there's an error
+    return {
+      code: '--',
+      name: '--'
+    };
   }
 }
 
