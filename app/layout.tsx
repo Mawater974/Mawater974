@@ -79,19 +79,12 @@ const languageScript = `
 export const metadata = {
   title: 'Mawater974',
   description: 'Your premier destination for cars',
-  metadataBase: new URL('https://mawater974.com'),
   icons: {
-    icon: [
-      { url: '/favicon.ico', sizes: 'any' },
-      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
-      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
-    ],
-    shortcut: '/favicon.ico',
-    apple: [
-      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
-    ],
+    icon: '/Mawater974Logo.png',
+    shortcut: '/Mawater974Logo.png',
+    apple: '/Mawater974Logo.png',
   },
-  manifest: '/site.webmanifest',
+  metadataBase: new URL('https://mawater974.com'),
   openGraph: {
     title: 'Mawater974',
     description: 'Your premier destination for cars',
@@ -102,19 +95,12 @@ export const metadata = {
       alt: 'Mawater974 Logo'
     }],
     type: 'website',
-    siteName: 'Mawater974',
-    locale: 'en_US',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Mawater974',
     description: 'Your premier destination for cars',
     images: ['/Mawater974Logo.png'],
-    creator: '@mawater974',
-  },
-  other: {
-    'msapplication-TileColor': '#da532c',
-    'theme-color': '#ffffff',
   }
 }
 
@@ -169,4 +155,3 @@ export default function RootLayout({
     </html>
   )
 }
-
