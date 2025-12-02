@@ -1,4 +1,18 @@
-import { Country } from '@/types/supabase';
+// Define the Country interface based on the database schema
+interface Country {
+  id: number;
+  code: string;
+  name: string;
+  name_ar: string;
+  currency_code: string;
+  currency_symbol: string;
+  currency_name: string;
+  currency_name_ar: string;
+  phone_code: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
 import { User } from '@supabase/supabase-js';
 
 interface GeolocationResponse {
@@ -80,5 +94,24 @@ export async function getCountryFromUser(user: User | null, supabase: any): Prom
   }
 }
 
-
+// Function to get user's country with fallback to IP detection
+export async function getUserCountry(countries: Country[]): Promise<Country | null> {
+  try {
+    // First try to get country from IP
+    const ipInfo = await getCountryFromIP();
+    
+    if (ipInfo && ipInfo.code !== '--') {
+      const country = countries.find(c => c.code.toLowerCase() === ipInfo.code.toLowerCase());
+      if (country) {
+        return country;
+      }
+    }
+    
+    // If IP detection fails, return the first available country as fallback
+    return countries.length > 0 ? countries[0] : null;
+  } catch (error) {
+    console.error('Error in getUserCountry:', error);
+    return countries.length > 0 ? countries[0] : null;
+  }
+}
 
