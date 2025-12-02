@@ -26,13 +26,19 @@ export async function middleware(req: NextRequest) {
   
   // Skip middleware for API routes, static files, etc.
   if (PUBLIC_PATHS.some(path => pathname.startsWith(path))) {
-    return NextResponse.next()
+    const res = NextResponse.next()
+    const supabase = createMiddlewareClient({ req, res })
+    await supabase.auth.getSession()
+    return res
   }
 
   // Skip if we already have a country code in the URL
   const pathParts = pathname.split('/').filter(Boolean)
   if (pathParts.length > 0 && SUPPORTED_COUNTRIES.includes(pathParts[0])) {
-    return NextResponse.next()
+    const res = NextResponse.next()
+    const supabase = createMiddlewareClient({ req, res })
+    await supabase.auth.getSession()
+    return res
   }
 
   // Get country from IP
@@ -47,10 +53,16 @@ export async function middleware(req: NextRequest) {
 
   // Create a new URL with the country code
   const url = req.nextUrl.clone()
-  url.pathname = `/${countryCode}${pathname === '/' ? '' : pathname}`
+  url.pathname = `/${countryCode}${pathname === '/' ? '' : pathname}` 
 
-  // Redirect to the new URL
-  return NextResponse.redirect(url)
+  // Create a response that will redirect to the new URL
+  const res = NextResponse.redirect(url)
+  
+  // Initialize Supabase client with the response
+  const supabase = createMiddlewareClient({ req, res })
+  await supabase.auth.getSession()
+  
+  return res
 }
 
 export const config = {
@@ -62,7 +74,10 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - public folder
+     * - images
+     * - fonts
+     * - assets
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|public/).*)',
+    '/((?!api|_next|_vercel|public|images|fonts|assets|favicon\.ico|sitemap\.xml|robots\.txt|sw\.js|workbox-.*\.js|worker-.*\.js|manifest\.webmanifest).*)',
   ],
 }
