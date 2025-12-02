@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { useSupabase } from './SupabaseContext';
 import { useAuth } from './AuthContext';
-import { getCountryFromIP } from '@/utils/geoLocation';
+import { getUserCountry } from '@/utils/geoLocation';
 import { Country, City } from '@/types/supabase';
 import { useLanguage } from './LanguageContext';
 
@@ -311,24 +311,15 @@ export function CountryProvider({ children }: { children: React.ReactNode }) {
         }
 
         // If no country in profile or not logged in, use IP geolocation
-        try {
-          const countryInfo = await getCountryFromIP();
-          if (countryInfo && countryInfo.code) {
-            // Find the country in our database that matches the country code
-            const matchedCountry = countries.find(c => c.code.toLowerCase() === countryInfo.code.toLowerCase());
-            if (matchedCountry) {
-              setCurrentCountry(matchedCountry);
-              // Set first city in this country as default
-              const firstCity = cities.find(c => c.country_id === matchedCountry.id);
-              if (firstCity) {
-                setCurrentCity(firstCity);
-              }
-              return;
-            }
+        const detectedCountry = await getUserCountry(countries);
+        
+        if (detectedCountry) {
+          setCurrentCountry(detectedCountry);
+          // Set first city in this country as default
+          const firstCity = cities.find(c => c.country_id === detectedCountry.id);
+          if (firstCity) {
+            setCurrentCity(firstCity);
           }
-        } catch (error) {
-          console.error('Error getting country from IP:', error);
-        }
         } else {
           // Default to Qatar if no country detected
           const defaultCountry = countries.find(c => c.code === 'QA');
