@@ -6,34 +6,24 @@ import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
 const SUPPORTED_COUNTRIES = ['qa', 'sa', 'ae', 'kw', 'sy', 'eg']
 const DEFAULT_COUNTRY = 'qa' // Default to Qatar if no match found
 
-// Paths that should bypass the middleware
-const PUBLIC_PATHS = [
-  '/api',
-  '/_next',
-  '/static',
-  '/favicon.ico',
-  '/images',
-  '/assets',
-  '/fonts',
-  '/icons',
-  '/Mawater974Logo.png',
-  '/sitemap.xml',
-  '/robots.txt'
-]
-
 // File extensions that should bypass the middleware
-const FILE_EXTENSIONS = [
-  '.png',
-  '.jpg',
-  '.jpeg',
-  '.gif',
-  '.ico',
-  '.svg',
-  '.css',
-  '.js',
-  '.json',
-  '.xml',
-  '.txt'
+const STATIC_EXTENSIONS = [
+  // Images
+  '.png', '.jpg', '.jpeg', '.gif', '.ico', '.svg', '.webp', '.avif',
+  // Fonts
+  '.woff', '.woff2', '.ttf', '.eot',
+  // Styles
+  '.css', '.scss', '.sass', '.less',
+  // Scripts
+  '.js', '.jsx', '.ts', '.tsx',
+  // Data
+  '.json', '.xml', '.csv',
+  // Documents
+  '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
+  // Archives
+  '.zip', '.gz', '.tar', '.rar',
+  // Other
+  '.txt', '.md', '.webmanifest'
 ]
 
 // Function to get country from IP address
@@ -51,13 +41,25 @@ async function getCountryFromIP() {
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
   
-  // Skip middleware for file extensions
-  if (FILE_EXTENSIONS.some(ext => pathname.endsWith(ext))) {
-    return NextResponse.next()
-  }
-  
-  // Skip middleware for public paths
-  if (PUBLIC_PATHS.some(path => pathname.startsWith(path))) {
+  // Skip middleware for static files and common paths
+  if (
+    // Skip for all file extensions
+    STATIC_EXTENSIONS.some(ext => pathname.endsWith(ext)) ||
+    // Skip for Next.js internal paths
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/api') ||
+    pathname.startsWith('/static') ||
+    pathname.startsWith('/images') ||
+    pathname.startsWith('/assets') ||
+    pathname.startsWith('/fonts') ||
+    pathname.startsWith('/icons') ||
+    pathname === '/favicon.ico' ||
+    pathname === '/sitemap.xml' ||
+    pathname === '/robots.txt' ||
+    pathname === '/Mawater974Logo.png' ||
+    // Skip for any path that has a file extension
+    /\.[^/]+$/.test(pathname)
+  ) {
     return NextResponse.next()
   }
 
@@ -80,11 +82,6 @@ export async function middleware(req: NextRequest) {
     countryCode = countryCode.toLowerCase()
   }
 
-  // Don't redirect if this is an API request or static file
-  if (pathname.startsWith('/api/') || pathname.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg)$/)) {
-    return NextResponse.next()
-  }
-
   // Create a new URL with the country code
   const url = req.nextUrl.clone()
   url.pathname = `/${countryCode}${pathname === '/' ? '' : pathname}`
@@ -97,7 +94,9 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
+  // Only run middleware on the root path and pages that don't have a country code
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|api/|images/|assets/|fonts/|icons/|sitemap\.xml|robots\.txt).*)',
+    '/',
+    '/((?!_next/|api/|static/|images/|assets/|fonts/|icons/|.*\..*).*)',
   ],
 }
