@@ -234,7 +234,7 @@ export default function DealershipRegistrationModal({
           opening_hours: formData.opening_hours,
           opening_hours_ar: formData.opening_hours_ar,
           logo_url: logoUrl,
-          status: 'pending',
+          status: 'approved',
           reviewer_id: null,
           review_notes: null,
           reviewed_at: null,
@@ -269,7 +269,7 @@ export default function DealershipRegistrationModal({
             opening_hours: formData.opening_hours,
             opening_hours_ar: formData.opening_hours_ar,
             logo_url: logoUrl,
-            status: 'pending',
+            status: 'approved',
           });
 
         if (requestError) {
