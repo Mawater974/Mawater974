@@ -596,7 +596,7 @@ export default function NewSellPage() {
         payment_currency: formData.payment_currency || null,
         payment_session_id: formData.payment_session_id || null,
         payment_metadata: formData.payment_metadata || null,
-        status: 'pending',
+        status: 'approved',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
@@ -606,7 +606,7 @@ export default function NewSellPage() {
       const listingDataWithFeatured = {
         ...listingData,
         is_featured: formData.is_featured || false,
-        status: 'pending'
+        status: 'approved'
       };
 
       const { data: listing, error: listingError } = await supabase
@@ -637,7 +637,7 @@ export default function NewSellPage() {
             payment_metadata: formData.payment_metadata,
           },
           is_featured: true,
-          status: 'pending'
+          status: 'approved'
         };
 
         const { error: updateError } = await supabase
