@@ -6,6 +6,18 @@ import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
 const SUPPORTED_COUNTRIES = ['qa', 'sa', 'ae', 'kw', 'sy', 'eg']
 const DEFAULT_COUNTRY = 'qa' // Default to Qatar if no match found
 
+// Paths that should bypass the middleware
+const PUBLIC_PATHS = [
+  '/api',
+  '/_next',
+  '/static',
+  '/favicon.ico',
+  '/images',
+  '/assets',
+  '/fonts',
+  '/icons'
+]
+
 // Function to get country from IP address
 async function getCountryFromIP() {
   try {
@@ -21,6 +33,11 @@ async function getCountryFromIP() {
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
   
+  // Skip middleware for public paths
+  if (PUBLIC_PATHS.some(path => pathname.startsWith(path))) {
+    return NextResponse.next()
+  }
+
   // Skip if we already have a country code in the URL
   const pathParts = pathname.split('/').filter(Boolean)
   if (pathParts.length > 0 && SUPPORTED_COUNTRIES.includes(pathParts[0])) {
@@ -52,5 +69,7 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico|api/|images/|assets/|fonts/|icons/).*)',
+  ],
 }
