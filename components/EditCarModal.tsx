@@ -911,7 +911,7 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
                       <input
                         type="number"
                         min="1900"
-                        max={new Date().getFullYear()}
+                        max={new Date().getFullYear() + 1}
                         value={formData.year}
                         onChange={(e) => setFormData(prev => ({ ...prev, year: parseInt(e.target.value) }))}
                         className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-qatar-maroon focus:border-qatar-maroon sm:text-sm bg-white dark:bg-gray-700 transition-colors duration-200"
