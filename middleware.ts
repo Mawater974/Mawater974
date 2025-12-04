@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getCountryFromIP } from './utils/getCountryFromIP';
-import { userAgent } from 'next/server';
 
 // List of supported countries and their codes with their respective domains
 const SUPPORTED_COUNTRIES = ['qa', 'ae', 'sa', 'sy', 'bh', 'om', 'eg'] as const;
@@ -11,13 +10,13 @@ type CountryCode = typeof SUPPORTED_COUNTRIES[number];
 
 // Paths that should not have country code redirection
 const EXCLUDED_PATHS = [
-  '/',
-  '/cars',
-  '/api',
-  '/_next',
-  '/favicon.ico',
-  '/images',
-  '/admin',
+  '/',             // Root domain
+  '/cars',         // Main cars page (will show in search results)
+  '/api',          // API routes
+  '/_next',        // Next.js internal
+  '/favicon.ico',  // Favicon
+  '/images',       // Static images
+  '/admin',        // Admin routes
   '/profile',
   '/favorites',
   '/my-ads',
@@ -25,41 +24,12 @@ const EXCLUDED_PATHS = [
   '/signup',
   '/reset-password',
   '/users',
-  '/contact',
-  '/terms',
-  '/privacy',
-  '/sitemap.xml',
-  '/sitemap-index.xml',
-  '/robots.txt',
-  '/ads.txt',
-  '/.well-known',
-  '/_vercel',
-  '/_error',
-  '/404',
-  '/500'
+  '/contact',      // Global contact page
+  '/terms',        // Global terms page
+  '/privacy',      // Global privacy page
+  '/sitemap.xml',  // Sitemap
+  '/robots.txt'    // Robots.txt
 ];
-
-// List of search engine bot user agents
-const SEARCH_ENGINE_BOTS = [
-  'googlebot',
-  'bingbot',
-  'slurp',
-  'duckduckbot',
-  'baiduspider',
-  'yandexbot',
-  'facebot',
-  'ia_archiver',
-  'ahrefsbot',
-  'semrushbot'
-];
-
-// Function to check if the request is from a search engine bot
-const isSearchEngineBot = (userAgent: string | null): boolean => {
-  if (!userAgent) return false;
-  return SEARCH_ENGINE_BOTS.some(bot => 
-    userAgent.toLowerCase().includes(bot)
-  );
-};
 
 // Check if the path should be excluded from country code routing
 const isExcludedPath = (path: string): boolean => {
@@ -82,52 +52,12 @@ const hasValidCountryCode = (path: string): { isValid: boolean; countryCode?: Co
 };
 
 export async function middleware(req: NextRequest) {
-  const { pathname, search, origin } = req.nextUrl;
-  const hostname = req.headers.get('host') || 'mawater974.com';
-  const userAgent = req.headers.get('user-agent') || '';
-  const isBot = isSearchEngineBot(userAgent);
+  const { pathname, search } = req.nextUrl;
+  const hostname = req.headers.get('host') || '';
   
   // Skip middleware for excluded paths
   if (isExcludedPath(pathname)) {
-    // Add link headers for search engines on root and /cars
-    if (pathname === '/' || pathname === '/cars') {
-      const response = NextResponse.next();
-      
-      // Add hreflang links for search engines
-      const links = SUPPORTED_COUNTRIES.map(country => 
-        `<${origin}/${country}${pathname === '/' ? '' : pathname}>; rel="alternate"; hreflang="${country}"`
-      ).join(',');
-      
-      response.headers.set('Link', links);
-      return response;
-    }
     return NextResponse.next();
-  }
-  
-  // Special handling for search engine bots
-  if (isBot) {
-    // Let search engines index all country-specific pages
-    if (hasValidCountryCode(pathname).isValid) {
-      const response = NextResponse.next();
-      
-      // Add canonical URL
-      const canonicalUrl = `${origin}${pathname}`;
-      response.headers.set('Link', `<${canonicalUrl}>; rel="canonical"`);
-      
-      // Add hreflang links
-      const hreflangLinks = SUPPORTED_COUNTRIES.map(country => {
-        const url = country === pathname.split('/')[1] 
-          ? `${origin}${pathname}`
-          : `${origin}/${country}${pathname.substring(3)}`; // Replace country code
-        return `<${url}>; rel="alternate"; hreflang="${country}"`;
-      });
-      
-      // Add x-default hreflang
-      hreflangLinks.push(`<${origin}${pathname}>; rel="alternate"; hreflang="x-default"`);
-      
-      response.headers.set('Link', hreflangLinks.join(','));
-      return response;
-    }
   }
   
   // Check if the path already has a valid country code
@@ -139,26 +69,15 @@ export async function middleware(req: NextRequest) {
     
     try {
       // Get country from IP address
-      console.log('Getting country from IP...');
-      const geoInfo = await getCountryFromIP();
+      const ipCountry = await getCountryFromIP(req);
       
-      if (geoInfo) {
-        console.log(`Detected country from IP: ${geoInfo.code} (${geoInfo.name})`);
-        
-        // Check if the detected country is in our supported countries
-        const normalizedCode = geoInfo.code.toLowerCase();
-        if (SUPPORTED_COUNTRIES.includes(normalizedCode as CountryCode)) {
-          console.log(`Using detected country: ${normalizedCode}`);
-          countryCode = normalizedCode;
-        } else {
-          console.log(`Country ${normalizedCode} not in supported countries, using default: ${DEFAULT_COUNTRY}`);
-        }
-      } else {
-        console.log('Could not detect country from IP, using default:', DEFAULT_COUNTRY);
+      // If we got a valid country code from IP and it's in our supported countries
+      if (ipCountry && SUPPORTED_COUNTRIES.includes(ipCountry.toLowerCase() as CountryCode)) {
+        countryCode = ipCountry.toLowerCase();
       }
     } catch (error) {
       console.error('Error getting country from IP:', error);
-      console.log('Falling back to default country:', DEFAULT_COUNTRY);
+      // Fall back to default country if there's an error
     }
     
     // Create new URL with country code
@@ -244,31 +163,6 @@ export const config = {
     // - public folder
     // - image files
     // - fonts
-    // - sitemap and robots.txt
-    '/((?!_next/static|_next/image|favicon.ico|api/|images/|sitemap|robots\.txt|ads\.txt|\.well-known|.*\\.(?:ico|png|jpg|jpeg|gif|svg|webp|css|js|woff|woff2|ttf|eot|xml)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|api/|images/|.*\\.(?:ico|png|jpg|jpeg|gif|svg|webp|css|js|woff|woff2|ttf|eot)$).*)',
   ],
-};
-
-// Add custom headers for search engines
-const addSearchEngineHeaders = (response: NextResponse, pathname: string, origin: string) => {
-  // Add canonical URL
-  const canonicalUrl = `${origin}${pathname}`;
-  response.headers.set('Link', `<${canonicalUrl}>; rel="canonical"`);
-  
-  // Add hreflang links for country-specific pages
-  if (pathname.match(/^\/[a-z]{2}(\/|$)/)) {
-    const hreflangLinks = SUPPORTED_COUNTRIES.map(country => {
-      const url = country === pathname.split('/')[1] 
-        ? `${origin}${pathname}`
-        : `${origin}/${country}${pathname.substring(3)}`; // Replace country code
-      return `<${url}>; rel="alternate"; hreflang="${country}"`;
-    });
-    
-    // Add x-default hreflang
-    hreflangLinks.push(`<${origin}${pathname}>; rel="alternate"; hreflang="x-default"`);
-    
-    response.headers.set('Link', hreflangLinks.join(','));
-  }
-  
-  return response;
 };
