@@ -139,15 +139,26 @@ export async function middleware(req: NextRequest) {
     
     try {
       // Get country from IP address
-      const ipCountry = await getCountryFromIP(req);
+      console.log('Getting country from IP...');
+      const geoInfo = await getCountryFromIP();
       
-      // If we got a valid country code from IP and it's in our supported countries
-      if (ipCountry && SUPPORTED_COUNTRIES.includes(ipCountry.toLowerCase() as CountryCode)) {
-        countryCode = ipCountry.toLowerCase();
+      if (geoInfo) {
+        console.log(`Detected country from IP: ${geoInfo.code} (${geoInfo.name})`);
+        
+        // Check if the detected country is in our supported countries
+        const normalizedCode = geoInfo.code.toLowerCase();
+        if (SUPPORTED_COUNTRIES.includes(normalizedCode as CountryCode)) {
+          console.log(`Using detected country: ${normalizedCode}`);
+          countryCode = normalizedCode;
+        } else {
+          console.log(`Country ${normalizedCode} not in supported countries, using default: ${DEFAULT_COUNTRY}`);
+        }
+      } else {
+        console.log('Could not detect country from IP, using default:', DEFAULT_COUNTRY);
       }
     } catch (error) {
       console.error('Error getting country from IP:', error);
-      // Fall back to default country if there's an error
+      console.log('Falling back to default country:', DEFAULT_COUNTRY);
     }
     
     // Create new URL with country code
