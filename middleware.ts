@@ -2,11 +2,9 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getCountryFromIP } from './utils/getCountryFromIP';
 
-// List of supported countries and their codes with their respective domains
-const SUPPORTED_COUNTRIES = ['qa', 'ae', 'sa', 'sy', 'bh', 'om', 'eg'] as const;
+// List of supported countries and their codes
+const SUPPORTED_COUNTRIES = ['qa', 'ae', 'sa', 'sy']; // Add more country codes as needed
 const DEFAULT_COUNTRY = 'qa'; // Default country code (Qatar)
-
-type CountryCode = typeof SUPPORTED_COUNTRIES[number];
 
 // Paths that should not have country code redirection
 const EXCLUDED_PATHS = [
@@ -16,6 +14,7 @@ const EXCLUDED_PATHS = [
   '/images',       // Static images
   '/admin',        // Admin routes
   '/profile',
+  '/notifications',
   '/favorites',
   '/my-ads',
   '/login',
@@ -24,95 +23,11 @@ const EXCLUDED_PATHS = [
   '/users',
   '/contact',      // Global contact page
   '/terms',        // Global terms page
-  '/privacy',      // Global privacy page
-  '/sitemap.xml',  // Sitemap
-  '/robots.txt'    // Robots.txt
+  '/privacy'       // Global privacy page
 ];
 
-// Check if the path should be excluded from country code routing
-const isExcludedPath = (path: string): boolean => {
-  return EXCLUDED_PATHS.some(excludedPath => 
-    path === excludedPath || path.startsWith(`${excludedPath}/`)
-  );
-};
-
-// Check if the path already has a valid country code
-const hasValidCountryCode = (path: string): { isValid: boolean; countryCode?: CountryCode } => {
-  const segments = path.split('/').filter(Boolean);
-  if (segments.length === 0) return { isValid: false };
-  
-  const potentialCode = segments[0].toLowerCase();
-  if (SUPPORTED_COUNTRIES.includes(potentialCode as CountryCode)) {
-    return { isValid: true, countryCode: potentialCode as CountryCode };
-  }
-  
-  return { isValid: false };
-};
-
 export async function middleware(req: NextRequest) {
-  const { pathname, search } = req.nextUrl;
-  const hostname = req.headers.get('host') || '';
-  
-  // Skip middleware for excluded paths
-  if (isExcludedPath(pathname)) {
-    return NextResponse.next();
-  }
-  
-  // Check if the path already has a valid country code
-  const { isValid: hasCountryCode, countryCode: existingCountryCode } = hasValidCountryCode(pathname);
-  
-  // If it's a direct domain access (no country code in path) and not an excluded path
-  if (!hasCountryCode) {
-    let countryCode: string = DEFAULT_COUNTRY;
-    
-    try {
-      // Get country from IP address
-      const ipCountry = await getCountryFromIP(req);
-      
-      // If we got a valid country code from IP and it's in our supported countries
-      if (ipCountry && SUPPORTED_COUNTRIES.includes(ipCountry.toLowerCase() as CountryCode)) {
-        countryCode = ipCountry.toLowerCase();
-      }
-    } catch (error) {
-      console.error('Error getting country from IP:', error);
-      // Fall back to default country if there's an error
-    }
-    
-    // Create new URL with country code
-    const url = req.nextUrl.clone();
-    
-    // Remove leading slash if present
-    const cleanPath = pathname.startsWith('/') ? pathname.substring(1) : pathname;
-    
-    // Build the new path with country code
-    url.pathname = `/${countryCode}${cleanPath ? `/${cleanPath}` : ''}`;
-    
-    // Preserve query parameters
-    url.search = search;
-    
-    return NextResponse.redirect(url);
-  }
-  
-  // If we have a valid country code, ensure it's in the correct case
-  if (existingCountryCode) {
-    const segments = pathname.split('/').filter(Boolean);
-    const currentCode = segments[0];
-    
-    if (currentCode !== existingCountryCode) {
-      // Fix the case of the country code if needed
-      segments[0] = existingCountryCode;
-      const newPath = `/${segments.join('/')}`;
-      
-      const url = req.nextUrl.clone();
-      url.pathname = newPath;
-      url.search = search;
-      
-      return NextResponse.redirect(url);
-    }
-  }
-  
-  // Continue with the request if no redirection is needed
-  return NextResponse.next();
+  const { pathname } = req.nextUrl;
   
   // Skip middleware for excluded paths
   if (EXCLUDED_PATHS.some(path => pathname.startsWith(path))) {
