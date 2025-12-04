@@ -10,8 +10,6 @@ type CountryCode = typeof SUPPORTED_COUNTRIES[number];
 
 // Paths that should not have country code redirection
 const EXCLUDED_PATHS = [
-  '/',             // Root domain
-  '/cars',         // Main cars page (will show in search results)
   '/api',          // API routes
   '/_next',        // Next.js internal
   '/favicon.ico',  // Favicon
@@ -64,7 +62,7 @@ export async function middleware(req: NextRequest) {
   const { isValid: hasCountryCode, countryCode: existingCountryCode } = hasValidCountryCode(pathname);
   
   // If it's a direct domain access (no country code in path) and not an excluded path
-  if (!hasCountryCode && pathname !== '/' && pathname !== '/cars') {
+  if (!hasCountryCode) {
     let countryCode: string = DEFAULT_COUNTRY;
     
     try {
