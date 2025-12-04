@@ -201,23 +201,7 @@ export default function Navbar() {
           {/* Logo and main nav */}
           <div className="flex-1 flex items-center justify-between">
             <Link href={`/${currentCountry?.code.toLowerCase()}`} className="flex items-center">
-              <Image 
-                src="/logo.png" 
-                alt="Mawater974 Logo" 
-                width={160} 
-                height={40} 
-                className="h-auto w-40 object-contain"
-                priority
-                onError={(e) => {
-                  // Fallback to text if image fails to load
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = 'none';
-                  const fallback = document.createElement('div');
-                  fallback.className = 'text-xl font-bold text-primary-600 dark:text-primary-400';
-                  fallback.textContent = 'Mawater974';
-                  target.parentNode?.insertBefore(fallback, target.nextSibling);
-                }}
-              />
+              <Image src="/logo.png" alt="Mawater974 Logo" width={150} height={40} className="h-150 w-40" priority />
             </Link>
 
             {/* Navigation Links */}
