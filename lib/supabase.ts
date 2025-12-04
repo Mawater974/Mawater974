@@ -16,6 +16,19 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   }
 });
 
+// Create admin client with service role key for admin operations
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (!supabaseServiceKey) {
+  console.warn('SUPABASE_SERVICE_ROLE_KEY is not set. Admin operations may fail.');
+}
+
+export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey || supabaseAnonKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false
+  }
+});
+
 export async function uploadCarImage(file: File, carId: number, isFirstImage: boolean = false) {
   try {
     // Generate unique file paths
