@@ -6,39 +6,12 @@ import { getCountryFromIP } from './utils/getCountryFromIP';
 const SUPPORTED_COUNTRIES = ['qa', 'ae', 'sa', 'sy']; // Add more country codes as needed
 const DEFAULT_COUNTRY = 'qa'; // Default country code (Qatar)
 
-// Paths that should not have country code redirection
-const EXCLUDED_PATHS = [
-  '/api',          // API routes
-  '/_next',        // Next.js internal
-  '/favicon.ico',  // Favicon
-  '/images',       // Static images
-  '/admin',        // Admin routes
-  '/profile',
-  '/notifications',
-  '/favorites',
-  '/my-ads',
-  '/login',
-  '/signup',
-  '/reset-password',
-  '/users',
-  '/contact',      // Global contact page
-  '/terms',        // Global terms page
-  '/privacy'       // Global privacy page
-];
-
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  
-  // Skip middleware for excluded paths
-  if (EXCLUDED_PATHS.some(path => pathname.startsWith(path))) {
-    return NextResponse.next();
-  }
-
   const pathParts = pathname.split('/').filter(Boolean);
   
   // Check if the path already starts with a country code
-  const hasCountryInPath = pathParts.length > 0 && 
-    SUPPORTED_COUNTRIES.includes(pathParts[0].toLowerCase());
+  const hasCountryInPath = pathParts.length > 0 && SUPPORTED_COUNTRIES.includes(pathParts[0].toLowerCase());
   
   // If the path already has a country code, don't redirect
   if (hasCountryInPath) {
