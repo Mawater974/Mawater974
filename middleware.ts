@@ -1,215 +1,50 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getCountryFromIP } from './utils/getCountryFromIP';
-import { userAgent } from 'next/server';
 
-// List of supported countries and their codes with their respective domains
-const SUPPORTED_COUNTRIES = ['qa', 'ae', 'sa', 'sy', 'bh', 'om', 'eg'] as const;
-const DEFAULT_COUNTRY = 'qa'; // Default country code (Qatar)
-
-type CountryCode = typeof SUPPORTED_COUNTRIES[number];
+// List of supported countries and their codes
+const SUPPORTED_COUNTRIES = ['qa', 'sa', 'sy', 'ae', 'bh', 'om', 'eg'];
+const DEFAULT_COUNTRY = 'qa'; // Default country code (UAE)
 
 // Paths that should not have country code redirection
 const EXCLUDED_PATHS = [
-  '/',
-  '/cars',
-  '/api',
-  '/_next',
-  '/favicon.ico',
-  '/images',
-  '/admin',
+  '/api',          // API routes
+  '/_next',        // Next.js internal
+  '/favicon.ico',  // Favicon
+  '/images',       // Static images
+  '/admin',        // Admin routes
   '/profile',
+  '/notifications',
   '/favorites',
   '/my-ads',
   '/login',
   '/signup',
   '/reset-password',
   '/users',
-  '/contact',
-  '/terms',
-  '/privacy',
-  '/sitemap.xml',
-  '/sitemap-index.xml',
-  '/robots.txt',
-  '/ads.txt',
-  '/.well-known',
-  '/_vercel',
-  '/_error',
-  '/404',
-  '/500'
+  '/contact',      // Global contact page
+  '/terms',        // Global terms page
+  '/privacy',      // Global privacy page
+  '/sitemap.xml',  // Sitemap
+  '/robots.txt'    // Robots.txt
 ];
-
-// List of search engine bot user agents
-const SEARCH_ENGINE_BOTS = [
-  'googlebot',
-  'bingbot',
-  'slurp',
-  'duckduckbot',
-  'baiduspider',
-  'yandexbot',
-  'facebot',
-  'ia_archiver',
-  'ahrefsbot',
-  'semrushbot'
-];
-
-// Function to check if the request is from a search engine bot
-const isSearchEngineBot = (userAgent: string | null): boolean => {
-  if (!userAgent) return false;
-  return SEARCH_ENGINE_BOTS.some(bot => 
-    userAgent.toLowerCase().includes(bot)
-  );
-};
-
-// Check if the path should be excluded from country code routing
-const isExcludedPath = (path: string): boolean => {
-  return EXCLUDED_PATHS.some(excludedPath => 
-    path === excludedPath || path.startsWith(`${excludedPath}/`)
-  );
-};
-
-// Check if the path already has a valid country code
-const hasValidCountryCode = (path: string): { isValid: boolean; countryCode?: CountryCode } => {
-  const segments = path.split('/').filter(Boolean);
-  if (segments.length === 0) return { isValid: false };
-  
-  const potentialCode = segments[0].toLowerCase();
-  if (SUPPORTED_COUNTRIES.includes(potentialCode as CountryCode)) {
-    return { isValid: true, countryCode: potentialCode as CountryCode };
-  }
-  
-  return { isValid: false };
-};
 
 export async function middleware(req: NextRequest) {
-  const { pathname, search, origin } = req.nextUrl;
-  const hostname = req.headers.get('host') || 'mawater974.com';
-  const userAgent = req.headers.get('user-agent') || '';
-  const isBot = isSearchEngineBot(userAgent);
+  const { pathname, search } = req.nextUrl;
   
   // Skip middleware for excluded paths
-  if (isExcludedPath(pathname)) {
-    // Add link headers for search engines on root and /cars
-    if (pathname === '/' || pathname === '/cars') {
-      const response = NextResponse.next();
-      
-      // Add hreflang links for search engines
-      const links = SUPPORTED_COUNTRIES.map(country => 
-        `<${origin}/${country}${pathname === '/' ? '' : pathname}>; rel="alternate"; hreflang="${country}"`
-      ).join(',');
-      
-      response.headers.set('Link', links);
-      return response;
-    }
-    return NextResponse.next();
-  }
+  const shouldExclude = EXCLUDED_PATHS.some(path => 
+    pathname === path || pathname.startsWith(`${path}/`)
+  );
   
-  // Special handling for search engine bots
-  if (isBot) {
-    // Let search engines index all country-specific pages
-    if (hasValidCountryCode(pathname).isValid) {
-      const response = NextResponse.next();
-      
-      // Add canonical URL
-      const canonicalUrl = `${origin}${pathname}`;
-      response.headers.set('Link', `<${canonicalUrl}>; rel="canonical"`);
-      
-      // Add hreflang links
-      const hreflangLinks = SUPPORTED_COUNTRIES.map(country => {
-        const url = country === pathname.split('/')[1] 
-          ? `${origin}${pathname}`
-          : `${origin}/${country}${pathname.substring(3)}`; // Replace country code
-        return `<${url}>; rel="alternate"; hreflang="${country}"`;
-      });
-      
-      // Add x-default hreflang
-      hreflangLinks.push(`<${origin}${pathname}>; rel="alternate"; hreflang="x-default"`);
-      
-      response.headers.set('Link', hreflangLinks.join(','));
-      return response;
-    }
-  }
-  
-  // Check if the path already has a valid country code
-  const { isValid: hasCountryCode, countryCode: existingCountryCode } = hasValidCountryCode(pathname);
-  
-  // If it's a direct domain access (no country code in path) and not an excluded path
-  if (!hasCountryCode && pathname !== '/' && pathname !== '/cars') {
-    let countryCode: string = DEFAULT_COUNTRY;
-    
-    try {
-      // Get country from IP address
-      console.log('Getting country from IP...');
-      const geoInfo = await getCountryFromIP();
-      
-      if (geoInfo) {
-        console.log(`Detected country from IP: ${geoInfo.code} (${geoInfo.name})`);
-        
-        // Check if the detected country is in our supported countries
-        const normalizedCode = geoInfo.code.toLowerCase();
-        if (SUPPORTED_COUNTRIES.includes(normalizedCode as CountryCode)) {
-          console.log(`Using detected country: ${normalizedCode}`);
-          countryCode = normalizedCode;
-        } else {
-          console.log(`Country ${normalizedCode} not in supported countries, using default: ${DEFAULT_COUNTRY}`);
-        }
-      } else {
-        console.log('Could not detect country from IP, using default:', DEFAULT_COUNTRY);
-      }
-    } catch (error) {
-      console.error('Error getting country from IP:', error);
-      console.log('Falling back to default country:', DEFAULT_COUNTRY);
-    }
-    
-    // Create new URL with country code
-    const url = req.nextUrl.clone();
-    
-    // Remove leading slash if present
-    const cleanPath = pathname.startsWith('/') ? pathname.substring(1) : pathname;
-    
-    // Build the new path with country code
-    url.pathname = `/${countryCode}${cleanPath ? `/${cleanPath}` : ''}`;
-    
-    // Preserve query parameters
-    url.search = search;
-    
-    return NextResponse.redirect(url);
-  }
-  
-  // If we have a valid country code, ensure it's in the correct case
-  if (existingCountryCode) {
-    const segments = pathname.split('/').filter(Boolean);
-    const currentCode = segments[0];
-    
-    if (currentCode !== existingCountryCode) {
-      // Fix the case of the country code if needed
-      segments[0] = existingCountryCode;
-      const newPath = `/${segments.join('/')}`;
-      
-      const url = req.nextUrl.clone();
-      url.pathname = newPath;
-      url.search = search;
-      
-      return NextResponse.redirect(url);
-    }
-  }
-  
-  // Continue with the request if no redirection is needed
-  return NextResponse.next();
-  
-  // Skip middleware for excluded paths
-  if (EXCLUDED_PATHS.some(path => pathname.startsWith(path))) {
+  if (shouldExclude) {
     return NextResponse.next();
   }
 
   const pathParts = pathname.split('/').filter(Boolean);
+  const firstPath = pathParts[0]?.toLowerCase();
   
-  // Check if the path already starts with a country code
-  const hasCountryInPath = pathParts.length > 0 && 
-    SUPPORTED_COUNTRIES.includes(pathParts[0].toLowerCase());
-  
-  // If the path already has a country code, don't redirect
-  if (hasCountryInPath) {
+  // Check if the path already starts with a supported country code
+  if (firstPath && SUPPORTED_COUNTRIES.includes(firstPath)) {
     return NextResponse.next();
   }
 
@@ -224,13 +59,21 @@ export async function middleware(req: NextRequest) {
     console.error('Error detecting country from IP:', error);
   }
 
+  // Preserve query parameters
+  const searchParams = new URLSearchParams(search);
+  const queryString = searchParams.toString() ? `?${searchParams.toString()}` : '';
+  
   // Create new URL with country code
-  const newPathname = `/${countryCode}${pathname === '/' ? '' : pathname}`;
+  const newPathname = `/${countryCode}${pathname === '/' ? '' : pathname}${queryString}`;
   const url = req.nextUrl.clone();
   url.pathname = newPathname;
 
-  // Redirect to the new URL
-  return NextResponse.redirect(url);
+  // Only redirect if not already on the correct path
+  if (url.pathname !== pathname) {
+    return NextResponse.redirect(url);
+  }
+  
+  return NextResponse.next();
 }
 
 // Configure which paths the middleware should run on
@@ -244,31 +87,6 @@ export const config = {
     // - public folder
     // - image files
     // - fonts
-    // - sitemap and robots.txt
-    '/((?!_next/static|_next/image|favicon.ico|api/|images/|sitemap|robots\.txt|ads\.txt|\.well-known|.*\\.(?:ico|png|jpg|jpeg|gif|svg|webp|css|js|woff|woff2|ttf|eot|xml)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|api/|images/|.*\\.(?:ico|png|jpg|jpeg|gif|svg|webp|css|js|woff|woff2|ttf|eot)$).*)',
   ],
-};
-
-// Add custom headers for search engines
-const addSearchEngineHeaders = (response: NextResponse, pathname: string, origin: string) => {
-  // Add canonical URL
-  const canonicalUrl = `${origin}${pathname}`;
-  response.headers.set('Link', `<${canonicalUrl}>; rel="canonical"`);
-  
-  // Add hreflang links for country-specific pages
-  if (pathname.match(/^\/[a-z]{2}(\/|$)/)) {
-    const hreflangLinks = SUPPORTED_COUNTRIES.map(country => {
-      const url = country === pathname.split('/')[1] 
-        ? `${origin}${pathname}`
-        : `${origin}/${country}${pathname.substring(3)}`; // Replace country code
-      return `<${url}>; rel="alternate"; hreflang="${country}"`;
-    });
-    
-    // Add x-default hreflang
-    hreflangLinks.push(`<${origin}${pathname}>; rel="alternate"; hreflang="x-default"`);
-    
-    response.headers.set('Link', hreflangLinks.join(','));
-  }
-  
-  return response;
 };
