@@ -356,10 +356,6 @@ export function CountryProvider({ children }: { children: React.ReactNode }) {
       } finally {
         setIsLoading(false);
       }
-      } catch (error) {
-        console.error('Error in determineLocation:', error);
-        setIsLoading(false);
-      }
     };
 
     // Only run this effect if countries and cities are loaded
