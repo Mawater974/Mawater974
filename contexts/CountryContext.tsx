@@ -355,7 +355,6 @@ export function CountryProvider({ children }: { children: React.ReactNode }) {
         } finally {
           setIsLoading(false);
         }
-      }
     };
 
     // Only run this effect if countries and cities are loaded
