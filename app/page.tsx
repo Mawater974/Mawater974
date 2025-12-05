@@ -26,19 +26,34 @@ export default function RootPage() {
         
         // Function to validate and get country code
         const getValidCountryCode = async (code: string) => {
+          if (!code) {
+            console.log('No country code provided');
+            return null;
+          }
+          
           const lowerCode = code.toLowerCase();
+          console.log('Validating country code:', lowerCode);
+          
           // First check if it's in our allowed list
           if (allowedCountryCodes.includes(lowerCode)) {
-            // Then verify it exists in the database
-            const { data: countryData } = await supabase
+            console.log('Country code in allowed list, checking database...');
+            // Then verify it exists in the database (case-insensitive check)
+            const { data: countryData, error } = await supabase
               .from('countries')
               .select('code')
-              .eq('code', lowerCode)
+              .ilike('code', lowerCode)
               .single();
               
+            console.log('Database check result:', { countryData, error });
+            
             if (countryData) {
+              console.log('Valid country code found:', lowerCode);
               return lowerCode;
+            } else if (error) {
+              console.error('Error checking country code in database:', error);
             }
+          } else {
+            console.log('Country code not in allowed list:', lowerCode);
           }
           return null;
         };
