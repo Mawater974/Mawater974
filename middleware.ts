@@ -2,9 +2,9 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getCountryFromIP } from './utils/getCountryFromIP';
 
-// List of supported countries and their codes
+// List of supported countries and their codes (lowercase for case-insensitive matching)
 const SUPPORTED_COUNTRIES = ['qa', 'sa', 'sy', 'ae', 'bh', 'om', 'eg'];
-const DEFAULT_COUNTRY = 'eg'; // Default country code (UAE)
+const DEFAULT_COUNTRY = 'eg'; // Default country code (Egypt)
 
 // Paths that should not have country code redirection
 const EXCLUDED_PATHS = [
@@ -13,13 +13,14 @@ const EXCLUDED_PATHS = [
   '/favicon.ico',  // Favicon
   '/images',       // Static images
   '/admin',        // Admin routes
-  '/profile',
+  '/profile', 
   '/notifications',
   '/favorites',
   '/my-ads',
   '/login',
   '/signup',
   '/reset-password',
+  '/${country.code.toLowerCase()}',
   '/users',
   '/contact',      // Global contact page
   '/terms',        // Global terms page
@@ -44,7 +45,13 @@ export async function middleware(req: NextRequest) {
   const firstPath = pathParts[0]?.toLowerCase();
   
   // Check if the path already starts with a supported country code
-  if (firstPath && SUPPORTED_COUNTRIES.includes(firstPath)) {
+  if (firstPath && SUPPORTED_COUNTRIES.includes(firstPath.toLowerCase())) {
+    // If it's a root path with country code (e.g., /qa), ensure it has a trailing slash
+    if (pathname === `/${firstPath}`) {
+      const url = req.nextUrl.clone();
+      url.pathname = `${pathname}/`;
+      return NextResponse.redirect(url);
+    }
     return NextResponse.next();
   }
 
@@ -52,11 +59,15 @@ export async function middleware(req: NextRequest) {
   let countryCode = DEFAULT_COUNTRY;
   try {
     const geoInfo = await getCountryFromIP();
-    if (geoInfo && SUPPORTED_COUNTRIES.includes(geoInfo.code.toLowerCase())) {
-      countryCode = geoInfo.code.toLowerCase();
+    const detectedCountry = geoInfo?.code?.toLowerCase();
+    
+    // Only use detected country if it's in our supported list
+    if (detectedCountry && SUPPORTED_COUNTRIES.includes(detectedCountry)) {
+      countryCode = detectedCountry;
     }
   } catch (error) {
     console.error('Error detecting country from IP:', error);
+    // Fall back to default country in case of error
   }
 
   // Preserve query parameters
