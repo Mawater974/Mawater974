@@ -335,24 +335,24 @@ export function CountryProvider({ children }: { children: React.ReactNode }) {
         }
         
         // If we get here, either no country was found from IP or there was an error
-        // Default to Qatar if no country detected
-        const defaultCountry = countries.find(c => c.code === 'QA');
+        // Default to Egypt if no country detected
+        const defaultCountry = countries.find(c => c.code === 'EG');
         if (defaultCountry) {
           setCurrentCountry(defaultCountry);
-          // Set default city (Doha)
-          const defaultCity = cities.find(c => c.country_id === defaultCountry.id && c.name === 'Doha');
+          // Set default city (Cairo)
+          const defaultCity = cities.find(c => c.country_id === defaultCountry.id && c.name === 'Cairo');
           if (defaultCity) {
             setCurrentCity(defaultCity);
           }
         }
       } catch (error) {
         console.error('Error in determineLocation:', error);
-        // Default to Qatar if error
-        const defaultCountry = countries.find(c => c.code === 'QA');
+        // Default to Egypt if error
+        const defaultCountry = countries.find(c => c.code === 'EG');
         if (defaultCountry) {
           setCurrentCountry(defaultCountry);
-          // Set default city (Doha)
-          const defaultCity = cities.find(c => c.country_id === defaultCountry.id && c.name === 'Doha');
+          // Set default city (Cairo)
+          const defaultCity = cities.find(c => c.country_id === defaultCountry.id && c.name === 'Cairo');
           if (defaultCity) {
             setCurrentCity(defaultCity);
           }
