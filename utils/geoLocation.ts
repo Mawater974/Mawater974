@@ -38,11 +38,13 @@ export async function getCountryFromIP(): Promise<CountryInfo> {
 
 // Function to validate if a country code exists in our database
 export async function isValidCountryCode(countryCode: string, supabase: any): Promise<boolean> {
+  if (!countryCode) return false;
+  
   try {
     const { data, error } = await supabase
       .from('countries')
       .select('code')
-      .eq('code', countryCode.toUpperCase())
+      .ilike('code', countryCode.toUpperCase()) // Case-insensitive comparison
       .single();
 
     if (error) throw error;
