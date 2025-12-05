@@ -9,13 +9,23 @@ import { TrashIcon, StarIcon, CheckIcon, XMarkIcon, ChevronDownIcon, PlusIcon } 
 import Link from 'next/link';
 import { Menu, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
-import EditCarModal from '@/components/EditCarModal';
 import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import { useCountry } from '@/contexts/CountryContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
-import AdminCarForm from '@/components/admin/cars/AdminCarForm';
+import dynamic from 'next/dynamic';
+
+// Dynamically import components that use browser APIs
+const EditCarModal = dynamic(
+  () => import('@/components/EditCarModal'),
+  { ssr: false }
+);
+
+const AdminCarForm = dynamic(
+  () => import('@/components/admin/cars/AdminCarForm'),
+  { ssr: false }
+);
 
 
 interface ExtendedCar extends Car {
@@ -79,6 +89,7 @@ type CarStatus = 'pending' | 'approved' | 'rejected' | 'sold' | 'expired' | 'hid
 type SortOrder = 'newest' | 'oldest' | 'price_high' | 'price_low';
 
 export default function AdminCarsPage() {
+  const [mounted, setMounted] = useState(false);
   const [cars, setCars] = useState<ExtendedCar[]>([]);
   const [editingCar, setEditingCar] = useState<ExtendedCar | null>(null);
   const [loading, setLoading] = useState(true);
@@ -94,6 +105,7 @@ export default function AdminCarsPage() {
   const router = useRouter();
 
   useEffect(() => {
+    setMounted(true);
     checkAdminStatus();
     fetchCars();
     checkExpiredCars();
@@ -866,6 +878,14 @@ export default function AdminCarsPage() {
     { value: 'price_high', label: 'Price: High to Low' },
     { value: 'price_low', label: 'Price: Low to High' }
   ];
+
+  if (!mounted) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <LoadingSpinner />
+      </div>
+    );
+  }
 
   if (loading) {
     return (
