@@ -22,7 +22,7 @@ export default function RootPage() {
         
         // Always get the real location from IP first
         const geoInfo = await getCountryFromIP();
-        let redirectCountry = 'eg'; // Default to Qatar
+        let redirectCountry = 'eg'; // Default to Egypt
         
         // Function to validate and get country code
         const getValidCountryCode = async (code: string) => {
@@ -119,8 +119,8 @@ export default function RootPage() {
         router.push(`/${redirectCountry}`);
       } catch (error) {
         console.error('Error redirecting to country:', error);
-        // Default to Qatar if there's an error
-        router.push('/qa');
+        // Default to Egypt if there's an error
+        router.push('/eg');
       } finally {
         setIsLoading(false);
       }
