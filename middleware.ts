@@ -64,10 +64,20 @@ export async function middleware(req: NextRequest) {
     // Only use detected country if it's in our supported list
     if (detectedCountry && SUPPORTED_COUNTRIES.includes(detectedCountry)) {
       countryCode = detectedCountry;
+    } else {
+      // If detected country is not supported, check the request headers for Cloudflare country
+      const cfCountry = req.headers.get('cf-ipcountry')?.toLowerCase();
+      if (cfCountry && SUPPORTED_COUNTRIES.includes(cfCountry)) {
+        countryCode = cfCountry;
+      }
     }
   } catch (error) {
     console.error('Error detecting country from IP:', error);
-    // Fall back to default country in case of error
+    // Fall back to Cloudflare headers if available
+    const cfCountry = req.headers.get('cf-ipcountry')?.toLowerCase();
+    if (cfCountry && SUPPORTED_COUNTRIES.includes(cfCountry)) {
+      countryCode = cfCountry;
+    }
   }
 
   // Preserve query parameters
