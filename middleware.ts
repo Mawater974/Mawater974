@@ -3,8 +3,6 @@ import type { NextRequest } from 'next/server';
 import { getCountryFromIP } from './utils/getCountryFromIP';
 
 const COUNTRY_COOKIE_NAME = 'user_country';
-const SESSION_COOKIE_NAME = 'session_id';
-const SESSION_DURATION = 30 * 24 * 60 * 60; // 30 days in seconds
 
 // List of supported countries and their codes (lowercase for case-insensitive matching)
 const SUPPORTED_COUNTRIES = ['qa', 'sa', 'sy', 'ae', 'bh', 'om', 'eg'];
@@ -34,7 +32,7 @@ const EXCLUDED_PATHS = [
 ];
 
 export async function middleware(req: NextRequest) {
-  const { pathname } = req.nextUrl;
+  const { pathname, search } = req.nextUrl;
   
   // Skip middleware for excluded paths
   const shouldExclude = EXCLUDED_PATHS.some(path => 
@@ -45,13 +43,6 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Get or create session ID
-  let sessionId = req.cookies.get(SESSION_COOKIE_NAME)?.value;
-  const isNewSession = !sessionId;
-  if (!sessionId) {
-    sessionId = crypto.randomUUID();
-  }
-
   const pathParts = pathname.split('/').filter(Boolean);
   const firstPath = pathParts[0]?.toLowerCase();
   
@@ -59,29 +50,13 @@ export async function middleware(req: NextRequest) {
   if (firstPath && SUPPORTED_COUNTRIES.includes(firstPath.toLowerCase())) {
     // Update the country cookie if it's different
     const currentCountry = req.cookies.get(COUNTRY_COOKIE_NAME)?.value;
-    if (currentCountry !== firstPath || isNewSession) {
+    if (currentCountry !== firstPath) {
       const response = NextResponse.next();
-      
-      // Set country cookie
       response.cookies.set(COUNTRY_COOKIE_NAME, firstPath, {
         path: '/',
-        maxAge: SESSION_DURATION,
+        maxAge: 30 * 24 * 60 * 60, // 30 days
         sameSite: 'lax',
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
       });
-      
-      // Set session cookie if new session
-      if (isNewSession) {
-        response.cookies.set(SESSION_COOKIE_NAME, sessionId, {
-          path: '/',
-          maxAge: SESSION_DURATION,
-          sameSite: 'lax',
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-        });
-      }
-      
       return response;
     }
     
@@ -89,45 +64,17 @@ export async function middleware(req: NextRequest) {
     if (pathname === `/${firstPath}`) {
       const url = req.nextUrl.clone();
       url.pathname = `${pathname}/`;
-      // If we reach here and need to update cookies (but no redirect was needed)
-  if (shouldUpdateCookies) {
-    const response = NextResponse.next();
-    
-    // Set country cookie
-    response.cookies.set(COUNTRY_COOKIE_NAME, countryCode, {
-      path: '/',
-      maxAge: SESSION_DURATION,
-      sameSite: 'lax',
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-    });
-    
-    // Set session cookie if new session
-    if (isNewSession) {
-      response.cookies.set(SESSION_COOKIE_NAME, sessionId, {
-        path: '/',
-        maxAge: SESSION_DURATION,
-        sameSite: 'lax',
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-      });
-    }
-    
-    return response;
-  }
-  
-  return NextResponse.next();
+      return NextResponse.redirect(url);
     }
     return NextResponse.next();
   }
 
   // Check for existing country cookie first
   const cookieCountry = req.cookies.get(COUNTRY_COOKIE_NAME)?.value;
-  let countryCode = cookieCountry;
-  let shouldUpdateCookies = isNewSession;
+  let countryCode = cookieCountry || DEFAULT_COUNTRY;
   
-  // Only detect country if we don't have a valid cookie or it's a new session
-  if (!cookieCountry || !SUPPORTED_COUNTRIES.includes(cookieCountry.toLowerCase()) || isNewSession) {
+  // Only detect country if we don't have a valid cookie
+  if (!cookieCountry || !SUPPORTED_COUNTRIES.includes(cookieCountry.toLowerCase())) {
     try {
       const geoInfo = await getCountryFromIP();
       const detectedCountry = geoInfo?.code?.toLowerCase();
@@ -135,17 +82,11 @@ export async function middleware(req: NextRequest) {
       // Only use detected country if it's in our supported list
       if (detectedCountry && SUPPORTED_COUNTRIES.includes(detectedCountry)) {
         countryCode = detectedCountry;
-        shouldUpdateCookies = true;
       } else {
         // If detected country is not supported, check the request headers for Cloudflare country
         const cfCountry = req.headers.get('cf-ipcountry')?.toLowerCase();
         if (cfCountry && SUPPORTED_COUNTRIES.includes(cfCountry)) {
           countryCode = cfCountry;
-          shouldUpdateCookies = true;
-        } else if (!cookieCountry) {
-          // Fallback to default country only if we don't have a cookie
-          countryCode = DEFAULT_COUNTRY;
-          shouldUpdateCookies = true;
         }
       }
     } catch (error) {
@@ -154,53 +95,18 @@ export async function middleware(req: NextRequest) {
       const cfCountry = req.headers.get('cf-ipcountry')?.toLowerCase();
       if (cfCountry && SUPPORTED_COUNTRIES.includes(cfCountry)) {
         countryCode = cfCountry;
-        shouldUpdateCookies = true;
-      } else if (!cookieCountry) {
-        // Fallback to default country only if we don't have a cookie
-        countryCode = DEFAULT_COUNTRY;
-        shouldUpdateCookies = true;
       }
     }
   }
 
-  // If we need to redirect to add the country code
-  if (countryCode && !pathname.startsWith(`/${countryCode}`) && !pathname.startsWith('/_next') && !pathname.startsWith('/api')) {
-    // Preserve query parameters
-    const searchParams = new URLSearchParams(req.nextUrl.search);
-    const queryString = searchParams.toString() ? `?${searchParams.toString()}` : '';
-    
-    // Create new URL with country code
-    const newPathname = `/${countryCode}${pathname === '/' ? '' : pathname}${queryString}`;
-    
-    // Only create a new response if we need to update cookies
-    if (shouldUpdateCookies) {
-      const response = NextResponse.redirect(new URL(newPathname, req.url));
-      
-      // Set country cookie
-      response.cookies.set(COUNTRY_COOKIE_NAME, countryCode, {
-        path: '/',
-        maxAge: SESSION_DURATION,
-        sameSite: 'lax',
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-      });
-      
-      // Set session cookie if new session
-      if (isNewSession) {
-        response.cookies.set(SESSION_COOKIE_NAME, sessionId, {
-          path: '/',
-          maxAge: SESSION_DURATION,
-          sameSite: 'lax',
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-        });
-      }
-      
-      return response;
-    }
-    
-    return NextResponse.redirect(new URL(newPathname, req.url));
-  }
+  // Preserve query parameters
+  const searchParams = new URLSearchParams(search);
+  const queryString = searchParams.toString() ? `?${searchParams.toString()}` : '';
+  
+  // Create new URL with country code
+  const newPathname = `/${countryCode}${pathname === '/' ? '' : pathname}${queryString}`;
+  const url = req.nextUrl.clone();
+  url.pathname = newPathname;
 
   // Only redirect if not already on the correct path
   if (url.pathname !== pathname) {
