@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { useSupabase } from './SupabaseContext';
 import { useAuth } from './AuthContext';
-import { getUserCountry } from '@/utils/geoLocation';
+import { getCountryFromIP } from '@/utils/geoLocation';
 import { Country, City } from '@/types/supabase';
 import { useLanguage } from './LanguageContext';
 
@@ -311,16 +311,48 @@ export function CountryProvider({ children }: { children: React.ReactNode }) {
         }
 
         // If no country in profile or not logged in, use IP geolocation
-        const detectedCountry = await getUserCountry(countries);
-        
-        if (detectedCountry) {
-          setCurrentCountry(detectedCountry);
-          // Set first city in this country as default
-          const firstCity = cities.find(c => c.country_id === detectedCountry.id);
-          if (firstCity) {
-            setCurrentCity(firstCity);
+        try {
+          const countryInfo = await getCountryFromIP();
+          if (countryInfo && countryInfo.code !== '--') {
+            // Find the country in our database that matches the country code
+            const detectedCountry = countries.find(c => c.code?.toLowerCase() === countryInfo.code.toLowerCase());
+            
+            if (detectedCountry) {
+              setCurrentCountry(detectedCountry);
+              // Set first city in this country as default
+              const firstCity = cities.find(c => c.country_id === detectedCountry.id);
+              if (firstCity) {
+                setCurrentCity(firstCity);
+              }
+              setIsLoading(false);
+              return;
+            }
           }
-        } else {
+          
+          // If we get here, either no country was found from IP or there was an error
+          // Default to Qatar if no country detected
+          const defaultCountry = countries.find(c => c.code === 'QA');
+          if (defaultCountry) {
+            setCurrentCountry(defaultCountry);
+            // Set default city (Doha)
+            const defaultCity = cities.find(c => c.country_id === defaultCountry.id && c.name === 'Doha');
+            if (defaultCity) {
+              setCurrentCity(defaultCity);
+            }
+          }
+        } catch (error) {
+          console.error('Error detecting country from IP:', error);
+          // Default to Qatar if error
+          const defaultCountry = countries.find(c => c.code === 'QA');
+          if (defaultCountry) {
+            setCurrentCountry(defaultCountry);
+            // Set default city (Doha)
+            const defaultCity = cities.find(c => c.country_id === defaultCountry.id && c.name === 'Doha');
+            if (defaultCity) {
+              setCurrentCity(defaultCity);
+            }
+          }
+        }
           // Default to Qatar if no country detected
           const defaultCountry = countries.find(c => c.code === 'QA');
           if (defaultCountry) {
