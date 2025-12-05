@@ -357,28 +357,28 @@ export function CountryProvider({ children }: { children: React.ReactNode }) {
           const defaultCountry = countries.find(c => c.code === 'QA');
           if (defaultCountry) {
             setCurrentCountry(defaultCountry);
+              // Set default city (Doha)
+              const defaultCity = cities.find(c => c.country_id === defaultCountry.id && c.name === 'Doha');
+              if (defaultCity) {
+                setCurrentCity(defaultCity);
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error determining location:', error);
+          // Default to Qatar if error
+          const defaultCountry = countries.find(c => c.code === 'QA');
+          if (defaultCountry) {
+            setCurrentCountry(defaultCountry);
             // Set default city (Doha)
             const defaultCity = cities.find(c => c.country_id === defaultCountry.id && c.name === 'Doha');
             if (defaultCity) {
               setCurrentCity(defaultCity);
             }
           }
+        } finally {
+          setIsLoading(false);
         }
-      } catch (error) {
-        console.error('Error determining location:', error);
-        // Default to Qatar if error
-        const defaultCountry = countries.find(c => c.code === 'QA');
-        if (defaultCountry) {
-          setCurrentCountry(defaultCountry);
-          // Set default city (Doha)
-          const defaultCity = cities.find(c => c.country_id === defaultCountry.id && c.name === 'Doha');
-          if (defaultCity) {
-            setCurrentCity(defaultCity);
-          }
-        }
-      } finally {
-        setIsLoading(false);
-      }
     };
 
     // Only run this effect if countries and cities are loaded
