@@ -4,16 +4,16 @@
 
 [build.environment]
   NEXT_PRIVATE_TARGET = "serverless"
-  NODE_VERSION = "20.11.1"
+  NODE_VERSION = "20.0.0"
 
 [context.production.environment]
-  NODE_VERSION = "20.11.1"
+  NODE_VERSION = "20.0.0"
 
 [context.deploy-preview.environment]
-  NODE_VERSION = "20.11.1"
+  NODE_VERSION = "20.0.0"
 
 [context.branch-deploy.environment]
-  NODE_VERSION = "20.11.1"
+  NODE_VERSION = "20.0.0"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
