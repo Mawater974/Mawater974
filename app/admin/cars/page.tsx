@@ -1,18 +1,19 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '../../../lib/supabase';
-import { useAuth } from '../../../contexts/AuthContext';
-import { Car } from '../../../types/supabase';
-import { TrashIcon, StarIcon, CheckIcon, XMarkIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
+import { Car, CarImage } from '@/types/supabase';
+import { TrashIcon, StarIcon, CheckIcon, XMarkIcon, ChevronDownIcon, PlusIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import { Menu, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 import toast from 'react-hot-toast';
-import EditCarModal from '../../../components/EditCarModal';
-import { useCountry } from '../../../contexts/CountryContext';
-import { useLanguage } from '../../../contexts/LanguageContext';
+import { useRouter } from 'next/navigation';
+import { useCountry } from '@/contexts/CountryContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import AdminCarForm from '@/components/admin/cars/AdminCarForm';
 
 
 interface ExtendedCar extends Car {
@@ -84,9 +85,11 @@ export default function AdminCarsPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [activeStatus, setActiveStatus] = useState<CarStatus>('pending');
   const [sortOrder, setSortOrder] = useState<SortOrder>('newest');
+  const [showAddForm, setShowAddForm] = useState(false);
   const { currentCountry } = useCountry();
   const { t, currentLanguage } = useLanguage();
   const [viewMode, setViewMode] = useState<'grid' | 'detail'>('grid');
+  const router = useRouter();
 
   useEffect(() => {
     checkAdminStatus();
@@ -787,6 +790,52 @@ export default function AdminCarsPage() {
     }
   };
 
+  // Handle successful form submission
+  const handleFormSuccess = () => {
+    setShowAddForm(false);
+    setEditingCar(null);
+    fetchCars(); // Refresh the car list
+  };
+
+  // Handle edit car
+  const handleEditCar = (car: ExtendedCar) => {
+    setEditingCar(car);
+  };
+
+  // Handle cancel form
+  const handleCancelForm = () => {
+    setShowAddForm(false);
+    setEditingCar(null);
+  };
+
+  if (loading && !cars.length) {
+    return <LoadingSpinner />;
+  }
+
+  if (error) {
+    return <div className="p-4 text-red-600">{error}</div>;
+  }
+
+  // Show the add/edit form if needed
+  if (showAddForm || editingCar) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <button
+          onClick={handleCancelForm}
+          className="mb-4 flex items-center text-sm text-gray-600 hover:text-gray-900"
+        >
+          <ChevronDownIcon className="h-4 w-4 mr-1 transform rotate-90" />
+          Back to car listings
+        </button>
+        <AdminCarForm
+          car={editingCar || undefined}
+          onSuccess={handleFormSuccess}
+          onCancel={handleCancelForm}
+        />
+      </div>
+    );
+  }
+
   if (!isAdmin) {
     return (
       <div className="min-h-screen bg-gray-100 dark:bg-gray-900 py-12">
@@ -824,7 +873,40 @@ export default function AdminCarsPage() {
     );
   }
   return (
-    <div className="min-h-screen">
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+        <h1 className="text-2xl font-bold">Car Listings</h1>
+        <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-2">
+          {/* Add New Car Button */}
+          <button
+            onClick={() => setShowAddForm(true)}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          >
+            <PlusIcon className="h-5 w-5 mr-2" />
+            Add New Car
+          </button>
+          
+          {/* View mode toggle */}
+          <div className="flex rounded-md shadow-sm">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`px-3 py-2 text-sm font-medium rounded-l-md ${
+                viewMode === 'grid' ? 'bg-indigo-100 text-indigo-700' : 'bg-white text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              Grid
+            </button>
+            <button
+              onClick={() => setViewMode('detail')}
+              className={`px-3 py-2 text-sm font-medium rounded-r-md ${
+                viewMode === 'detail' ? 'bg-indigo-100 text-indigo-700' : 'bg-white text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              List
+            </button>
+          </div>
+        </div>
+      </div>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
