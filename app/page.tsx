@@ -22,7 +22,7 @@ export default function RootPage() {
         
         // Always get the real location from IP first
         const geoInfo = await getCountryFromIP();
-        let redirectCountry = 'qa'; // Default to Qatar
+        let redirectCountry = 'eg'; // Default to Qatar
         
         // Function to validate and get country code
         const getValidCountryCode = async (code: string) => {
