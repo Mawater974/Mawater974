@@ -1,15 +1,20 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { getCountryFromIP, isValidCountryCode } from '@/utils/geoLocation';
+import { getCountryFromIP } from '@/utils/geoLocation';
+
+// List of supported countries (should match middleware)
+const SUPPORTED_COUNTRIES = ['qa', 'sa', 'sy', 'ae', 'bh', 'om', 'eg'];
+const DEFAULT_COUNTRY = 'eg';
 
 export default function RootPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const { user, profile } = useAuth();
   const { t } = useLanguage();
   const [isLoading, setIsLoading] = useState(true);
@@ -17,74 +22,46 @@ export default function RootPage() {
   useEffect(() => {
     const redirectToCountry = async () => {
       try {
-        // List of allowed country codes
-        const allowedCountryCodes = ['qa', 'ae', 'om', 'bh', 'sa', 'sy', 'eg'];
-        
-        // Always get the real location from IP first
-        const geoInfo = await getCountryFromIP();
-        let redirectCountry = 'eg'; // Default to Egypt
-        
-        // Function to validate and get country code
-        const getValidCountryCode = async (code: string) => {
-          if (!code) {
-            console.log('No country code provided');
-            return null;
-          }
-          
-          const lowerCode = code.toLowerCase();
-          console.log('Validating country code:', lowerCode);
-          
-          // First check if it's in our allowed list
-          if (allowedCountryCodes.includes(lowerCode)) {
-            console.log('Country code in allowed list, checking database...');
-            // Then verify it exists in the database (case-insensitive check)
-            const { data: countryData, error } = await supabase
-              .from('countries')
-              .select('code')
-              .ilike('code', lowerCode)
-              .single();
-              
-            console.log('Database check result:', { countryData, error });
-            
-            if (countryData) {
-              console.log('Valid country code found:', lowerCode);
-              return lowerCode;
-            } else if (error) {
-              console.error('Error checking country code in database:', error);
-            }
-          } else {
-            console.log('Country code not in allowed list:', lowerCode);
-          }
-          return null;
-        };
-        
-        // Log initial state
-        console.log('Starting redirection with:', {
-          hasUser: !!user,
-          hasProfile: !!profile,
-          profileCountryId: profile?.country_id,
-          geoInfo: geoInfo || 'No geo info'
-        });
+        // Skip if we're already on a country-specific route
+        const currentPath = pathname.split('/').filter(Boolean)[0]?.toLowerCase();
+        if (currentPath && SUPPORTED_COUNTRIES.includes(currentPath)) {
+          setIsLoading(false);
+          return;
+        }
 
-        // Determine redirect country
+        let redirectCountry = DEFAULT_COUNTRY;
+        let countryFromIP: string | null = null;
+        
+        try {
+          // Get country from IP for analytics
+          const geoInfo = await getCountryFromIP();
+          countryFromIP = geoInfo?.code?.toLowerCase();
+          
+          // Only use IP country if it's in our supported list
+          if (countryFromIP && SUPPORTED_COUNTRIES.includes(countryFromIP)) {
+            redirectCountry = countryFromIP;
+          }
+        } catch (error) {
+          console.error('Error getting country from IP:', error);
+        }
+        
+        // Override with user's preferred country if available
         if (user && profile?.country_id) {
-          // Use user's profile country if it's valid
           const { data: countryData, error: countryError } = await supabase
             .from('countries')
             .select('code')
             .eq('id', profile.country_id)
             .single();
             
-          if (!countryError && countryData) {
-            const validCode = await getValidCountryCode(countryData.code);
-            if (validCode) {
-              redirectCountry = validCode;
+          if (!countryError && countryData?.code) {
+            const userCountry = countryData.code.toLowerCase();
+            if (SUPPORTED_COUNTRIES.includes(userCountry)) {
+              redirectCountry = userCountry;
             }
           }
         } else {
-          // Check local storage first
+          // Check for previously selected country in local storage
           const savedCountryId = typeof window !== 'undefined' ? localStorage.getItem('selectedCountryId') : null;
-          console.log('Local storage country ID:', savedCountryId);
           
           if (savedCountryId) {
             const { data: countryData, error: countryError } = await supabase
@@ -93,62 +70,49 @@ export default function RootPage() {
               .eq('id', savedCountryId)
               .single();
               
-            if (!countryError && countryData) {
-              const validCode = await getValidCountryCode(countryData.code);
-              if (validCode) {
-                redirectCountry = validCode;
+            if (!countryError && countryData?.code) {
+              const savedCountry = countryData.code.toLowerCase();
+              if (SUPPORTED_COUNTRIES.includes(savedCountry)) {
+                redirectCountry = savedCountry;
               }
-            }
-          } else if (geoInfo?.code) {
-            console.log('Using IP geolocation country:', geoInfo.code);
-            // Use IP location if it's a valid country code
-            const validCode = await getValidCountryCode(geoInfo.code);
-            console.log('IP geolocation validation result:', validCode);
-            if (validCode) {
-              redirectCountry = validCode;
             }
           }
         }
         
-        // Track only the initial root visit with both real and redirect country
-        await fetch('/api/analytics/page-view', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            countryCode: geoInfo?.code ? geoInfo.code.toLowerCase() : '--', // Default to -- if no geo
-            countryName: geoInfo?.name || '--', // Default to -- if no geo
-            userId: user?.id,
-            pageType: 'root', // Explicitly mark as root page visit
-            page_path: '/', // Record as root visit
-            redirect_to: `/${redirectCountry}` // Store where they were redirected
-          })
-        });
+        // Track the initial root visit with both real and redirect country
+        try {
+          await fetch('/api/analytics/page-view', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              countryCode: countryFromIP || '--',
+              countryName: countryFromIP || '--',
+              userId: user?.id,
+              pageType: 'root',
+              page_path: '/',
+              redirect_to: `/${redirectCountry}`
+            })
+          });
+        } catch (error) {
+          console.error('Error logging analytics:', error);
+          // Don't block redirection if analytics fails
+        }
 
-        // Log the final decision
-        console.log('Final redirect decision:', {
-          userCountry: user?.id ? 'User is logged in' : 'User is not logged in',
-          profileCountry: profile?.country_id || 'No profile country',
-          geoInfo: geoInfo || 'No geo info',
-          finalRedirect: redirectCountry
-        });
-        
-        // Redirect to the country-specific page
-        console.log('Final redirect country:', redirectCountry);
-        router.push(`/${redirectCountry}`);
+        // Redirect to the country-specific page with a trailing slash
+        router.push(`/${redirectCountry}/`);
       } catch (error) {
-        console.error('Error in redirectToCountry:', error);
-        console.log('Error occurred, defaulting to /eg');
-        // Force redirect to Egypt in case of any error
-        router.push('/eg');
+        console.error('Error redirecting to country:', error);
+        // Default to Qatar if there's an error
+        router.push('/qa');
       } finally {
         setIsLoading(false);
       }
     };
     
     redirectToCountry();
-  }, [router, user, profile]);
+  }, [router, user, profile, pathname]);
 
   return (
     <div className="flex items-center justify-center min-h-screen">
