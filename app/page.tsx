@@ -17,13 +17,35 @@ export default function RootPage() {
   useEffect(() => {
     const redirectToCountry = async () => {
       try {
+        // List of allowed country codes
+        const allowedCountryCodes = ['qa', 'ae', 'om', 'bh', 'sa', 'sy', 'eg'];
+        
         // Always get the real location from IP first
         const geoInfo = await getCountryFromIP();
         let redirectCountry = 'qa'; // Default to Qatar
         
+        // Function to validate and get country code
+        const getValidCountryCode = async (code: string) => {
+          const lowerCode = code.toLowerCase();
+          // First check if it's in our allowed list
+          if (allowedCountryCodes.includes(lowerCode)) {
+            // Then verify it exists in the database
+            const { data: countryData } = await supabase
+              .from('countries')
+              .select('code')
+              .eq('code', lowerCode)
+              .single();
+              
+            if (countryData) {
+              return lowerCode;
+            }
+          }
+          return null;
+        };
+        
         // Determine redirect country
         if (user && profile?.country_id) {
-          // Use user's profile country
+          // Use user's profile country if it's valid
           const { data: countryData, error: countryError } = await supabase
             .from('countries')
             .select('code')
@@ -31,7 +53,10 @@ export default function RootPage() {
             .single();
             
           if (!countryError && countryData) {
-            redirectCountry = countryData.code.toLowerCase();
+            const validCode = await getValidCountryCode(countryData.code);
+            if (validCode) {
+              redirectCountry = validCode;
+            }
           }
         } else {
           // Check local storage first
@@ -45,12 +70,17 @@ export default function RootPage() {
               .single();
               
             if (!countryError && countryData) {
-              redirectCountry = countryData.code.toLowerCase();
+              const validCode = await getValidCountryCode(countryData.code);
+              if (validCode) {
+                redirectCountry = validCode;
+              }
             }
-          } else {
-            // Use IP location if valid, otherwise default to Qatar
-            const isValid = await isValidCountryCode(geoInfo.code, supabase);
-            redirectCountry = isValid ? geoInfo.code.toLowerCase() : 'qa';
+          } else if (geoInfo?.code) {
+            // Use IP location if it's a valid country code, otherwise default to Qatar
+            const validCode = await getValidCountryCode(geoInfo.code);
+            if (validCode) {
+              redirectCountry = validCode;
+            }
           }
         }
         
