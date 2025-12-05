@@ -3,11 +3,13 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import { Car, CarImage } from '@/types/supabase';
+import { Car } from '@/types/car';
+import { CarImage } from '@/types/supabase';
 import { TrashIcon, StarIcon, CheckIcon, XMarkIcon, ChevronDownIcon, PlusIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import { Menu, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
+import EditCarModal from '@/components/EditCarModal';
 import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import { useCountry } from '@/contexts/CountryContext';
