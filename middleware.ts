@@ -4,7 +4,7 @@ import { getCountryFromIP } from './utils/getCountryFromIP';
 
 // List of supported countries and their codes
 const SUPPORTED_COUNTRIES = ['qa', 'sa', 'sy', 'ae', 'bh', 'om', 'eg'];
-const DEFAULT_COUNTRY = 'qa'; // Default country code (UAE)
+const DEFAULT_COUNTRY = 'eg'; // Default country code (UAE)
 
 // Paths that should not have country code redirection
 const EXCLUDED_PATHS = [
