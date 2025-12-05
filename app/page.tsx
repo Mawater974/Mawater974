@@ -18,7 +18,7 @@ export default function RootPage() {
     const redirectToCountry = async () => {
       try {
         // List of allowed country codes
-        const allowedCountryCodes = ['ae', 'qa', 'om', 'bh', 'sa', 'sy', 'eg'];
+        const allowedCountryCodes = ['qa', 'ae', 'om', 'bh', 'sa', 'sy', 'eg'];
         
         // Always get the real location from IP first
         const geoInfo = await getCountryFromIP();
@@ -58,6 +58,14 @@ export default function RootPage() {
           return null;
         };
         
+        // Log initial state
+        console.log('Starting redirection with:', {
+          hasUser: !!user,
+          hasProfile: !!profile,
+          profileCountryId: profile?.country_id,
+          geoInfo: geoInfo || 'No geo info'
+        });
+
         // Determine redirect country
         if (user && profile?.country_id) {
           // Use user's profile country if it's valid
@@ -76,6 +84,7 @@ export default function RootPage() {
         } else {
           // Check local storage first
           const savedCountryId = typeof window !== 'undefined' ? localStorage.getItem('selectedCountryId') : null;
+          console.log('Local storage country ID:', savedCountryId);
           
           if (savedCountryId) {
             const { data: countryData, error: countryError } = await supabase
@@ -91,8 +100,10 @@ export default function RootPage() {
               }
             }
           } else if (geoInfo?.code) {
-            // Use IP location if it's a valid country code, otherwise default to Qatar
+            console.log('Using IP geolocation country:', geoInfo.code);
+            // Use IP location if it's a valid country code
             const validCode = await getValidCountryCode(geoInfo.code);
+            console.log('IP geolocation validation result:', validCode);
             if (validCode) {
               redirectCountry = validCode;
             }
@@ -115,11 +126,21 @@ export default function RootPage() {
           })
         });
 
+        // Log the final decision
+        console.log('Final redirect decision:', {
+          userCountry: user?.id ? 'User is logged in' : 'User is not logged in',
+          profileCountry: profile?.country_id || 'No profile country',
+          geoInfo: geoInfo || 'No geo info',
+          finalRedirect: redirectCountry
+        });
+        
         // Redirect to the country-specific page
+        console.log('Final redirect country:', redirectCountry);
         router.push(`/${redirectCountry}`);
       } catch (error) {
-        console.error('Error redirecting to country:', error);
-        // Default to Egypt if there's an error
+        console.error('Error in redirectToCountry:', error);
+        console.log('Error occurred, defaulting to /eg');
+        // Force redirect to Egypt in case of any error
         router.push('/eg');
       } finally {
         setIsLoading(false);
