@@ -5,7 +5,7 @@ import { HTML5Backend } from 'react-dnd-html5-backend';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSupabase } from '@/contexts/SupabaseContext';
 import { XMarkIcon } from '@heroicons/react/24/outline';
-import { toast } from 'react-hot-toast';
+import { Car } from '@/types/car';
 import { Image as ImageIcon, Upload, Loader2 } from 'lucide-react';
 import { DraggableImage } from './DraggableImage';
 import { scrollToTop } from '@/utils/scrollToTop';
