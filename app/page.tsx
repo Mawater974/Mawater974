@@ -18,7 +18,7 @@ export default function RootPage() {
     const redirectToCountry = async () => {
       try {
         // List of allowed country codes
-        const allowedCountryCodes = ['qa', 'ae', 'om', 'bh', 'sa', 'sy', 'eg'];
+        const allowedCountryCodes = ['ae', 'qa', 'om', 'bh', 'sa', 'sy', 'eg'];
         
         // Always get the real location from IP first
         const geoInfo = await getCountryFromIP();
