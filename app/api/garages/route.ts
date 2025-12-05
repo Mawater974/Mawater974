@@ -3,10 +3,12 @@ import { createClient } from '@/utils/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { Garage, GarageFilters, GarageResponse } from '@/types/garage';
 
-export async function GET(request: NextRequest) {
+export const dynamic = 'force-dynamic'; // Add this line to make it explicitly dynamic
+
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
   try {
     const supabase = createClient();
-    const searchParams = request.nextUrl.searchParams;
     
     // Parse query parameters
     const filters: GarageFilters = {
