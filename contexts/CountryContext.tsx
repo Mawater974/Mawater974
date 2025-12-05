@@ -313,21 +313,25 @@ export function CountryProvider({ children }: { children: React.ReactNode }) {
         }
 
         // If no country in profile or not logged in, use IP geolocation
-        const countryInfo = await getCountryFromIP();
-        if (countryInfo && countryInfo.code !== '--') {
-          // Find the country in our database that matches the country code
-          const detectedCountry = countries.find(c => c.code?.toLowerCase() === countryInfo.code.toLowerCase());
-          
-          if (detectedCountry) {
-            setCurrentCountry(detectedCountry);
-            // Set first city in this country as default
-            const firstCity = cities.find(c => c.country_id === detectedCountry.id);
-            if (firstCity) {
-              setCurrentCity(firstCity);
+        try {
+          const countryInfo = await getCountryFromIP();
+          if (countryInfo && countryInfo.code !== '--') {
+            // Find the country in our database that matches the country code
+            const detectedCountry = countries.find(c => c.code?.toLowerCase() === countryInfo.code.toLowerCase());
+            
+            if (detectedCountry) {
+              setCurrentCountry(detectedCountry);
+              // Set first city in this country as default
+              const firstCity = cities.find(c => c.country_id === detectedCountry.id);
+              if (firstCity) {
+                setCurrentCity(firstCity);
+              }
+              setIsLoading(false);
+              return;
             }
-            setIsLoading(false);
-            return;
           }
+        } catch (error) {
+          console.error('Error detecting country from IP:', error);
         }
         
         // If we get here, either no country was found from IP or there was an error
@@ -363,59 +367,6 @@ export function CountryProvider({ children }: { children: React.ReactNode }) {
       determineLocation();
     }
   }, [countries, cities, profile, user, setCurrentCountry, setCurrentCity, setIsLoading]);
-
-        // If no country in profile or not logged in, use IP geolocation
-        try {
-          const countryInfo = await getCountryFromIP();
-          if (countryInfo && countryInfo.code !== '--') {
-            // Find the country in our database that matches the country code
-            const detectedCountry = countries.find(c => c.code?.toLowerCase() === countryInfo.code.toLowerCase());
-            
-            if (detectedCountry) {
-              setCurrentCountry(detectedCountry);
-              // Set first city in this country as default
-              const firstCity = cities.find(c => c.country_id === detectedCountry.id);
-              if (firstCity) {
-                setCurrentCity(firstCity);
-              }
-              setIsLoading(false);
-              return;
-            }
-          }
-          
-          // If we get here, either no country was found from IP or there was an error
-          // Default to Qatar if no country detected
-          const defaultCountry = countries.find(c => c.code === 'QA');
-          if (defaultCountry) {
-            setCurrentCountry(defaultCountry);
-            // Set default city (Doha)
-            const defaultCity = cities.find(c => c.country_id === defaultCountry.id && c.name === 'Doha');
-            if (defaultCity) {
-              setCurrentCity(defaultCity);
-            }
-          }
-        } catch (error) {
-          console.error('Error detecting country from IP:', error);
-          // Default to Qatar if error
-          const defaultCountry = countries.find(c => c.code === 'QA');
-          if (defaultCountry) {
-            setCurrentCountry(defaultCountry);
-            // Set default city (Doha)
-            const defaultCity = cities.find(c => c.country_id === defaultCountry.id && c.name === 'Doha');
-            if (defaultCity) {
-              setCurrentCity(defaultCity);
-            }
-          }
-        } finally {
-          setIsLoading(false);
-        }
-    };
-
-    // Only run this effect if countries and cities are loaded
-    if (countries.length > 0 && cities.length > 0) {
-      determineLocation();
-    }
-  }, [countries, cities, profile, user]);
 
   // Update localStorage when country changes
   useEffect(() => {
