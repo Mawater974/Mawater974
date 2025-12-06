@@ -30,21 +30,26 @@ const EXCLUDED_PATHS = [
 ];
 
 async function detectUserCountry(req: NextRequest): Promise<string> {
-  // Temporary: Skip cookie check for testing geolocation
-  // const cookieCountry = req.cookies.get(COUNTRY_COOKIE_NAME)?.value;
-  // if (cookieCountry && SUPPORTED_COUNTRIES.includes(cookieCountry)) {
-  //   return cookieCountry;
-  // }
+  // Check cookie first if available
+  const cookieCountry = req.cookies.get(COUNTRY_COOKIE_NAME)?.value;
+  if (cookieCountry && SUPPORTED_COUNTRIES.includes(cookieCountry)) {
+    return cookieCountry;
+  }
 
-  // Then try IP detection
+  // Try IP detection
   try {
     const geoInfo = await getCountryFromIP();
-    if (geoInfo) {
+    if (geoInfo && geoInfo.code && geoInfo.code !== '--') {
       const countryCode = geoInfo.code.toLowerCase();
       
-      // If the country is in our supported list, use it (e.g., UAE -> ae)
+      // If the country is in our supported list, use it (e.g., qa -> qa, ae -> ae)
       if (SUPPORTED_COUNTRIES.includes(countryCode)) {
         return countryCode;
+      }
+      
+      // Special case for Qatar (qa) - make sure it's properly handled
+      if (countryCode === 'qa') {
+        return 'qa';
       }
       
       // List of European countries that should fall back to 'eg'
@@ -60,6 +65,9 @@ async function detectUserCountry(req: NextRequest): Promise<string> {
       if (EUROPEAN_COUNTRIES.includes(countryCode)) {
         return 'eg';
       }
+      
+      // For all other countries, default to 'eg' for testing
+      return 'eg';
     }
     
     // Fall back to Cloudflare headers if available
@@ -68,14 +76,14 @@ async function detectUserCountry(req: NextRequest): Promise<string> {
       if (SUPPORTED_COUNTRIES.includes(cfCountry)) {
         return cfCountry;
       }
-      // If Cloudflare detects a non-supported country, fall back to 'eg'
+      // For non-supported countries in Cloudflare headers, default to 'eg'
       return 'eg';
     }
   } catch (error) {
     console.error('Error detecting country:', error);
   }
   
-  // Default to Egypt if we can't determine the country or if there's an error
+  // Default to Egypt for unknown locations
   return 'eg';
 }
 
