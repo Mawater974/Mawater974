@@ -2,15 +2,6 @@ import { MetadataRoute } from 'next'
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = 'https://mawater974.com'
-  
-  const countryCodes = ['qa', 'ae', 'sa', 'sy', 'kw', 'eg']
-  
-  const countryPages: MetadataRoute.Sitemap = countryCodes.map(code => ({
-    url: `${baseUrl}/${code}`,
-    lastModified: new Date(),
-    changeFrequency: 'daily',
-    priority: 0.8
-  }))
 
   const staticPages: MetadataRoute.Sitemap = [
     {
@@ -26,6 +17,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.9
     },
     {
+      url: `${baseUrl}/spare-parts`,
+      lastModified: new Date(),
+      changeFrequency: 'daily',
+      priority: 0.7
+    },
+    {
       url: `${baseUrl}/login`,
       lastModified: new Date(),
       changeFrequency: 'monthly',
@@ -37,7 +34,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'monthly',
       priority: 0.6
     },
-    {
+    /*{
       url: `${baseUrl}/contact`,
       lastModified: new Date(),
       changeFrequency: 'monthly',
@@ -54,11 +51,19 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.5
-    }
+    }*/
   ]
+
+  // Only include the root /cars URL, not country-specific ones
+  const carPages: MetadataRoute.Sitemap = [{
+    url: `${baseUrl}/cars`,
+    lastModified: new Date(),
+    changeFrequency: 'daily',
+    priority: 0.9
+  }]
 
   return [
     ...staticPages,
-    ...countryPages
+    ...carPages
   ]
 }
