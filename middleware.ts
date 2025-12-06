@@ -47,11 +47,6 @@ async function detectUserCountry(req: NextRequest): Promise<string> {
         return countryCode;
       }
       
-      // Special case for Qatar (qa) - make sure it's properly handled
-      if (countryCode === 'qa') {
-        return 'qa';
-      }
-      
       // List of European countries that should fall back to 'eg'
       const EUROPEAN_COUNTRIES = [
         'al', 'ad', 'at', 'by', 'be', 'ba', 'bg', 'hr', 'cy', 'cz',
