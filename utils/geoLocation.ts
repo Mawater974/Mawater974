@@ -1,9 +1,16 @@
 import { Country } from '@/types/supabase';
 import { User } from '@supabase/supabase-js';
 
+interface CachedGeoData {
+  data: CountryInfo;
+  timestamp: number;
+}
+
 interface GeolocationResponse {
   country_code: string;
   country_name: string;
+  error?: boolean;
+  reason?: string;
 }
 
 interface CountryInfo {
@@ -11,32 +18,80 @@ interface CountryInfo {
   name: string;
 }
 
-// Function to get country from IP using a third-party service
-export async function getCountryFromIP(): Promise<CountryInfo> {
+// Cache for IP lookups
+const ipCache = new Map<string, CachedGeoData>();
+const CACHE_TTL = 1000 * 60 * 60; // 1 hour
+const IPAPI_URL = 'https://ipapi.co/json';
+const REQUEST_TIMEOUT = 3000; // 3 seconds
+
+/**
+ * Get country information from IP address with caching
+ * @param ip Optional IP address (defaults to client IP if not provided)
+ * @returns Promise with country info or default values
+ */
+export async function getCountryFromIP(ip?: string): Promise<CountryInfo> {
+  const cacheKey = ip || 'default';
+  const cached = ipCache.get(cacheKey);
+  
+  // Return cached result if still valid
+  if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
+    return cached.data;
+  }
+
   try {
-    // Using ipapi.co for IP geolocation (free tier has limitations)
-    const response = await fetch('https://ipapi.co/json/');
-    const data = await response.json();
+    // Create a timeout promise to avoid hanging on slow responses
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Request timeout')), REQUEST_TIMEOUT);
+    });
+
+    // Make the API request
+    const url = ip ? `${IPAPI_URL}/${ip}/json/` : IPAPI_URL;
+    const fetchPromise = fetch(url, {
+      headers: { 'User-Agent': 'Mawater974/1.0' }
+    });
+
+    const response = await Promise.race([fetchPromise, timeoutPromise]);
     
-    if (data && data.country_code && data.country_name) {
-      return {
-        code: data.country_code.toLowerCase(),
-        name: data.country_name
-      };
+    if (!response.ok) {
+      throw new Error(`IP API responded with ${response.status}`);
+    }
+
+    const data: GeolocationResponse = await response.json();
+    
+    // Check for API errors
+    if (data.error) {
+      throw new Error(data.reason || 'Error from IP API');
     }
     
-    throw new Error('Could not determine country from IP');
+    if (!data.country_code || !data.country_name) {
+      throw new Error('Invalid response from IP API');
+    }
+
+    const result = {
+      code: data.country_code.toLowerCase(),
+      name: data.country_name
+    };
+
+    // Cache the result
+    ipCache.set(cacheKey, {
+      data: result,
+      timestamp: Date.now()
+    });
+
+    return result;
   } catch (error) {
     console.error('Error getting country from IP:', error);
-    // Default to Qatar if there's an error
+    // Return default values that will be handled by the caller
     return {
       code: '--',
-      name: '--'
+      name: 'Unknown'
     };
   }
 }
 
-// Function to validate if a country code exists in our database
+/**
+ * Validate if a country code exists in our database
+ */
 export async function isValidCountryCode(countryCode: string, supabase: any): Promise<boolean> {
   if (!countryCode) return false;
   
@@ -44,7 +99,7 @@ export async function isValidCountryCode(countryCode: string, supabase: any): Pr
     const { data, error } = await supabase
       .from('countries')
       .select('code')
-      .ilike('code', countryCode.toUpperCase()) // Case-insensitive comparison
+      .eq('code', countryCode.toUpperCase())
       .single();
 
     if (error) throw error;
