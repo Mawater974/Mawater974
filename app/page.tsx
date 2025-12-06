@@ -1,85 +1,38 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
 import LoadingSpinner from '@/components/LoadingSpinner';
-import { useLanguage } from '@/contexts/LanguageContext';
 import { getCountryFromIP } from '@/utils/geoLocation';
 
 // List of supported countries (should match middleware)
-const SUPPORTED_COUNTRIES = ['qa', 'sa', 'sy', 'ae', 'bh', 'om', 'eg'];
+const SUPPORTED_COUNTRIES = ['qa', 'sa', 'sy', 'ae', 'bh', 'kw', 'om', 'eg'];
 const DEFAULT_COUNTRY = 'eg';
 
 export default function RootPage() {
   const router = useRouter();
-  const pathname = usePathname();
-  const { user, profile } = useAuth();
-  const { t } = useLanguage();
-  const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
 
   useEffect(() => {
-    const redirectToCountry = async () => {
+    const trackAndRedirect = async () => {
       try {
-        // Skip if we're already on a country-specific route
-        const currentPath = pathname.split('/').filter(Boolean)[0]?.toLowerCase();
-        if (currentPath && SUPPORTED_COUNTRIES.includes(currentPath)) {
-          setIsLoading(false);
-          return;
+        // Get country from IP for analytics
+        let detectedCountry = '--';
+        try {
+          const geoInfo = await getCountryFromIP();
+          detectedCountry = geoInfo?.code || '--';
+        } catch (error) {
+          console.error('Error detecting country:', error);
         }
 
-        let redirectCountry = DEFAULT_COUNTRY;
-        let countryFromIP: string | null = null;
-        
-        try {
-          // Get country from IP for analytics
-          const geoInfo = await getCountryFromIP();
-          countryFromIP = geoInfo?.code?.toLowerCase();
-          
-          // Only use IP country if it's in our supported list
-          if (countryFromIP && SUPPORTED_COUNTRIES.includes(countryFromIP)) {
-            redirectCountry = countryFromIP;
-          }
-        } catch (error) {
-          console.error('Error getting country from IP:', error);
-        }
-        
-        // Override with user's preferred country if available
-        if (user && profile?.country_id) {
-          const { data: countryData, error: countryError } = await supabase
-            .from('countries')
-            .select('code')
-            .eq('id', profile.country_id)
-            .single();
-            
-          if (!countryError && countryData?.code) {
-            const userCountry = countryData.code.toLowerCase();
-            if (SUPPORTED_COUNTRIES.includes(userCountry)) {
-              redirectCountry = userCountry;
-            }
-          }
-        } else {
-          // Check for previously selected country in local storage
-          const savedCountryId = typeof window !== 'undefined' ? localStorage.getItem('selectedCountryId') : null;
-          
-          if (savedCountryId) {
-            const { data: countryData, error: countryError } = await supabase
-              .from('countries')
-              .select('code')
-              .eq('id', savedCountryId)
-              .single();
-              
-            if (!countryError && countryData?.code) {
-              const savedCountry = countryData.code.toLowerCase();
-              if (SUPPORTED_COUNTRIES.includes(savedCountry)) {
-                redirectCountry = savedCountry;
-              }
-            }
-          }
-        }
-        
-        // Track the initial root visit with both real and redirect country
+        // Get the country code from the cookie (set by middleware)
+        const countryCode = document.cookie
+          .split('; ')
+          .find(row => row.startsWith('user_country='))
+          ?.split('=')[1] || DEFAULT_COUNTRY;
+
+        // Track the initial root visit
         try {
           await fetch('/api/analytics/page-view', {
             method: 'POST',
@@ -87,12 +40,12 @@ export default function RootPage() {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              countryCode: countryFromIP || '--',
-              countryName: countryFromIP || '--',
+              countryCode: detectedCountry,
+              countryName: detectedCountry,
               userId: user?.id,
               pageType: 'root',
               page_path: '/',
-              redirect_to: `/${redirectCountry}`
+              redirect_to: `/${countryCode}`
             })
           });
         } catch (error) {
@@ -100,25 +53,24 @@ export default function RootPage() {
           // Don't block redirection if analytics fails
         }
 
-        // Redirect to the country-specific page with a trailing slash
-        router.push(`/${redirectCountry}/`);
+        // Redirect to the country-specific page
+        router.push(`/${countryCode}/`);
+
       } catch (error) {
-        console.error('Error redirecting to country:', error);
-        // Default to Qatar if there's an error
-        router.push('/qa');
-      } finally {
-        setIsLoading(false);
+        console.error('Error in root page redirect:', error);
+        // Fallback to default country if something goes wrong
+        router.push(`/${DEFAULT_COUNTRY}/`);
       }
     };
-    
-    redirectToCountry();
-  }, [router, user, profile, pathname]);
+
+    trackAndRedirect();
+  }, [router, user?.id]);
 
   return (
     <div className="flex items-center justify-center min-h-screen">
       <div className="text-center">
         <LoadingSpinner />
-        <p className="mt-4 text-gray-600 dark:text-gray-400">{t('auth.loading.redirect')}</p>
+        <p className="mt-4 text-gray-600 dark:text-gray-400">Loading your experience...</p>
       </div>
     </div>
   );
