@@ -3,17 +3,18 @@ import type { NextRequest } from 'next/server';
 import { getCountryFromIP } from './utils/geoLocation';
 
 const COUNTRY_COOKIE_NAME = 'user_country';
-const SUPPORTED_COUNTRIES = ['qa', 'sa', 'sy', 'ae', 'bh', 'kw','om', 'eg'];
-const DEFAULT_COUNTRY = 'eg'; // Default to Egypt if country detection fails
+const COUNTRY_COOKIE_MAX_AGE = 30 * 24 * 60 * 60; // 30 days
+const SUPPORTED_COUNTRIES = ['qa', 'sa', 'sy', 'ae', 'bh', 'kw', 'om', 'eg'];
+const DEFAULT_COUNTRY = 'eg';
 
 // Paths that should skip country redirection
 const EXCLUDED_PATHS = [
-  '/api',              // API routes
-  '/_next',            // Next.js internal
-  '/favicon.ico',      // Favicon
-  '/images',           // Static images
-  '/admin',            // Admin routes
-  '/profile', 
+  '/api',
+  '/_next',
+  '/favicon.ico',
+  '/images',
+  '/admin',
+  '/profile',
   '/notifications',
   '/favorites',
   '/my-ads',
@@ -21,22 +22,18 @@ const EXCLUDED_PATHS = [
   '/signup',
   '/reset-password',
   '/users',
-  '/contact',          // Global contact page
-  '/terms',            // Global terms page
-  '/privacy',          // Global privacy page
-  '/sitemap.xml',      // Sitemap
-  '/robots.txt'        // Robots.txt
+  '/contact',
+  '/terms',
+  '/privacy',
+  '/sitemap.xml',
+  '/robots.txt'
 ];
 
 export async function middleware(req: NextRequest) {
-  const { pathname, search } = req.nextUrl;
+  const { pathname } = req.nextUrl;
   
   // Skip middleware for excluded paths
-  const shouldExclude = EXCLUDED_PATHS.some(path => 
-    pathname === path || pathname.startsWith(`${path}/`)
-  );
-  
-  if (shouldExclude) {
+  if (EXCLUDED_PATHS.some(path => pathname === path || pathname.startsWith(`${path}/`))) {
     return NextResponse.next();
   }
 
@@ -49,7 +46,11 @@ export async function middleware(req: NextRequest) {
     const response = NextResponse.next();
     // Update cookie if different
     if (req.cookies.get(COUNTRY_COOKIE_NAME)?.value !== firstPath) {
-      setCountryCookie(response, firstPath);
+      response.cookies.set(COUNTRY_COOKIE_NAME, firstPath, {
+        path: '/',
+        maxAge: COUNTRY_COOKIE_MAX_AGE,
+        sameSite: 'lax',
+      });
     }
     return response;
   }
@@ -75,54 +76,36 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // Remove any existing country code from the path
-  let cleanPath = pathname;
-  const existingCountryInPath = pathname.split('/')[1]?.toLowerCase();
-  if (existingCountryInPath && SUPPORTED_COUNTRIES.includes(existingCountryInPath)) {
-    // Remove the country code from the path
-    cleanPath = pathname.split('/').slice(2).join('/') || '/';
-    cleanPath = cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`;
-  }
-
-  // Create new URL with the new country code and clean path
-  const newPathname = `/${countryCode}${cleanPath === '/' ? '' : cleanPath}`;
+  // Create new URL with the country code
+  const newPathname = `/${countryCode}${pathname === '/' ? '' : pathname}`;
   const url = req.nextUrl.clone();
   url.pathname = newPathname;
 
   // Only redirect if not already on the correct path
   if (url.pathname !== pathname) {
     const response = NextResponse.redirect(url);
-    setCountryCookie(response, countryCode);
+    response.cookies.set(COUNTRY_COOKIE_NAME, countryCode, {
+      path: '/',
+      maxAge: COUNTRY_COOKIE_MAX_AGE,
+      sameSite: 'lax',
+    });
     return response;
   }
   
   // If we're already on the correct path, just ensure the cookie is set
   const response = NextResponse.next();
   if (!req.cookies.get(COUNTRY_COOKIE_NAME)?.value) {
-    setCountryCookie(response, countryCode);
+    response.cookies.set(COUNTRY_COOKIE_NAME, countryCode, {
+      path: '/',
+      maxAge: COUNTRY_COOKIE_MAX_AGE,
+      sameSite: 'lax',
+    });
   }
   return response;
 }
 
-// Helper function to set country cookie
-function setCountryCookie(response: NextResponse, countryCode: string) {
-  response.cookies.set(COUNTRY_COOKIE_NAME, countryCode, {
-    path: '/',
-    maxAge: 30 * 24 * 60 * 60, // 30 days
-    sameSite: 'lax',
-  });
-}
-
-// Configure which paths the middleware should run on
 export const config = {
   matcher: [
-    // Match all request paths except for:
-    // - _next/static (static files)
-    // - _next/image (image optimization files)
-    // - favicon.ico (favicon file)
-    // - api routes
-    // - public folder
-    // - static files
     '/((?!_next/static|_next/image|favicon.ico|api/|images/|.*\\.(?:ico|png|jpg|jpeg|gif|svg|webp|css|js|woff|woff2|ttf|eot)$).*)',
   ],
 };
