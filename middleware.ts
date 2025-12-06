@@ -43,26 +43,8 @@ async function detectUserCountry(req: NextRequest): Promise<string> {
       const countryCode = geoInfo.code.toLowerCase();
       
       // If the country is in our supported list, use it (e.g., qa -> qa, ae -> ae)
-      if (SUPPORTED_COUNTRIES.includes(countryCode)) {
-        return countryCode;
-      }
-      
-      // List of European countries that should fall back to 'eg'
-      const EUROPEAN_COUNTRIES = [
-        'al', 'ad', 'at', 'by', 'be', 'ba', 'bg', 'hr', 'cy', 'cz',
-        'dk', 'ee', 'fi', 'fr', 'de', 'gr', 'hu', 'is', 'ie', 'it',
-        'lv', 'li', 'lt', 'lu', 'mt', 'md', 'mc', 'me', 'nl', 'mk',
-        'no', 'pl', 'pt', 'ro', 'ru', 'sm', 'rs', 'sk', 'si', 'es',
-        'se', 'ch', 'ua', 'gb', 'va', 'rs', 'me', 'xk'
-      ];
-      
-      // If the country is in Europe, fall back to 'eg'
-      if (EUROPEAN_COUNTRIES.includes(countryCode)) {
-        return 'eg';
-      }
-      
-      // For all other countries, default to 'eg' for testing
-      return 'eg';
+      // Otherwise, default to 'eg' for all non-supported countries
+      return SUPPORTED_COUNTRIES.includes(countryCode) ? countryCode : 'eg';
     }
     
     // Fall back to Cloudflare headers if available
@@ -84,28 +66,15 @@ async function detectUserCountry(req: NextRequest): Promise<string> {
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+  const pathParts = pathname.split('/').filter(Boolean);
+  const firstPath = pathParts[0]?.toLowerCase();
   
   // Skip middleware for excluded paths
   if (EXCLUDED_PATHS.some(path => pathname === path || pathname.startsWith(`${path}/`))) {
     return NextResponse.next();
   }
 
-  // Handle root path - redirect to country-specific page
-  if (pathname === '/') {
-    const countryCode = await detectUserCountry(req);
-    const response = NextResponse.redirect(new URL(`/${countryCode}`, req.url));
-    response.cookies.set(COUNTRY_COOKIE_NAME, countryCode, {
-      path: '/',
-      maxAge: COUNTRY_COOKIE_MAX_AGE,
-      sameSite: 'lax',
-    });
-    return response;
-  }
-
-  // For non-root paths with country code
-  const pathParts = pathname.split('/').filter(Boolean);
-  const firstPath = pathParts[0]?.toLowerCase();
-
+  // If the first path segment is a supported country code
   if (firstPath && SUPPORTED_COUNTRIES.includes(firstPath)) {
     const response = NextResponse.next();
     // Update cookie if different
@@ -119,15 +88,18 @@ export async function middleware(req: NextRequest) {
     return response;
   }
 
-  // For any other path, redirect to country-specific version
+  // For root path or paths without country code, detect country and redirect
   const countryCode = await detectUserCountry(req);
-  const newPathname = `/${countryCode}${pathname}`;
+  const newPathname = `/${countryCode}${pathname === '/' ? '' : pathname}`;
   const response = NextResponse.redirect(new URL(newPathname, req.url));
+  
+  // Set the country cookie
   response.cookies.set(COUNTRY_COOKIE_NAME, countryCode, {
     path: '/',
     maxAge: COUNTRY_COOKIE_MAX_AGE,
     sameSite: 'lax',
   });
+  
   return response;
 }
 
