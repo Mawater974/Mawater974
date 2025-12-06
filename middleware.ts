@@ -29,6 +29,56 @@ const EXCLUDED_PATHS = [
   '/robots.txt'
 ];
 
+async function detectUserCountry(req: NextRequest): Promise<string> {
+  // Temporary: Skip cookie check for testing geolocation
+  // const cookieCountry = req.cookies.get(COUNTRY_COOKIE_NAME)?.value;
+  // if (cookieCountry && SUPPORTED_COUNTRIES.includes(cookieCountry)) {
+  //   return cookieCountry;
+  // }
+
+  // Then try IP detection
+  try {
+    const geoInfo = await getCountryFromIP();
+    if (geoInfo) {
+      const countryCode = geoInfo.code.toLowerCase();
+      
+      // If the country is in our supported list, use it (e.g., UAE -> ae)
+      if (SUPPORTED_COUNTRIES.includes(countryCode)) {
+        return countryCode;
+      }
+      
+      // List of European countries that should fall back to 'eg'
+      const EUROPEAN_COUNTRIES = [
+        'al', 'ad', 'at', 'by', 'be', 'ba', 'bg', 'hr', 'cy', 'cz',
+        'dk', 'ee', 'fi', 'fr', 'de', 'gr', 'hu', 'is', 'ie', 'it',
+        'lv', 'li', 'lt', 'lu', 'mt', 'md', 'mc', 'me', 'nl', 'mk',
+        'no', 'pl', 'pt', 'ro', 'ru', 'sm', 'rs', 'sk', 'si', 'es',
+        'se', 'ch', 'ua', 'gb', 'va', 'rs', 'me', 'xk'
+      ];
+      
+      // If the country is in Europe, fall back to 'eg'
+      if (EUROPEAN_COUNTRIES.includes(countryCode)) {
+        return 'eg';
+      }
+    }
+    
+    // Fall back to Cloudflare headers if available
+    const cfCountry = req.headers.get('cf-ipcountry')?.toLowerCase();
+    if (cfCountry) {
+      if (SUPPORTED_COUNTRIES.includes(cfCountry)) {
+        return cfCountry;
+      }
+      // If Cloudflare detects a non-supported country, fall back to 'eg'
+      return 'eg';
+    }
+  } catch (error) {
+    console.error('Error detecting country:', error);
+  }
+  
+  // Default to Egypt if we can't determine the country or if there's an error
+  return 'eg';
+}
+
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   
@@ -37,11 +87,22 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Extract the first path segment as potential country code
+  // Handle root path - redirect to country-specific page
+  if (pathname === '/') {
+    const countryCode = await detectUserCountry(req);
+    const response = NextResponse.redirect(new URL(`/${countryCode}`, req.url));
+    response.cookies.set(COUNTRY_COOKIE_NAME, countryCode, {
+      path: '/',
+      maxAge: COUNTRY_COOKIE_MAX_AGE,
+      sameSite: 'lax',
+    });
+    return response;
+  }
+
+  // For non-root paths with country code
   const pathParts = pathname.split('/').filter(Boolean);
   const firstPath = pathParts[0]?.toLowerCase();
 
-  // If the path already starts with a supported country code
   if (firstPath && SUPPORTED_COUNTRIES.includes(firstPath)) {
     const response = NextResponse.next();
     // Update cookie if different
@@ -55,52 +116,15 @@ export async function middleware(req: NextRequest) {
     return response;
   }
 
-  // Try to detect country from IP if no valid country in URL
-  let countryCode = req.cookies.get(COUNTRY_COOKIE_NAME)?.value;
-
-  if (!countryCode || !SUPPORTED_COUNTRIES.includes(countryCode)) {
-    try {
-      const geoInfo = await getCountryFromIP();
-      if (geoInfo && SUPPORTED_COUNTRIES.includes(geoInfo.code.toLowerCase())) {
-        countryCode = geoInfo.code.toLowerCase();
-      } else {
-        // Fall back to Cloudflare headers if available
-        const cfCountry = req.headers.get('cf-ipcountry')?.toLowerCase();
-        countryCode = cfCountry && SUPPORTED_COUNTRIES.includes(cfCountry) 
-          ? cfCountry 
-          : DEFAULT_COUNTRY;
-      }
-    } catch (error) {
-      console.error('Error detecting country:', error);
-      countryCode = DEFAULT_COUNTRY;
-    }
-  }
-
-  // Create new URL with the country code
-  const newPathname = `/${countryCode}${pathname === '/' ? '' : pathname}`;
-  const url = req.nextUrl.clone();
-  url.pathname = newPathname;
-
-  // Only redirect if not already on the correct path
-  if (url.pathname !== pathname) {
-    const response = NextResponse.redirect(url);
-    response.cookies.set(COUNTRY_COOKIE_NAME, countryCode, {
-      path: '/',
-      maxAge: COUNTRY_COOKIE_MAX_AGE,
-      sameSite: 'lax',
-    });
-    return response;
-  }
-  
-  // If we're already on the correct path, just ensure the cookie is set
-  const response = NextResponse.next();
-  if (!req.cookies.get(COUNTRY_COOKIE_NAME)?.value) {
-    response.cookies.set(COUNTRY_COOKIE_NAME, countryCode, {
-      path: '/',
-      maxAge: COUNTRY_COOKIE_MAX_AGE,
-      sameSite: 'lax',
-    });
-  }
+  // For any other path, redirect to country-specific version
+  const countryCode = await detectUserCountry(req);
+  const newPathname = `/${countryCode}${pathname}`;
+  const response = NextResponse.redirect(new URL(newPathname, req.url));
+  response.cookies.set(COUNTRY_COOKIE_NAME, countryCode, {
+    path: '/',
+    maxAge: COUNTRY_COOKIE_MAX_AGE,
+    sameSite: 'lax',
+  });
   return response;
 }
 
