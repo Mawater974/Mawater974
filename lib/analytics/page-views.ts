@@ -1,4 +1,5 @@
 import { createClient } from '@/utils/supabase/client';
+import { Database } from '@/types/database.types';
 
 export type PageType = 
   | 'home' 
@@ -24,13 +25,26 @@ export type PageType =
 
 
 export interface PageView {
-    countryCode: string;
+    countryCode: string;        // User's actual country (from IP/geolocation)
+    servedCountryCode: string;  // The country code being served (e.g., 'eg')
     userId?: string;
     pageType: PageType;
-    entityId?: string; // For car-detail, this would be the car ID
+    entityId?: string;          // For car-detail, this would be the car ID
+    pagePath: string;           // The actual URL path (e.g., '/eg/home')
+    userAgent?: string;         // Optional: User agent string
+    sessionId?: string;         // Optional: Session ID for anonymous tracking
 }
 
-export async function trackPageView({ countryCode, userId, pageType, entityId }: PageView) {
+export async function trackPageView({ 
+    countryCode, 
+    servedCountryCode, 
+    userId, 
+    pageType, 
+    entityId, 
+    pagePath,
+    userAgent = typeof window !== 'undefined' ? window.navigator.userAgent : '',
+    sessionId = ''
+}: PageView) {
     try {
         const supabase = createClient();
         
@@ -51,16 +65,24 @@ export async function trackPageView({ countryCode, userId, pageType, entityId }:
             console.error('Error inserting view:', insertError);
         }
 
+        // Store the exact page path for user tracking
+        const exactPath = pagePath;
+
         // Track detailed user view
         const { error: viewError } = await supabase
             .from('user_page_views')
             .insert({
                 user_id: userId || null,
-                country_code: countryCode.toLowerCase(),
+                country_code: servedCountryCode.toLowerCase(),
+                real_country_name: countryCode, // Store the actual country name
                 page_type: pageType,
-                entity_id: entityId,
-                page_path: entityId ? `/${pageType}/${entityId}` : `/${pageType}`
-            });
+                entity_id: entityId || null,
+                page_path: exactPath,
+                is_authenticated: !!userId,
+                user_agent: userAgent,
+                session_id: sessionId || null,
+                created_at: new Date().toISOString()
+            } as any); // Using 'as any' as a temporary workaround for type issues
 
         if (viewError) {
             console.error('Error recording user view:', viewError);
@@ -70,7 +92,7 @@ export async function trackPageView({ countryCode, userId, pageType, entityId }:
         const { data: currentCount } = await supabase
             .from('page_views')
             .select('view_count')
-            .eq('country_code', countryCode.toLowerCase())
+            .eq('country_code', servedCountryCode.toLowerCase())
             .eq('page_type', pageType)
             .single();
 
