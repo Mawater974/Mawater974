@@ -15,7 +15,7 @@ export default function CountryLayout({
 }) {
   const { countries, setCurrentCountry, isLoading } = useCountry();
   const router = useRouter();
-  const countryCode = params.countryCode.toUpperCase();
+  const countryCode = params?.countryCode?.toUpperCase() || '';
 
   // Moved useEffect to the top before any conditional returns
   useEffect(() => {
