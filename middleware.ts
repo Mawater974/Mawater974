@@ -6,7 +6,7 @@ import { getCountryFromIP } from './utils/getCountryFromIP';
 const COUNTRY_COOKIE_NAME = 'user_country';
 const COUNTRY_COOKIE_MAX_AGE = 30 * 24 * 60 * 60; // 30 days
 const SUPPORTED_COUNTRIES = ['qa', 'sa', 'sy', 'ae', 'bh', 'kw', 'om', 'eg'];
-const DEFAULT_COUNTRY = 'ae';
+const DEFAULT_COUNTRY = 'qa';
 
 // Paths excluded from middleware routing
 const EXCLUDED_PATHS = [
