@@ -32,23 +32,30 @@ const EXCLUDED_PATHS = [
 function detectCountry(request: NextRequest): string {
   console.log('=== Country Detection Debug ===');
   
+  // Helper function to normalize country code
+  const normalizeCountryCode = (code: string | undefined): string | null => {
+    if (!code) return null;
+    const normalized = code.toLowerCase();
+    return SUPPORTED_COUNTRIES.includes(normalized) ? normalized : null;
+  };
+  
   // 1. Try cookie
-  const cookieCountry = request.cookies.get(COUNTRY_COOKIE_NAME)?.value;
+  const cookieCountry = normalizeCountryCode(request.cookies.get(COUNTRY_COOKIE_NAME)?.value);
   console.log('Cookie country:', cookieCountry);
   
-  if (cookieCountry && SUPPORTED_COUNTRIES.includes(cookieCountry)) {
+  if (cookieCountry) {
     console.log('Using country from cookie:', cookieCountry);
     return cookieCountry;
   }
 
   // 2. Try Cloudflare/Vercel geo header
-  const cfCountry = request.headers.get('cf-ipcountry')?.toLowerCase();
-  console.log('Cloudflare country header:', cfCountry);
+  const cfCountryHeader = request.headers.get('cf-ipcountry') || undefined;
+  const cfCountry = normalizeCountryCode(cfCountryHeader);
+  console.log('Cloudflare country header:', cfCountryHeader, '-> Normalized:', cfCountry);
   
   if (cfCountry) {
-    const country = SUPPORTED_COUNTRIES.includes(cfCountry) ? cfCountry : DEFAULT_COUNTRY;
-    console.log('Using country from header:', country);
-    return country;
+    console.log('Using country from header:', cfCountry);
+    return cfCountry;
   }
 
   // 3. Try IP-based detection
@@ -77,9 +84,11 @@ export async function middleware(request: NextRequest) {
   const firstPath = pathParts[0]?.toLowerCase();
 
   // If path already starts with a country (e.g., /qa/home)
-  if (firstPath && SUPPORTED_COUNTRIES.includes(firstPath)) {
+  const normalizedFirstPath = firstPath?.toLowerCase();
+  if (normalizedFirstPath && SUPPORTED_COUNTRIES.includes(normalizedFirstPath)) {
     const res = NextResponse.next();
-    res.cookies.set(COUNTRY_COOKIE_NAME, firstPath, {
+    // Always store country code in lowercase
+    res.cookies.set(COUNTRY_COOKIE_NAME, normalizedFirstPath, {
       path: '/',
       maxAge: COUNTRY_COOKIE_MAX_AGE,
       sameSite: 'lax',
@@ -88,11 +97,11 @@ export async function middleware(request: NextRequest) {
   }
 
   // Otherwise detect country and redirect
-  const userCountry = detectCountry(req);
+  const userCountry = detectCountry(request);
 
   const newUrl = new URL(
     `/${userCountry}${pathname === '/' ? '' : pathname}`,
-    req.url
+    request.url
   );
 
   const response = NextResponse.redirect(newUrl);
