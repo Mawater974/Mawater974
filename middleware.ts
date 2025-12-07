@@ -1,6 +1,7 @@
 // middleware.ts
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { getCountryFromIP } from './utils/getCountryFromIP';
 
 const COUNTRY_COOKIE_NAME = 'user_country';
 const COUNTRY_COOKIE_MAX_AGE = 30 * 24 * 60 * 60; // 30 days
@@ -29,7 +30,7 @@ const EXCLUDED_PATHS = [
   '/robots.txt'
 ];
 
-function detectCountry(request: NextRequest): string {
+async function detectCountry(request: NextRequest): Promise<string> {
   console.log('=== Country Detection Debug ===');
   
   // Helper function to normalize country code
@@ -46,6 +47,16 @@ function detectCountry(request: NextRequest): string {
   if (cookieCountry) {
     console.log('Using country from cookie:', cookieCountry);
     return cookieCountry;
+  }
+  
+  // 1.5 In development, use mock data
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Running in development mode - using mock Qatar data');
+    const mockCountry = await getCountryFromIP(true);
+    if (mockCountry) {
+      console.log('Using mock country:', mockCountry.code);
+      return mockCountry.code;
+    }
   }
 
   // 2. Try Cloudflare/Vercel geo header
@@ -65,7 +76,7 @@ function detectCountry(request: NextRequest): string {
   return DEFAULT_COUNTRY;
 }
 
-export async function middleware(request: NextRequest) {
+export default async function middleware(request: NextRequest) {
   console.log('=== Middleware Executed ===');
   console.log('Path:', request.nextUrl.pathname);
   console.log('User Agent:', request.headers.get('user-agent'));
@@ -97,7 +108,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Otherwise detect country and redirect
-  const userCountry = detectCountry(request);
+  const userCountry = await detectCountry(request);
 
   const newUrl = new URL(
     `/${userCountry}${pathname === '/' ? '' : pathname}`,
