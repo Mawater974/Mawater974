@@ -31,6 +31,9 @@ const EXCLUDED_PATHS = [
 ];
 
 async function detectCountry(request: NextRequest): Promise<string> {
+  // Log all available headers for debugging
+  console.log('Available headers:', Object.fromEntries(request.headers.entries()));
+  
   // 1. Try cookie first
   const cookieCountry = request.cookies.get(COUNTRY_COOKIE_NAME)?.value?.toLowerCase();
   if (cookieCountry && SUPPORTED_COUNTRIES.includes(cookieCountry)) {
@@ -38,19 +41,32 @@ async function detectCountry(request: NextRequest): Promise<string> {
     return cookieCountry;
   }
 
-  // 2. Try Cloudflare/Vercel geo header
-  const cfCountry = request.headers.get('cf-ipcountry')?.toLowerCase();
-  if (cfCountry && SUPPORTED_COUNTRIES.includes(cfCountry)) {
-    console.log('Using country from header:', cfCountry);
-    return cfCountry;
+  // 2. Try various production headers (Vercel, Netlify, Cloudflare)
+  const headersToCheck = [
+    'x-vercel-ip-country',    // Vercel
+    'cf-ipcountry',           // Cloudflare
+    'x-country-code',         // Common alternative
+    'x-geoip-country'         // Another common alternative
+  ];
+
+  for (const header of headersToCheck) {
+    const country = request.headers.get(header)?.toLowerCase();
+    if (country && SUPPORTED_COUNTRIES.includes(country)) {
+      console.log(`Using country from ${header} header:`, country);
+      return country;
+    }
   }
 
   // 3. Fall back to IP detection
   console.log('No country detected from cookie or headers, detecting from IP...');
-  const geoInfo = await getCountryFromIP();
-  if (geoInfo && SUPPORTED_COUNTRIES.includes(geoInfo.code)) {
-    console.log('Using country from IP detection:', geoInfo.code);
-    return geoInfo.code;
+  try {
+    const geoInfo = await getCountryFromIP();
+    if (geoInfo && SUPPORTED_COUNTRIES.includes(geoInfo.code)) {
+      console.log('Using country from IP detection:', geoInfo.code);
+      return geoInfo.code;
+    }
+  } catch (error) {
+    console.error('IP detection failed, falling back to default country:', error);
   }
 
   // 4. Fall back to default
