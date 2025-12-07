@@ -15,9 +15,16 @@ export default function CountryLayout({
 }) {
   const { countries, setCurrentCountry, isLoading } = useCountry();
   const router = useRouter();
-  const countryCode = params?.countryCode?.toUpperCase() || '';
+  const countryCode = params.countryCode.toUpperCase();
 
-  // Moved useEffect to the top before any conditional returns
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <LoadingSpinner />
+      </div>
+    );
+  }
+
   useEffect(() => {
     if (!isLoading && countries.length > 0) {
       const country = countries.find(c => c.code.toUpperCase() === countryCode);
@@ -32,15 +39,7 @@ export default function CountryLayout({
       }
     }
   }, [countryCode, countries, isLoading, setCurrentCountry, router]);
-
-  if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen">
-        <LoadingSpinner />
-      </div>
-    );
-  }
-
+ 
   // Check if the country code is valid
   const isValidCountry = countries.some(c => c.code.toUpperCase() === countryCode);
   if (!isValidCountry) {
