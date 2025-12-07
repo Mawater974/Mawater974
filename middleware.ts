@@ -31,46 +31,68 @@ const EXCLUDED_PATHS = [
 ];
 
 async function detectCountry(request: NextRequest): Promise<string> {
-  // Log all available headers for debugging
-  console.log('Available headers:', Object.fromEntries(request.headers.entries()));
+  console.log('\n=== Country Detection Debug ===');
+  console.log('Request URL:', request.url);
+  console.log('Path:', request.nextUrl.pathname);
   
+  // Log all available headers in a readable format
+  const headers: Record<string, string> = {};
+  request.headers.forEach((value, key) => {
+    headers[key] = value;
+  });
+  console.log('Available headers:', JSON.stringify(headers, null, 2));
+
   // 1. Try cookie first
   const cookieCountry = request.cookies.get(COUNTRY_COOKIE_NAME)?.value?.toLowerCase();
+  console.log('Cookie country:', cookieCountry || 'Not found');
+  
   if (cookieCountry && SUPPORTED_COUNTRIES.includes(cookieCountry)) {
-    console.log('Using country from cookie:', cookieCountry);
+    console.log('✅ Using country from cookie:', cookieCountry);
     return cookieCountry;
   }
 
-  // 2. Try various production headers (Vercel, Netlify, Cloudflare)
+  // 2. Try various production headers
   const headersToCheck = [
     'x-vercel-ip-country',    // Vercel
     'cf-ipcountry',           // Cloudflare
     'x-country-code',         // Common alternative
-    'x-geoip-country'         // Another common alternative
+    'x-geoip-country',        // Another common alternative
+    'x-vercel-ip-country-region', // Vercel region
+    'cloudfront-viewer-country'   // AWS CloudFront
   ];
 
+  console.log('\nChecking for country in headers:');
   for (const header of headersToCheck) {
-    const country = request.headers.get(header)?.toLowerCase();
-    if (country && SUPPORTED_COUNTRIES.includes(country)) {
-      console.log(`Using country from ${header} header:`, country);
-      return country;
+    const value = request.headers.get(header);
+    console.log(`- ${header}:`, value || 'Not found');
+    
+    if (value) {
+      const country = value.toLowerCase();
+      if (SUPPORTED_COUNTRIES.includes(country)) {
+        console.log(`✅ Using country from ${header} header:`, country);
+        return country;
+      }
     }
   }
 
   // 3. Fall back to IP detection
-  console.log('No country detected from cookie or headers, detecting from IP...');
+  console.log('\n🌐 No country detected from cookie or headers, detecting from IP...');
   try {
     const geoInfo = await getCountryFromIP();
+    console.log('IP API response:', JSON.stringify(geoInfo, null, 2));
+    
     if (geoInfo && SUPPORTED_COUNTRIES.includes(geoInfo.code)) {
-      console.log('Using country from IP detection:', geoInfo.code);
+      console.log('✅ Using country from IP detection:', geoInfo.code);
       return geoInfo.code;
+    } else if (geoInfo) {
+      console.log('⚠️ Detected country not in supported list:', geoInfo.code);
     }
   } catch (error) {
-    console.error('IP detection failed, falling back to default country:', error);
+    console.error('❌ IP detection failed:', error);
   }
 
   // 4. Fall back to default
-  console.log('Using default country:', DEFAULT_COUNTRY);
+  console.log('⚠️ Using default country:', DEFAULT_COUNTRY);
   return DEFAULT_COUNTRY;
 }
 
