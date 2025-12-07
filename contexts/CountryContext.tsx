@@ -265,20 +265,23 @@ export function CountryProvider({ children }: { children: React.ReactNode }) {
     fetchCountriesAndCities();
   }, [supabase]);
 
-  // Determine current country and city based on user profile or IP
-    // Determine current country and city based on user profile or IP
+  // Determine current country and city based on URL, cookie, or user profile
   useEffect(() => {
     const determineLocation = async () => {
+      if (isLoading === false) return; // Prevent multiple initializations
+      
       setIsLoading(true);
       try {
-        // Check if we have a saved country in localStorage
-        const savedCountryJson = typeof window !== 'undefined' ? localStorage.getItem('selectedCountry') : null;
-        if (savedCountryJson) {
-          try {
-            const savedCountry = JSON.parse(savedCountryJson);
-            const country = countries.find(c => c.id === savedCountry.id);
+        // 1. First, check the URL for country code (set by middleware)
+        if (typeof window !== 'undefined') {
+          const pathParts = window.location.pathname.split('/').filter(Boolean);
+          const countryCodeFromUrl = pathParts[0]?.toUpperCase();
+          
+          if (countryCodeFromUrl) {
+            const country = countries.find(c => c.code === countryCodeFromUrl);
             if (country) {
               setCurrentCountry(country);
+              localStorage.setItem('selectedCountry', JSON.stringify(country));
               
               // Set first city in this country as default
               const firstCity = cities.find(c => c.country_id === country.id);
@@ -288,9 +291,32 @@ export function CountryProvider({ children }: { children: React.ReactNode }) {
               setIsLoading(false);
               return;
             }
+          }
+        }
+
+        // 2. Check if we have a saved country in localStorage
+        const savedCountryJson = typeof window !== 'undefined' ? localStorage.getItem('selectedCountry') : null;
+        if (savedCountryJson) {
+          try {
+            const savedCountry = JSON.parse(savedCountryJson);
+            const country = countries.find(c => c.id === savedCountry.id);
+            if (country) {
+              // Redirect to the correct country URL if not already there
+              if (typeof window !== 'undefined' && !window.location.pathname.startsWith(`/${country.code.toLowerCase()}`)) {
+                window.location.href = `/${country.code.toLowerCase()}${window.location.pathname}`;
+                return;
+              }
+              
+              setCurrentCountry(country);
+              const firstCity = cities.find(c => c.country_id === country.id);
+              if (firstCity) {
+                setCurrentCity(firstCity);
+              }
+              setIsLoading(false);
+              return;
+            }
           } catch (e) {
             console.error('Error parsing saved country:', e);
-            // Continue to next check if there's an error
           }
         }
 

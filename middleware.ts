@@ -1,4 +1,3 @@
-// middleware.ts
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getCountryFromIP } from './utils/getCountryFromIP';
@@ -6,7 +5,7 @@ import { getCountryFromIP } from './utils/getCountryFromIP';
 const COUNTRY_COOKIE_NAME = 'user_country';
 const COUNTRY_COOKIE_MAX_AGE = 30 * 24 * 60 * 60; // 30 days
 const SUPPORTED_COUNTRIES = ['qa', 'sa', 'sy', 'ae', 'bh', 'kw', 'om', 'eg'];
-const DEFAULT_COUNTRY = 'qa';
+const DEFAULT_COUNTRY = 'ae';
 
 // Paths excluded from middleware routing
 const EXCLUDED_PATHS = [
@@ -47,10 +46,14 @@ async function detectCountry(request: NextRequest): Promise<string> {
 
   // 3. Fall back to IP detection
   console.log('No country detected from cookie or headers, detecting from IP...');
-  const geoInfo = await getCountryFromIP();
-  if (geoInfo && SUPPORTED_COUNTRIES.includes(geoInfo.code)) {
-    console.log('Using country from IP detection:', geoInfo.code);
-    return geoInfo.code;
+  try {
+    const geoInfo = await getCountryFromIP();
+    if (geoInfo && SUPPORTED_COUNTRIES.includes(geoInfo.code)) {
+      console.log('Using country from IP detection:', geoInfo.code);
+      return geoInfo.code;
+    }
+  } catch (error) {
+    console.error('Error detecting country from IP:', error);
   }
 
   // 4. Fall back to default
@@ -71,10 +74,10 @@ export default async function middleware(request: NextRequest) {
   const pathParts = pathname.split('/').filter(Boolean);
   const firstPath = pathParts[0]?.toLowerCase();
   const isCountryPath = firstPath && SUPPORTED_COUNTRIES.includes(firstPath);
-
+  
   // Get user's country
   const userCountry = await detectCountry(request);
-
+  
   // If already on the correct country path, continue
   if (isCountryPath && firstPath === userCountry) {
     const response = NextResponse.next();
