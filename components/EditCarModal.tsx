@@ -1,3 +1,5 @@
+'use client'
+
 import { Fragment, useEffect, useState, useRef, useMemo } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { DndProvider } from 'react-dnd';
