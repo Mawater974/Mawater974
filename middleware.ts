@@ -47,8 +47,8 @@ async function detectCountry(request: NextRequest): Promise<string> {
 
   // 3. Fall back to IP detection
   console.log('No country detected from cookie or headers, detecting from IP...');
-  const geoInfo = await getCountryFromIP();
-  if (geoInfo && SUPPORTED_COUNTRIES.includes(geoInfo.code)) {
+const geoInfo = await getCountryFromIP(request);
+if (geoInfo && SUPPORTED_COUNTRIES.includes(geoInfo.code)) {
     console.log('Using country from IP detection:', geoInfo.code);
     return geoInfo.code;
   }

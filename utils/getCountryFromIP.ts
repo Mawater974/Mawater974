@@ -3,10 +3,25 @@ export interface GeoInfo {
   code: string;
 }
 
-export async function getCountryFromIP(): Promise<GeoInfo | null> {
+export async function getCountryFromIP(request?: Request): Promise<GeoInfo | null> {
   try {
-    console.log('Fetching country data from IP API...');
-    const response = await fetch('https://ipapi.co/json/');
+    let ipAddress: string | null = null;
+    
+    // Get the client IP from Netlify's header if available
+    if (request) {
+      const headers = request.headers || new Headers();
+      ipAddress = headers.get('x-nf-client-connection-ip') || 
+                 headers.get('x-forwarded-for')?.split(',')[0].trim() ||
+                 headers.get('cf-connecting-ip');
+      console.log('Detected client IP:', ipAddress);
+    }
+
+    const apiUrl = ipAddress 
+      ? `https://ipapi.co/${ipAddress}/json/`
+      : 'https://ipapi.co/json/';
+
+    console.log('Fetching country data from IP API:', apiUrl);
+    const response = await fetch(apiUrl);
     const data = await response.json();
 
     if (data.error) {
@@ -22,7 +37,8 @@ export async function getCountryFromIP(): Promise<GeoInfo | null> {
       countryCode, 
       countryName,
       city: data.city,
-      region: data.region
+      region: data.region,
+      isProxy: !!ipAddress
     });
     
     return {
