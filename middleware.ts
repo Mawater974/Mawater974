@@ -1,11 +1,12 @@
 // middleware.ts
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { getCountryFromIP } from './utils/getCountryFromIP';
 
 const COUNTRY_COOKIE_NAME = 'user_country';
 const COUNTRY_COOKIE_MAX_AGE = 30 * 24 * 60 * 60; // 30 days
 const SUPPORTED_COUNTRIES = ['qa', 'sa', 'sy', 'ae', 'bh', 'kw', 'om', 'eg'];
-const DEFAULT_COUNTRY = 'eg';
+const DEFAULT_COUNTRY = 'ae';
 
 // Paths excluded from middleware routing
 const EXCLUDED_PATHS = [
@@ -30,88 +31,82 @@ const EXCLUDED_PATHS = [
 ];
 
 async function detectCountry(request: NextRequest): Promise<string> {
-  console.log('=== Country Detection Debug ===');
-  
-  // Helper function to normalize country code
-  const normalizeCountryCode = (code: string | undefined): string | null => {
-    if (!code) return null;
-    const normalized = code.toLowerCase();
-    return SUPPORTED_COUNTRIES.includes(normalized) ? normalized : null;
-  };
-  
-  // 1. Try cookie
-  const cookieCountry = normalizeCountryCode(request.cookies.get(COUNTRY_COOKIE_NAME)?.value);
-  console.log('Cookie country:', cookieCountry);
-  
-  if (cookieCountry) {
+  // 1. Try cookie first
+  const cookieCountry = request.cookies.get(COUNTRY_COOKIE_NAME)?.value?.toLowerCase();
+  if (cookieCountry && SUPPORTED_COUNTRIES.includes(cookieCountry)) {
     console.log('Using country from cookie:', cookieCountry);
     return cookieCountry;
   }
-  
+
   // 2. Try Cloudflare/Vercel geo header
-  const cfCountryHeader = request.headers.get('cf-ipcountry') || undefined;
-  const cfCountry = normalizeCountryCode(cfCountryHeader);
-  console.log('Cloudflare country header:', cfCountryHeader, '-> Normalized:', cfCountry);
-  
-  if (cfCountry) {
+  const cfCountry = request.headers.get('cf-ipcountry')?.toLowerCase();
+  if (cfCountry && SUPPORTED_COUNTRIES.includes(cfCountry)) {
     console.log('Using country from header:', cfCountry);
     return cfCountry;
   }
 
-  // 3. Try IP-based detection
-  console.log('No country detected from cookie or headers, using default');
-  console.log('Request headers:', JSON.stringify(Object.fromEntries(request.headers.entries()), null, 2));
-  
+  // 3. Fall back to IP detection
+  console.log('No country detected from cookie or headers, detecting from IP...');
+  const geoInfo = await getCountryFromIP();
+  if (geoInfo && SUPPORTED_COUNTRIES.includes(geoInfo.code)) {
+    console.log('Using country from IP detection:', geoInfo.code);
+    return geoInfo.code;
+  }
+
+  // 4. Fall back to default
+  console.log('Using default country:', DEFAULT_COUNTRY);
   return DEFAULT_COUNTRY;
 }
 
 export default async function middleware(request: NextRequest) {
-  console.log('=== Middleware Executed ===');
-  console.log('Path:', request.nextUrl.pathname);
-  console.log('User Agent:', request.headers.get('user-agent'));
-  console.log('X-Forwarded-For:', request.headers.get('x-forwarded-for'));
-  console.log('X-Real-IP:', request.headers.get('x-real-ip'));
-  
   const { pathname } = request.nextUrl;
+  const url = request.nextUrl.clone();
 
   // Skip excluded paths
   if (EXCLUDED_PATHS.some(path => pathname === path || pathname.startsWith(`${path}/`))) {
-    console.log('Skipping excluded path:', pathname);
     return NextResponse.next();
   }
 
+  // Get the first path segment (country code)
   const pathParts = pathname.split('/').filter(Boolean);
   const firstPath = pathParts[0]?.toLowerCase();
+  const isCountryPath = firstPath && SUPPORTED_COUNTRIES.includes(firstPath);
 
-  // If path already starts with a country (e.g., /qa/home)
-  const normalizedFirstPath = firstPath?.toLowerCase();
-  if (normalizedFirstPath && SUPPORTED_COUNTRIES.includes(normalizedFirstPath)) {
-    const res = NextResponse.next();
-    // Always store country code in lowercase
-    res.cookies.set(COUNTRY_COOKIE_NAME, normalizedFirstPath, {
+  // Get user's country
+  const userCountry = await detectCountry(request);
+
+  // If already on the correct country path, continue
+  if (isCountryPath && firstPath === userCountry) {
+    const response = NextResponse.next();
+    // Ensure cookie is set for future requests
+    response.cookies.set(COUNTRY_COOKIE_NAME, userCountry, {
       path: '/',
       maxAge: COUNTRY_COOKIE_MAX_AGE,
       sameSite: 'lax',
     });
-    return res;
+    return response;
   }
 
-  // Otherwise detect country and redirect
-  const userCountry = await detectCountry(request);
+  // Build the new URL with the correct country code
+  const newPath = `/${userCountry}${pathname === '/' ? '' : pathname}`;
+  const newUrl = new URL(newPath, request.url);
 
-  const newUrl = new URL(
-    `/${userCountry}${pathname === '/' ? '' : pathname}`,
-    request.url
-  );
+  // Don't redirect if we're already on the correct path
+  if (newUrl.pathname === pathname) {
+    return NextResponse.next();
+  }
 
+  console.log(`Redirecting from ${pathname} to ${newUrl.pathname}`);
   const response = NextResponse.redirect(newUrl);
-
-  response.cookies.set(COUNTRY_COOKIE_NAME, userCountry, {
+  
+  // Set the country cookie - ensure userCountry is always a string
+  const countryToSet = userCountry || DEFAULT_COUNTRY;
+  response.cookies.set(COUNTRY_COOKIE_NAME, countryToSet, {
     path: '/',
     maxAge: COUNTRY_COOKIE_MAX_AGE,
     sameSite: 'lax',
   });
-
+  
   return response;
 }
 
