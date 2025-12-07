@@ -1,21 +1,10 @@
-import { mockQatarGeoData } from './mockGeoLocation';
-
 export interface GeoInfo {
   name: string;
   code: string;
 }
 
-export async function getCountryFromIP(useMock = false): Promise<GeoInfo | null> {
+export async function getCountryFromIP(): Promise<GeoInfo | null> {
   try {
-    // Use mock data if requested or in development
-    if (useMock || process.env.NODE_ENV === 'development') {
-      console.log('Using mock Qatar data');
-      return {
-        name: mockQatarGeoData.country_name,
-        code: mockQatarGeoData.country_code.toLowerCase()
-      };
-    }
-
     console.log('Fetching country from IP API...');
     const response = await fetch('https://ipapi.co/json/');
     const data = await response.json();

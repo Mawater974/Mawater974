@@ -1,7 +1,6 @@
 // middleware.ts
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { getCountryFromIP } from './utils/getCountryFromIP';
 
 const COUNTRY_COOKIE_NAME = 'user_country';
 const COUNTRY_COOKIE_MAX_AGE = 30 * 24 * 60 * 60; // 30 days
@@ -49,16 +48,6 @@ async function detectCountry(request: NextRequest): Promise<string> {
     return cookieCountry;
   }
   
-  // 1.5 In development, use mock data
-  if (process.env.NODE_ENV === 'development') {
-    console.log('Running in development mode - using mock Qatar data');
-    const mockCountry = await getCountryFromIP(true);
-    if (mockCountry) {
-      console.log('Using mock country:', mockCountry.code);
-      return mockCountry.code;
-    }
-  }
-
   // 2. Try Cloudflare/Vercel geo header
   const cfCountryHeader = request.headers.get('cf-ipcountry') || undefined;
   const cfCountry = normalizeCountryCode(cfCountryHeader);
