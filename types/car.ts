@@ -9,10 +9,13 @@ export type DriveType = 'FWD' | 'RWD' | 'AWD' | '4WD';
 export interface CarImage {
   id: string;
   car_id: number;
-  url: string;
+  url?: string; // Legacy field, will be deprecated
+  image_url: string; // High resolution image URL
+  thumbnail_url: string | null; // Thumbnail URL, can be null for backward compatibility
   is_main: boolean;
   display_order: number;
   created_at: string;
+  updated_at?: string;
 }
 
 export interface Car {

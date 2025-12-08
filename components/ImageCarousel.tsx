@@ -4,8 +4,16 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 
+import { getCarImageUrl } from '@/lib/supabase';
+
 interface ImageCarouselProps {
-  images: { url: string; is_main?: boolean }[];
+  images: { 
+    id: string;
+    image_url: string; 
+    thumbnail_url: string | null;
+    is_main?: boolean;
+    url?: string; // Legacy support
+  }[];
   alt: string;
   aspectRatio?: string;
   fallbackImage?: string;
@@ -15,19 +23,26 @@ export default function ImageCarousel({
   images = [],
   alt,
   aspectRatio = 'aspect-[16/9]',
-  fallbackImage = '/placeholder-car.jpg',
 }: ImageCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
+  // Process images - handle both new and legacy formats
+  const processedImages = images.length > 0 ? images.map(img => ({
+    id: img.id,
+    image_url: img.image_url || img.url || '',
+    thumbnail_url: img.thumbnail_url || img.url || null,
+    is_main: img.is_main || false
+  })) : [];
+
   // Sort images to show main image first
-  const sortedImages = [...images].sort((a, b) => {
+  const sortedImages = [...processedImages].sort((a, b) => {
     if (a.is_main && !b.is_main) return -1;
     if (!a.is_main && b.is_main) return 1;
     return 0;
   });
 
-  // Use fallback if no images
-  const imageUrls = sortedImages.length > 0 ? sortedImages : [{ url: fallbackImage }];
+  // Use fallback text if no images
+  const hasImages = sortedImages.length > 0;
 
   const next = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -43,27 +58,43 @@ export default function ImageCarousel({
 
   return (
     <div className={`${aspectRatio} relative overflow-hidden group`}>
-      <div 
-        className="absolute inset-0 flex transition-transform duration-300 ease-in-out"
-        style={{ transform: `translateX(-${currentIndex * 100}%)` }}
-      >
-        {imageUrls.map((image, index) => (
-          <div
-            key={index}
-            className="flex-shrink-0 w-full h-full relative"
-          >
-            <Image
-              src={image.url}
-              alt={`${alt} ${index + 1}`}
-              fill  
-              className="object-cover"
-              priority={index === 0}
-            />
+      {hasImages ? (
+        <div 
+          className="absolute inset-0 flex transition-transform duration-300 ease-in-out"
+          style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+        >
+          {sortedImages.map((image, index) => (
+            <div
+              key={index}
+              className="flex-shrink-0 w-full h-full relative"
+            >
+              <Image
+                src={image.thumbnail_url || image.image_url}
+                alt={`${alt} ${index + 1}`}
+                fill  
+                className="object-cover"
+                priority={index === 0}
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                onError={(e) => {
+                  // If the thumbnail fails to load, try falling back to the full image URL
+                  if (image.thumbnail_url && image.image_url && e.currentTarget.src !== image.image_url) {
+                    e.currentTarget.src = image.image_url;
+                  }
+                }}
+              />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800">
+          <div className="text-center p-4 text-gray-500 dark:text-gray-400">
+            <div className="text-2xl font-medium mb-2">No Image Available</div>
+            <div className="text-sm">{alt || 'Car'}</div>
           </div>
-        ))}
-      </div>
+        </div>
+      )}
 
-      {imageUrls.length > 1 && (
+      {hasImages && sortedImages.length > 1 && (
         <>
           {/* Navigation Arrows */}
           <button
@@ -86,7 +117,7 @@ export default function ImageCarousel({
 
           {/* Dots */}
           <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
-            {imageUrls.map((_, index) => (
+            {sortedImages.map((_, index) => (
               <button
                 key={index}
                 onClick={(e) => {

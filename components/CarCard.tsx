@@ -16,7 +16,7 @@ import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { useLanguage } from '../contexts/LanguageContext';
 import ImageCarousel from './ImageCarousel';
-
+import { getCarImageUrl } from '@/lib/supabase';
 
 interface CarCardProps {
   car: ExtendedCar;
@@ -78,7 +78,13 @@ export default function CarCard({
 
         <div className="relative aspect-[16/9] bg-gray-100 dark:bg-gray-800">
           <ImageCarousel
-            images={car.images || []}
+            images={car.images?.map(img => ({
+              ...img,
+              // Use the url field (thumbnail) if available, otherwise fall back to image_url
+              image_url: img.url || img.image_url,
+              // Ensure we have a fallback for thumbnail_url as well
+              thumbnail_url: img.thumbnail_url || img.url || img.image_url
+            })) || []}
             alt={`${language === 'ar' && car.brand?.name_ar ? car.brand.name_ar : car.brand?.name || 'Car'} ${language === 'ar' && car.model?.name_ar ? car.model.name_ar : car.model?.name || ''}`}
             fallbackImage="/placeholder-car.jpg"
           />
