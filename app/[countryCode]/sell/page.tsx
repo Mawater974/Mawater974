@@ -477,7 +477,10 @@ export default function NewSellPage() {
       title: t('sell.steps.images'),
       component: (
         <MediaUploadStep 
-          onFilesChange={(files) => setFormData(prev => ({ ...prev, images: files }))}
+          onFilesChange={(files) => {
+            // Store both high-res and thumbnail versions in the form data
+            setFormData(prev => ({ ...prev, images: files }));
+          }}
           onNext={goToNextStep}
           onBack={() => setCurrentStep(prev => prev - 1)}
           t={t}
@@ -687,72 +690,102 @@ export default function NewSellPage() {
         console.log('Starting image uploads...');
         const imagePromises = formData.images.map(async (file, index) => {
           try {
-            // Convert to a proper File object and compress
-            const fileToUpload = await convertToFile(file);
-            const compressedFile = await compressImage(fileToUpload, Boolean(formData.is_featured));
+            // Get both high-res and thumbnail files
+            const highResFile = file.raw;
+            const thumbnailFile = file.thumbnailRaw || file.raw; // Fallback to original if no thumbnail
             
-            // Generate consistent file name with WebP extension
+            // Generate consistent file names with WebP extension
             const fileExt = 'webp';
-            const timestamp = Date.now();
+            const timestamp = new Date().getTime();
             const randomStr = Math.random().toString(36).substring(2, 8);
-            const fileName = `${timestamp}-${randomStr}.${fileExt}`;
-            const filePath = `${listing.id}/${fileName}`;
+            
+            // High-res file details
+            const highResFileName = `${timestamp}-${randomStr}.${fileExt}`;
+            const highResFilePath = `${listing.id}/${highResFileName}`;
+            
+            // Thumbnail file details
+            const thumbFileName = `${timestamp}-${randomStr}-thumb.${fileExt}`;
+            const thumbFilePath = `${listing.id}/${thumbFileName}`;
 
-            console.log('Uploading image:', filePath, 'Type:', compressedFile.type, 'Size:', (compressedFile.size / 1024).toFixed(2) + 'KB');
+            console.log('Uploading high-res image:', highResFilePath, 'Size:', (highResFile.size / 1024).toFixed(2) + 'KB');
+            console.log('Uploading thumbnail image:', thumbFilePath, 'Size:', (thumbnailFile.size / 1024).toFixed(2) + 'KB');
 
-            try {
-              // Upload the compressed image with WebP format
-              const { error: uploadError } = await supabase.storage
-                .from('car-images')
-                .upload(filePath, compressedFile, {
-                  contentType: 'image/webp',
-                  upsert: false,
-                  cacheControl: '3600'
-                });
-
-              if (uploadError) {
-                console.error('Error uploading image:', uploadError);
-                throw uploadError;
-              }
-
-              // Get the public URL
-              const { data: urlData } = supabase.storage
-                .from('car-images')
-                .getPublicUrl(filePath);
-
-              if (!urlData?.publicUrl) {
-                throw new Error('Failed to get public URL for uploaded image');
-              }
-
-              const imageUrl = urlData.publicUrl;
-              const imageDimensions = await getImageDimensions(compressedFile);
-              
-              console.log('Image uploaded successfully:', {
-                url: imageUrl,
-                size: (compressedFile.size / 1024).toFixed(2) + 'KB',
-                dimensions: imageDimensions
+            // Upload high-res image
+            const { error: highResUploadError } = await supabase.storage
+              .from('car-images')
+              .upload(highResFilePath, highResFile, {
+                contentType: 'image/webp',
+                upsert: false,
+                cacheControl: '3600'
               });
 
-              // Insert image record
-              const { error: insertError } = await supabase
-                .from('car_images')
-                .insert([{
-                  car_id: listing.id,
-                  url: imageUrl,
-                  is_main: index === formData.mainPhotoIndex,
-                  display_order: index
-                }]);
-
-              if (insertError) {
-                console.error('Error inserting image record:', insertError);
-                throw insertError;
-              }
-
-              return imageUrl;
-            } catch (error) {
-              console.error('Error in image upload process:', error);
-              throw error;
+            if (highResUploadError) {
+              console.error('Error uploading high-res image:', highResUploadError);
+              throw highResUploadError;
             }
+
+            // Upload thumbnail image
+            const { error: thumbUploadError } = await supabase.storage
+              .from('car-images')
+              .upload(thumbFilePath, thumbnailFile, {
+                contentType: 'image/webp',
+                upsert: false,
+                cacheControl: '3600'
+              });
+
+            if (thumbUploadError) {
+              console.error('Error uploading thumbnail image:', thumbUploadError);
+              throw thumbUploadError;
+            }
+
+            // Get public URLs
+            const { data: highResUrlData } = supabase.storage
+              .from('car-images')
+              .getPublicUrl(highResFilePath);
+
+            const { data: thumbUrlData } = supabase.storage
+              .from('car-images')
+              .getPublicUrl(thumbFilePath);
+
+            if (!highResUrlData?.publicUrl) {
+              throw new Error('Failed to get public URL for high-res image');
+            }
+
+            if (!thumbUrlData?.publicUrl) {
+              console.warn('Failed to get public URL for thumbnail image, using high-res as fallback');
+            }
+
+            const imageUrl = highResUrlData.publicUrl;
+            const thumbnailUrl = thumbUrlData?.publicUrl || imageUrl; // Fallback to high-res if thumbnail fails
+            
+            const imageDimensions = await getImageDimensions(highResFile);
+            
+            console.log('Images uploaded successfully:', {
+              highResUrl: imageUrl,
+              thumbnailUrl: thumbnailUrl,
+              size: (highResFile.size / 1024).toFixed(2) + 'KB',
+              dimensions: imageDimensions
+            });
+
+            // Save to car_images table with both URLs
+            const { data: imageData, error: imageError } = await supabase
+              .from('car_images')
+              .insert({
+                car_id: listing.id,
+                image_url: imageUrl,
+                thumbnail_url: thumbnailUrl,
+                is_main: index === 0, // First image is main
+                display_order: index
+              })
+              .select()
+              .single();
+
+            if (imageError) {
+              console.error('Error saving image to database:', imageError);
+              throw imageError;
+            }
+
+            return { imageUrl, thumbnailUrl };
           } catch (error) {
             console.error('Error processing image:', error);
             throw error;

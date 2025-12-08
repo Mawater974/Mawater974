@@ -246,7 +246,7 @@ export default function CarsPage() {
           user:profiles!user_id(*), 
           city:cities(*), 
           country:countries(*), 
-          images:car_images!car_images_car_id_fkey(url, is_main)
+          images:car_images!car_images_car_id_fkey(image_url, thumbnail_url, is_main)
         `)
         .eq('status', 'approved');
 

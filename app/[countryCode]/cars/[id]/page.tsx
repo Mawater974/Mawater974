@@ -200,7 +200,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
             *,
             brand:brands(*),
             model:models(*),
-            images:car_images!car_images_car_id_fkey(id, url, is_main, display_order),
+            images:car_images!car_images_car_id_fkey(id, image_url, thumbnail_url, is_main, display_order),
             city:cities(*),
             country:countries(*),
             user:profiles(*)
@@ -255,7 +255,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
             model:models!inner(id, name, name_ar),
             user:profiles!inner(full_name, email, phone_number),
             country:countries!inner(id, currency_code, code, name, name_ar),
-            images:car_images!car_images_car_id_fkey(url, is_main)
+            images:car_images!car_images_car_id_fkey(image_url, thumbnail_url, is_main, display_order)
           `)
           .eq('brand_id', car.brand_id)
           .eq('country_id', car.country?.id) // Filter by the same country
@@ -277,7 +277,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
             model:models!inner(id, name, name_ar),
             user:profiles!inner(full_name, email, phone_number),
             country:countries!inner(id, currency_code, code, name, name_ar),
-            images:car_images(url, is_main)
+            images:car_images(image_url, is_main)
           `)
           .eq('brand_id', car.brand_id)
           .eq('country_id', car.country?.id) // Filter by the same country
@@ -292,32 +292,76 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
         }
 
         if (featuredData) {
-          const processedFeaturedCars = featuredData.map(carData => ({
-            ...carData,
-            images: carData.images?.map(img => ({
-              url: img.url,
-              is_main: img.is_main || false
-            })) || [],
-            brand: carData.brand,
-            model: carData.model,
-            user: carData.user,
-            country: carData.country
-          }));
+          const processedFeaturedCars = featuredData.map(carData => {
+            // For car cards, we want to use thumbnails with fallback to full-size images
+            const processedImages = (carData.images || []).map(img => ({
+              id: img.id || `img-${Math.random().toString(36).substr(2, 9)}`,
+              // For car cards, we'll use the thumbnail_url for display
+              // and keep image_url for the detail page
+              url: img.thumbnail_url || img.image_url || '/images/car-placeholder.jpg',
+              image_url: img.image_url || '/images/car-placeholder.jpg',
+              thumbnail_url: img.thumbnail_url || img.image_url || '/images/car-placeholder.jpg',
+              is_main: Boolean(img.is_main),
+              display_order: Number(img.display_order) || 0
+            }));
+
+            // Ensure we have at least one image
+            const images = processedImages.length > 0 
+              ? processedImages 
+              : [{
+                  id: 'fallback',
+                  image_url: '/images/car-placeholder.jpg',
+                  thumbnail_url: '/images/car-placeholder.jpg',
+                  is_main: true,
+                  display_order: 0
+                }];
+
+            return {
+              ...carData,
+              images,
+              brand: carData.brand,
+              model: carData.model,
+              user: carData.user,
+              country: carData.country
+            };
+          });
           setFeaturedSimilarCars(processedFeaturedCars);
         }
 
         if (normalData) {
-          const processedNormalCars = normalData.map(carData => ({
-            ...carData,
-            images: carData.images?.map(img => ({
-              url: img.url,
-              is_main: img.is_main || false
-            })) || [],
-            brand: carData.brand,
-            model: carData.model,
-            user: carData.user,
-            country: carData.country
-          }));
+          const processedNormalCars = normalData.map(carData => {
+            // For car cards, we want to use thumbnails with fallback to full-size images
+            const processedImages = (carData.images || []).map(img => ({
+              id: img.id || `img-${Math.random().toString(36).substr(2, 9)}`,
+              // For car cards, we'll use the thumbnail_url for display
+              // and keep image_url for the detail page
+              url: img.thumbnail_url || img.image_url || '/images/car-placeholder.jpg',
+              image_url: img.image_url || '/images/car-placeholder.jpg',
+              thumbnail_url: img.thumbnail_url || img.image_url || '/images/car-placeholder.jpg',
+              is_main: Boolean(img.is_main),
+              display_order: Number(img.display_order) || 0
+            }));
+
+            // Ensure we have at least one image
+            const images = processedImages.length > 0 
+              ? processedImages 
+              : [{
+                  id: 'fallback',
+                  image_url: '/images/car-placeholder.jpg',
+                  thumbnail_url: '/images/car-placeholder.jpg',
+                  is_main: true,
+                  display_order: 0
+                }];
+
+            return {
+              ...carData,
+              images,
+              brand: carData.brand,
+              model: carData.model,
+              user: carData.user,
+              country: carData.country
+            };
+          });
           setSimilarCars(processedNormalCars);
         }
       } catch (err) {
@@ -818,7 +862,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
               {car?.images && car.images.length > 0 && (
                 <>
                   <img
-                    src={car.images[currentImageIndex]?.url}
+                    src={car.images[currentImageIndex]?.image_url || car.images[currentImageIndex]?.thumbnail_url}
                     alt={`${car.brand?.name || ''} ${car.model?.name || ''}`}
                     className={`w-full h-full object-cover ${car.status !== 'approved' ? 'opacity-70' : ''}`}
                     onClick={() => openFullImage(currentImageIndex)}
@@ -887,7 +931,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
                 {car.images.map((image, index) => (
                   <img
                     key={index}
-                    src={image.url}
+                    src={image.image_url || image.url}
                     alt={`${car.brand?.name || ''} ${car.model?.name || ''} thumbnail ${index + 1}`}
                     className={`w-full aspect-[4/3] object-cover rounded-lg cursor-pointer ${
                       currentImageIndex === index ? 'ring-2 ring-qatar-maroon' : ''
