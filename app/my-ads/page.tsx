@@ -259,16 +259,22 @@ const CarsTab = ({
             href={`/${currentCountry?.code.toLowerCase()}/cars/${car.id}`}
             className="block group"
           >
-            <div className="relative h-48 bg-gray-200">
-              {car.images?.[0]?.url && (
-                <Image
-                  src={car.images[0].url}
-                  alt={`${car.brand?.name || ''} ${car.model?.name || ''}`}
-                  fill
-                  className="object-cover group-hover:brightness-90 transition-all duration-200"
-                />
-              )}
-            </div>
+            <div className="relative aspect-[16/9] bg-gray-100 dark:bg-gray-800">
+            {car.images && car.images.length > 0 ? (
+              <Image
+                src={car.images[0].url}
+                alt={`${car.brand?.name || ''} ${car.model?.name || ''}`}
+                fill
+                className="object-cover group-hover:brightness-90 transition-all duration-200"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-gray-200 dark:bg-gray-700">
+                <span className="text-gray-400">No image</span>
+              </div>
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+          </div>
             <div className="p-4">
               <div className="flex justify-between items-start">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-qatar-maroon transition-colors">
@@ -326,7 +332,7 @@ const CarsTab = ({
               <button
                 onClick={(e) => {
                   e.preventDefault();
-                  handleRenew(car.id);s
+                  handleRenew(car.id);
                 }}
                 className="w-full mt-3 px-3 py-1.5 bg-qatar-maroon text-white rounded hover:bg-qatar-maroon/90 text-sm flex items-center justify-center"
                 disabled={renewingCarId === car.id}
@@ -880,13 +886,24 @@ const handleRenewSparePart = async (sparePartId: string) => {
         (cars || []).map(async (car) => {
           const { data: imagesData } = await supabase
             .from('car_images')
-            .select('*')
+            .select('id, image_url, thumbnail_url, is_main, display_order')
             .eq('car_id', car.id)
-            .order('is_main', { ascending: false });
+            .order('is_main', { ascending: false })
+            .order('display_order', { ascending: true });
+
+          // Ensure we have proper image URLs with fallbacks
+          const processedImages = (imagesData || []).map(img => ({
+            ...img,
+            // Use the url field (thumbnail) if available, otherwise fall back to image_url
+            url: img.thumbnail_url || img.image_url,
+            // Ensure we have both URL fields for compatibility with CarCard
+            image_url: img.image_url,
+            thumbnail_url: img.thumbnail_url || img.image_url
+          }));
 
           return {
             ...car,
-            images: imagesData || []
+            images: processedImages
           };
         })
       );

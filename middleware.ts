@@ -31,29 +31,37 @@ const EXCLUDED_PATHS = [
 ];
 
 async function detectCountry(request: NextRequest): Promise<string> {
-  // 1. Try cookie first
+  // 1. Check URL path first if it's a supported country
+  const pathParts = request.nextUrl.pathname.split('/').filter(Boolean);
+  const firstPath = pathParts[0]?.toLowerCase();
+  if (firstPath && SUPPORTED_COUNTRIES.includes(firstPath)) {
+    console.log('Using country from URL path:', firstPath);
+    return firstPath;
+  }
+
+  // 2. Try cookie
   const cookieCountry = request.cookies.get(COUNTRY_COOKIE_NAME)?.value?.toLowerCase();
   if (cookieCountry && SUPPORTED_COUNTRIES.includes(cookieCountry)) {
     console.log('Using country from cookie:', cookieCountry);
     return cookieCountry;
   }
 
-  // 2. Try Cloudflare/Vercel geo header
+  // 3. Try Cloudflare/Vercel geo header
   const cfCountry = request.headers.get('cf-ipcountry')?.toLowerCase();
   if (cfCountry && SUPPORTED_COUNTRIES.includes(cfCountry)) {
     console.log('Using country from header:', cfCountry);
     return cfCountry;
   }
 
-  // 3. Fall back to IP detection
-  console.log('No country detected from cookie or headers, detecting from IP...');
-const geoInfo = await getCountryFromIP(request);
-if (geoInfo && SUPPORTED_COUNTRIES.includes(geoInfo.code)) {
+  // 4. Fall back to IP detection
+  console.log('No country detected from URL, cookie or headers, detecting from IP...');
+  const geoInfo = await getCountryFromIP(request);
+  if (geoInfo && SUPPORTED_COUNTRIES.includes(geoInfo.code)) {
     console.log('Using country from IP detection:', geoInfo.code);
     return geoInfo.code;
   }
 
-  // 4. Fall back to default
+  // 5. Fall back to default
   console.log('Using default country:', DEFAULT_COUNTRY);
   return DEFAULT_COUNTRY;
 }

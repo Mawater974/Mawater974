@@ -7,6 +7,8 @@ import { getCountryFromIP } from '@/utils/geoLocation';
 import { Country, City } from '@/types/supabase';
 import { useLanguage } from './LanguageContext';
 
+const COUNTRY_COOKIE_NAME = 'user_country';
+
 interface CurrencyRate {
   from_currency: string;
   to_currency: string;
@@ -494,10 +496,14 @@ export function CountryProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('selectedCountryId', country.id.toString());
     localStorage.setItem('selectedCountry', JSON.stringify(country));
     
-    // Redirect to home page after a short delay to ensure country is set
+    // Set cookie directly to ensure it's available for the next request
+    const countryCode = country.code.toLowerCase();
+    document.cookie = `${COUNTRY_COOKIE_NAME}=${countryCode}; path=/; max-age=${30 * 24 * 60 * 60}; SameSite=Lax`;
+    
+    // Redirect to home page with minimal delay
     setTimeout(() => {
-      window.location.href = `/${country.code.toLowerCase()}`;
-    }, 500);
+      window.location.href = `/${countryCode}`;
+    }, 100);
   };
 
   return (

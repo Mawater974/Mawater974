@@ -86,12 +86,30 @@ export default function FavoritesPage() {
               user:profiles(id, full_name),
               city:cities(id, name, name_ar),
               country:countries(id, name, name_ar, code, currency_code),
-              images:car_images(url, is_main)
+              images:car_images(
+                id,
+                image_url,
+                thumbnail_url,
+                is_main,
+                display_order
+              )
             `)
             .in('id', carIds);
 
           if (carsError) throw carsError;
-          if (carsData) cars = carsData;
+          if (carsData) {
+            cars = carsData.map(car => ({
+              ...car,
+              images: (car.images || []).map(img => ({
+                ...img,
+                // Use thumbnail_url if available, otherwise fall back to image_url
+                url: img.thumbnail_url || img.image_url,
+                // Ensure both URL fields are available for compatibility
+                image_url: img.image_url,
+                thumbnail_url: img.thumbnail_url || img.image_url
+              }))
+            }));
+          }
         }
       }
 
@@ -290,9 +308,10 @@ export default function FavoritesPage() {
                   ) : (
                     <SparePartCard
                       part={item as unknown as ExtendedSparePart}
-                      onToggleFavorite={(e: React.MouseEvent) => {
-                        e.stopPropagation();
-                        handleFavoriteToggle(item.id, 'spare_part');
+                      countryCode={params.countryCode as string}
+                      onToggleFavorite={(id, e) => {
+                        e?.stopPropagation();
+                        handleFavoriteToggle(id.toString(), 'spare_part');
                       }}
                       isFavorite={true}
                     />
