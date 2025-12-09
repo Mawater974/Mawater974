@@ -188,12 +188,31 @@ const SparePartCard: React.FC<SparePartCardProps> = ({
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
         </div>
 
-        <div className="p-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
-          <div className="flex flex-col gap-2">
+        <div className="p-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-white h-[140px] flex flex-col justify-between">
+          <div className="flex flex-col">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
                 {part.title}
               </h3>
+              
+              {/* Favorite Button */}
+              <button
+                onClick={handleFavoriteClick}
+                className={`absolute bottom-3 ${language === 'ar' ? 'left-3' : 'right-3'} p-1.5 rounded-lg transition-all duration-200 border
+                  ${isFavorited
+                    ? 'bg-qatar-maroon/10 text-qatar-maroon border-qatar-maroon hover:bg-qatar-maroon hover:text-white'
+                    : 'bg-transparent border-gray-200 dark:border-gray-600 text-gray-400 hover:border-qatar-maroon hover:text-qatar-maroon'
+                  }
+                  transform active:scale-95 hover:scale-105`}
+                aria-label={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+                disabled={isLoading}
+              >
+                {isFavorited ? (
+                  <HeartSolid className="h-4 w-4" />
+                ) : (
+                  <HeartOutline className="h-4 w-4" />
+                )}
+              </button>
             </div>
 
             <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
@@ -251,7 +270,7 @@ const SparePartCard: React.FC<SparePartCardProps> = ({
           }
           transform active:scale-95 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed`}
         aria-label={isFavorited ? t('spareParts.favorite.remove') || 'Remove from favorites' : t('spareParts.favorite.add') || 'Add to favorites'}
-        disabled={isLoading}
+        disabled={isLoading} 
       >
         {isLoading ? (
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-400 border-t-transparent"></div>
