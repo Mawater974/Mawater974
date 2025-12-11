@@ -25,7 +25,10 @@ const EXCLUDED_PATHS = [
   '/users',
   '/contact',
   '/terms',
+  '/test-connection',
   '/privacy',
+  '/dealer-dashboard',
+  '/forgot-password',
   '/sitemap.xml',
   '/robots.txt'
 ];
@@ -106,7 +109,7 @@ export default async function middleware(request: NextRequest) {
 
   console.log(`Redirecting from ${pathname} to ${newUrl.pathname}`);
   const response = NextResponse.redirect(newUrl);
-  
+
   // Set the country cookie - ensure userCountry is always a string
   const countryToSet = userCountry || DEFAULT_COUNTRY;
   response.cookies.set(COUNTRY_COOKIE_NAME, countryToSet, {
@@ -114,7 +117,7 @@ export default async function middleware(request: NextRequest) {
     maxAge: COUNTRY_COOKIE_MAX_AGE,
     sameSite: 'lax',
   });
-  
+
   return response;
 }
 

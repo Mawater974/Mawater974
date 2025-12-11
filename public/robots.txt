@@ -1,0 +1,37 @@
+User-agent: *
+Disallow: /api/
+Disallow: /admin/
+Disallow: /login
+Disallow: /signup
+Disallow: /profile
+Disallow: /dashboard
+Disallow: /notifications
+Disallow: /favorites
+Disallow: /my-ads
+Disallow: /terms
+Disallow: /privacy
+Disallow: /contact
+Disallow: /reset-password
+Disallow: /test-connection
+Disallow: /trial
+Disallow: /users
+Disallow: /dealer-dashboard
+Disallow: /facility-dashboard
+
+
+Allow: /
+
+Sitemap: https://mawater974.com/sitemap.xml
+
+# Specific crawler rules
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: DuckDuckBot
+Allow: /
+
+User-agent: Yandex
+Allow: /
