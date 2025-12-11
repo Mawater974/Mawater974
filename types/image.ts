@@ -7,4 +7,7 @@ export interface ImageFile {
   name: string;
   size: number;
   lastModified: number;
+  thumbnailUrl?: string;
+  thumbnailRaw?: File;
+  originalName?: string;
 }

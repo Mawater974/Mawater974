@@ -167,17 +167,12 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
     }
   };
 
-  // Compress image with optimized settings
-  const compressImage = async (file: File, isFeatured: boolean = false): Promise<File> => {
+  // Generate optimized image with specific settings
+  const generateOptimizedImage = async (file: File, options: any): Promise<File> => {
     const fileType = file.type.toLowerCase();
 
     // Skip non-image files or unsupported image types
-    if (!fileType.startsWith('image/') ||
-        (fileType !== 'image/jpeg' &&
-         fileType !== 'image/png' &&
-         fileType !== 'image/webp' &&
-         !fileType.includes('heic') &&
-         !fileType.includes('heif'))) {
+    if (!fileType.startsWith('image/') || !SUPPORTED_IMAGE_TYPES.includes(fileType)) {
       console.warn(`Unsupported file type: ${fileType}. File will be uploaded as-is.`);
       return file;
     }
@@ -189,37 +184,79 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
     }
 
     try {
-      const options = {
-        // Higher quality settings for admin
-        maxSizeMB: 1.5, // Slightly larger max size for better quality
-        maxWidthOrHeight: 2560, // Higher resolution for admin
-        useWebWorker: true,
-        maxIteration: 15,
-        fileType: 'image/webp' as const,
-        initialQuality: 0.95, // Higher quality for admin
-        alwaysKeepResolution: true,
-        preserveExif: false,
-      };
+      console.log(`Processing ${options.purpose} version: ${file.name}`);
 
-      console.log('Original file name:', file.name);
-      console.log('Original file type:', file.type);
-      console.log('Original file size:', (file.size / 1024 / 1024).toFixed(2), 'MB');
+      const compressedBlob = await imageCompression(processedFile, options) as Blob;
 
-      const compressedBlob = await imageCompression(processedFile, options);
+      // Determine output format (convert all to webp for better compression, except for SVG)
+      const outputFormat = fileType === 'image/svg+xml' ? 'image/svg+xml' : 'image/webp';
+      const extension = fileType === 'image/svg+xml' ? 'svg' : 'webp';
 
-      // Create a new File object with the compressed image
-      const compressedFile = new File(
+      // Create a new File object with the correct MIME type and extension
+      const optimizedFile = new File(
         [compressedBlob],
-        file.name.replace(/\.[^/.]+$/, '.webp'),
-        { type: 'image/webp', lastModified: Date.now() }
+        `${file.name.replace(/\.[^/.]+$/, '')}${options.suffix || ''}.${extension}`,
+        {
+          type: outputFormat,
+          lastModified: Date.now()
+        }
       );
 
-      console.log('Compressed file size:', (compressedFile.size / 1024 / 1024).toFixed(2), 'MB');
-
-      return compressedFile;
+      return optimizedFile;
     } catch (error) {
-      console.error('Error compressing image:', error);
-      return processedFile; // Return original if compression fails
+      console.error(`Error generating ${options.purpose} version:`, error);
+      return file; // Return original if optimization fails
+    }
+  };
+
+  // Generate both high-res and thumbnail versions of the image
+  const compressImage = async (file: File, isFeatured: boolean = false): Promise<{ original: File; thumbnail: File }> => {
+    const fileType = file.type.toLowerCase();
+    const isSvg = fileType === 'image/svg+xml';
+
+    // Skip processing for SVGs or unsupported types
+    if (isSvg || !fileType.startsWith('image/') || !SUPPORTED_IMAGE_TYPES.includes(fileType)) {
+      return { original: file, thumbnail: file };
+    }
+
+    // High-res image settings
+    const highResOptions = {
+      maxSizeMB: isFeatured ? 1.0 : 0.8, // Higher quality for admin
+      maxWidthOrHeight: isFeatured ? 1920 : 1600,
+      useWebWorker: true,
+      maxIteration: 15,
+      fileType: 'image/webp',
+      initialQuality: isFeatured ? 0.85 : 0.80,
+      alwaysKeepResolution: true,
+      purpose: 'high-res',
+      suffix: ''
+    };
+
+    // Thumbnail settings (for grid/list views)
+    const thumbnailOptions = {
+      maxSizeMB: 0.1, // Target ~80KB
+      maxWidthOrHeight: 600, // Middle of 400-600px range
+      useWebWorker: true,
+      maxIteration: 10,
+      fileType: 'image/webp',
+      initialQuality: 0.80,
+      alwaysKeepResolution: true,
+      purpose: 'thumbnail',
+      suffix: '_thumb'
+    };
+
+    try {
+      // Process both versions in parallel
+      const [highResFile, thumbnailFile] = await Promise.all([
+        generateOptimizedImage(file, highResOptions),
+        generateOptimizedImage(file, thumbnailOptions)
+      ]);
+
+      return { original: highResFile, thumbnail: thumbnailFile };
+    } catch (error) {
+      console.error('Error processing image versions:', error);
+      // Fallback to original file if processing fails
+      return { original: file, thumbnail: file };
     }
   };
 
@@ -236,11 +273,11 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
   const [images, setImages] = useState<ImageFile[]>(
     car?.images?.map(img => ({
       id: img.id || `existing-${uuidv4()}`,
-      preview: img.url,
+      preview: img.url || '',
       isMain: img.is_main || false,
       type: 'existing' as const,
-      raw: new File([], img.url.split('/').pop() || 'image.jpg', { type: 'image/jpeg' }),
-      name: img.url.split('/').pop() || 'image.jpg',
+      raw: new File([], (img.url || '').split('/').pop() || 'image.jpg', { type: 'image/jpeg' }),
+      name: (img.url || '').split('/').pop() || 'image.jpg',
       size: 0,
       lastModified: Date.now()
     })) || []
@@ -382,14 +419,12 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
     return extensionMap[mimeType.toLowerCase()] || 'jpg';
   };
 
-  // Handle file selection
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) return;
-
-    const files = Array.from(e.target.files);
+  // Process files (used for both drag & drop and file input)
+  const processFiles = async (filesToProcess: File[]) => {
+    if (!filesToProcess || filesToProcess.length === 0) return;
 
     // Check if adding these files would exceed the limit
-    if (images.length + files.length > MAX_IMAGES) {
+    if (images.length + filesToProcess.length > MAX_IMAGES) {
       toast.error(`You can upload a maximum of ${MAX_IMAGES} images`);
       return;
     }
@@ -399,7 +434,7 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
     try {
       const newImages: ImageFile[] = [];
 
-      for (const file of files) {
+      for (const file of filesToProcess) {
         try {
           // Check file type
           if (!SUPPORTED_IMAGE_TYPES.includes(file.type.toLowerCase())) {
@@ -407,21 +442,26 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
             continue;
           }
 
-          // Compress the image
-          const compressedFile = await compressImage(file, formData.is_featured || false);
+          // Compress the image (generates both high-res and thumbnail)
+          const { original: compressedFile, thumbnail: thumbnailFile } = await compressImage(file, formData.is_featured || false);
 
           // Create a preview URL
           const preview = URL.createObjectURL(compressedFile);
+          const thumbnailUrl = URL.createObjectURL(thumbnailFile);
+
           objectUrls.current.add(preview);
+          objectUrls.current.add(thumbnailUrl);
 
           // Create image object
           const imageObj: ImageFile = {
             id: `new-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             preview,
+            thumbnailUrl,
             raw: compressedFile,
+            thumbnailRaw: thumbnailFile,
             name: compressedFile.name,
             size: compressedFile.size,
-            type: compressedFile.type,
+            type: 'new',
             lastModified: compressedFile.lastModified,
             isMain: false
           };
@@ -446,9 +486,8 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
       if (newImages.length > 0) {
         toast.success(`Successfully added ${newImages.length} images`);
       }
-
     } catch (error) {
-      console.error('Error in handleFileSelect:', error);
+      console.error('Error processing files:', error);
       toast.error('Error processing images');
     } finally {
       setLoading(false);
@@ -457,6 +496,13 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
         fileInputRef.current.value = '';
       }
     }
+  };
+
+  // Handle file selection
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const files = Array.from(e.target.files);
+    await processFiles(files);
   };
 
   // Handle drag over
@@ -527,7 +573,7 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
       // Get the preview URL to revoke
       const fileToRemove = prevFiles.find(file => file.id === id);
       if (fileToRemove?.preview && typeof fileToRemove.preview === 'string' &&
-          (fileToRemove.preview.startsWith('blob:') || fileToRemove.preview.startsWith('data:'))) {
+        (fileToRemove.preview.startsWith('blob:') || fileToRemove.preview.startsWith('data:'))) {
         URL.revokeObjectURL(fileToRemove.preview);
         objectUrls.current.delete(fileToRemove.preview);
       }
@@ -573,12 +619,12 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
     if (file instanceof File) {
       return file;
     }
-    
+
     // If it's an ImageFile with a raw file object, return that
     if ('raw' in file && file.raw instanceof File) {
       return file.raw;
     }
-    
+
     // If it's an ImageFile with a preview URL, create a new File object
     if (file.preview) {
       try {
@@ -596,7 +642,7 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
         throw new Error('Failed to process image');
       }
     }
-    
+
     throw new Error('Unsupported file format');
   };
 
@@ -668,48 +714,98 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
         console.log('Starting image uploads...');
         const imagePromises = allImages.map(async (img, index) => {
           try {
-            // Convert to a proper File object and compress
+            // Convert to a proper File object and compress if it's a new file
+            // For existing files, we might skip this if we had logic to detect them, 
+            // but here we treat all as needing processing if they are 'new' or re-uploaded
+
+            let highResFile: File;
+            let thumbnailFile: File;
+
+            if (img.type === 'existing') {
+              // If it's existing, we just keep it as is (no upload needed usually, but if we are editing...)
+              // Actually, for existing images, we shouldn't re-upload unless changed.
+              // But the current logic seems to re-upload everything? 
+              // Wait, the original logic converted everything to file.
+              // Let's check if it's an existing image (url starts with http)
+              if (img.preview && img.preview.startsWith('http')) {
+                return img.preview;
+              }
+            }
+
+            // It's a new file
             const fileToUpload = await convertToFile(img);
-            const compressedFile = await compressImage(fileToUpload, Boolean(formData.is_featured));
-            
+
+            // We need to re-compress because convertToFile might return the raw file which might not be compressed yet
+            // OR if it came from our state, it might already be compressed.
+            // Safest is to use the raw files we stored in state if available
+
+            if (img.raw && img.thumbnailRaw) {
+              highResFile = img.raw;
+              thumbnailFile = img.thumbnailRaw;
+            } else {
+              // Fallback: re-compress
+              const { original, thumbnail } = await compressImage(fileToUpload, Boolean(formData.is_featured));
+              highResFile = original;
+              thumbnailFile = thumbnail;
+            }
+
             // Generate consistent file name with WebP extension
             const fileExt = 'webp';
             const timestamp = Date.now();
             const randomStr = Math.random().toString(36).substring(2, 8);
-            const fileName = `${timestamp}-${randomStr}.${fileExt}`;
-            const filePath = `${carId}/${fileName}`;
 
-            console.log('Uploading image:', filePath, 'Type:', compressedFile.type, 'Size:', (compressedFile.size / 1024).toFixed(2) + 'KB');
+            const highResFileName = `${timestamp}-${randomStr}.${fileExt}`;
+            const highResFilePath = `${carId}/${highResFileName}`;
 
-            // Upload the compressed image with WebP format
+            const thumbFileName = `${timestamp}-${randomStr}-thumb.${fileExt}`;
+            const thumbFilePath = `${carId}/${thumbFileName}`;
+
+            console.log('Uploading image:', highResFilePath, 'Size:', (highResFile.size / 1024).toFixed(2) + 'KB');
+
+            // Upload high-res
             const { error: uploadError } = await supabase.storage
               .from('car-images')
-              .upload(filePath, compressedFile, {
+              .upload(highResFilePath, highResFile, {
                 contentType: 'image/webp',
                 upsert: false,
                 cacheControl: '3600'
               });
 
-            if (uploadError) {
-              console.error('Error uploading image:', uploadError);
-              throw uploadError;
-            }
+            if (uploadError) throw uploadError;
 
-            // Get the public URL
+            // Upload thumbnail
+            const { error: thumbUploadError } = await supabase.storage
+              .from('car-images')
+              .upload(thumbFilePath, thumbnailFile, {
+                contentType: 'image/webp',
+                upsert: false,
+                cacheControl: '3600'
+              });
+
+            if (thumbUploadError) console.warn('Thumbnail upload failed:', thumbUploadError);
+
+            // Get public URLs
             const { data: urlData } = supabase.storage
               .from('car-images')
-              .getPublicUrl(filePath);
+              .getPublicUrl(highResFilePath);
+
+            const { data: thumbUrlData } = supabase.storage
+              .from('car-images')
+              .getPublicUrl(thumbFilePath);
 
             if (!urlData?.publicUrl) {
               throw new Error('Failed to get public URL for uploaded image');
             }
 
             const imageUrl = urlData.publicUrl;
-            const imageDimensions = await getImageDimensions(compressedFile);
-            
+            const thumbnailUrl = thumbUrlData?.publicUrl || imageUrl;
+
+            const imageDimensions = await getImageDimensions(highResFile);
+
             console.log('Image uploaded successfully:', {
               url: imageUrl,
-              size: (compressedFile.size / 1024).toFixed(2) + 'KB',
+              thumbnail: thumbnailUrl,
+              size: (highResFile.size / 1024).toFixed(2) + 'KB',
               dimensions: imageDimensions
             });
 
@@ -720,6 +816,7 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
               {
                 p_car_id: carId,
                 p_url: imageUrl,
+                p_thumbnail_url: thumbnailUrl,
                 p_is_main: index === 0,
                 p_display_order: index
               }
@@ -727,11 +824,6 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
 
             if (insertError) {
               console.error('Error calling admin_insert_car_image:', insertError);
-              throw insertError;
-            }
-
-            if (insertError) {
-              console.error('Error inserting image record:', insertError);
               throw insertError;
             }
 
@@ -753,7 +845,7 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
         const modelId = parseInt(formData.model_id.toString());
         const brandName = brands.find(b => b.id === brandId)?.name || formData.brand_id.toString();
         const modelName = models.find(m => m.id === modelId)?.name || formData.model_id.toString();
-        
+
         try {
           await supabaseAdmin.from('notifications').insert({
             user_id: selectedUserId.toString(), // Ensure user_id is a string
@@ -773,7 +865,7 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
 
       toast.success(car ? 'Car updated successfully' : 'Car created successfully');
       if (onSuccess) onSuccess();
-      
+
     } catch (error) {
       console.error('Error saving car:', error);
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
@@ -840,25 +932,25 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
           </div>
 
           {/* City */}
-            <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                City *
-              </label>
-              <select
-                name="city_id"
-                value={formData.city_id || ''}
-                onChange={handleInputChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                required
-              >
-                <option value="">Select a city</option>
-                {currentCountry && getCitiesByCountry(currentCountry.id).map(city => (
-                  <option key={city.id} value={city.id}>
-                    {city.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <div className="col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              City *
+            </label>
+            <select
+              name="city_id"
+              value={formData.city_id || ''}
+              onChange={handleInputChange}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              required
+            >
+              <option value="">Select a city</option>
+              {currentCountry && getCitiesByCountry(currentCountry.id).map(city => (
+                <option key={city.id} value={city.id}>
+                  {city.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
           {/* Brand */}
           <div>
@@ -1085,7 +1177,7 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
               <option value="">{t('admin.cars.selectCylinders')}</option>
               {cylinderOptions.map(cyl => (
                 <option key={cyl} value={cyl}>
-                  {cyl === 'Electric' 
+                  {cyl === 'Electric'
                     ? t('sell.details.cylinders.electric')
                     : t('sell.details.cylinders.count', { count: cyl })}
                 </option>
@@ -1226,7 +1318,7 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
               Feature this listing
             </label>
           </div>
-          
+
           {/* Description */}
           <div className="col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1241,13 +1333,13 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
               placeholder="Enter a detailed description of the car..."
             />
           </div>
-          
+
           {/* Images Section */}
           <div className="mb-6 col-span-full">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Images (First image will be the main photo)
             </label>
-            
+
             <DndProvider backend={HTML5Backend}>
               <div className="space-y-4">
                 {/* Image Grid */}
@@ -1256,9 +1348,8 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
-                  className={`grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 min-h-[200px] p-4 rounded-lg border-2 border-dashed ${
-                    isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
-                  } transition-colors`}
+                  className={`grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 min-h-[200px] p-4 rounded-lg border-2 border-dashed ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
+                    } transition-colors`}
                 >
                   {allImages.map((file, index) => {
                     const preview = typeof file.preview === 'string' ? file.preview : '';
@@ -1280,10 +1371,9 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
 
                   {/* Upload Area - Only show if under max images */}
                   {allImages.length < MAX_IMAGES && (
-                    <div 
-                      className={`flex flex-col items-center justify-center h-full min-h-[150px] border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
-                        isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'
-                      }`}
+                    <div
+                      className={`flex flex-col items-center justify-center h-full min-h-[150px] border-2 border-dashed rounded-lg cursor-pointer transition-colors ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'
+                        }`}
                       onClick={() => fileInputRef.current?.click()}
                     >
                       <div className="flex flex-col items-center justify-center p-4 text-center">
@@ -1337,7 +1427,7 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
             </DndProvider>
           </div>
         </div>
-        
+
         {/* Form Actions */}
         <div className="pt-5">
           <div className="flex justify-end space-x-3">

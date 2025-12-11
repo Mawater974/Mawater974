@@ -7,9 +7,9 @@ import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { getCarImageUrl } from '@/lib/supabase';
 
 interface ImageCarouselProps {
-  images: { 
+  images: {
     id: string;
-    image_url: string; 
+    image_url: string;
     thumbnail_url: string | null;
     is_main?: boolean;
     url?: string; // Legacy support
@@ -47,19 +47,19 @@ export default function ImageCarousel({
   const next = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setCurrentIndex((currentIndex + 1) % imageUrls.length);
+    setCurrentIndex((currentIndex + 1) % sortedImages.length);
   };
 
   const prev = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setCurrentIndex((currentIndex - 1 + imageUrls.length) % imageUrls.length);
+    setCurrentIndex((currentIndex - 1 + sortedImages.length) % sortedImages.length);
   };
 
   return (
     <div className={`${aspectRatio} relative overflow-hidden group`}>
       {hasImages ? (
-        <div 
+        <div
           className="absolute inset-0 flex transition-transform duration-300 ease-in-out"
           style={{ transform: `translateX(-${currentIndex * 100}%)` }}
         >
@@ -71,7 +71,7 @@ export default function ImageCarousel({
               <Image
                 src={image.thumbnail_url || image.image_url}
                 alt={`${alt} ${index + 1}`}
-                fill  
+                fill
                 className="object-cover"
                 priority={index === 0}
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
@@ -105,7 +105,7 @@ export default function ImageCarousel({
           >
             <ChevronLeftIcon className="w-5 h-5" />
           </button>
-          
+
           <button
             onClick={next}
             className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/50 text-white 
@@ -125,11 +125,10 @@ export default function ImageCarousel({
                   e.stopPropagation();
                   setCurrentIndex(index);
                 }}
-                className={`h-1.5 rounded-full transition-all duration-200 ${
-                  index === currentIndex 
-                    ? 'w-4 bg-qatar-maroon' 
+                className={`h-1.5 rounded-full transition-all duration-200 ${index === currentIndex
+                    ? 'w-4 bg-qatar-maroon'
                     : 'w-1.5 bg-white/60 hover:bg-white'
-                }`}
+                  }`}
                 aria-label={`Go to image ${index + 1}`}
               />
             ))}

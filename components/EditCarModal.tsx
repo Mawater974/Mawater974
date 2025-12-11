@@ -87,27 +87,36 @@ const compressImage = async (file: File, isFeatured: boolean = false): Promise<F
   }
   
   try {
-    const options = isFeatured ? {
-      // Higher quality settings for featured listings
-      maxSizeMB: 1.0, // Larger max size for better quality
-      maxWidthOrHeight: 2560, // Higher resolution for featured
+    // High-res image settings (for car detail page)
+    const highResOptions = {
+      maxSizeMB: isFeatured ? 1.2 : 1.0, // Slightly larger for featured
+      maxWidthOrHeight: isFeatured ? 1920 : 1600, // Higher resolution for featured
       useWebWorker: true,
       maxIteration: 15,
       fileType: 'image/webp',
-      initialQuality: 0.95, // Higher quality for featured
+      initialQuality: isFeatured ? 0.85 : 0.80, // Better quality for featured
       alwaysKeepResolution: true,
       preserveExif: false,
-    } : {
-      // Standard compression for regular listings
-      maxSizeMB: 0.6,
-      maxWidthOrHeight: 1920,
-      useWebWorker: true,
-      maxIteration: 15,
-      fileType: 'image/webp',
-      initialQuality: 0.90,
-      alwaysKeepResolution: true,
-      preserveExif: false,
+      purpose: 'high-res',
+      suffix: ''
     };
+    
+    // Thumbnail settings (for grid/list views)
+    const thumbnailOptions = {
+      maxSizeMB: 0.1, // Target ~80KB
+      maxWidthOrHeight: 500, // Middle of 400-600px range
+      useWebWorker: true,
+      maxIteration: 10,
+      fileType: 'image/webp',
+      initialQuality: 0.80, // Slightly lower quality for faster loading
+      alwaysKeepResolution: true,
+      preserveExif: false,
+      purpose: 'thumbnail',
+      suffix: '_thumb'
+    };
+    
+    // Use high-res options by default, as we're not implementing thumbnails yet
+    const options = highResOptions;
     
     const compressedBlob = await imageCompression(processedFile, options) as Blob;
     

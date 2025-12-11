@@ -156,7 +156,7 @@ const SparePartCard: React.FC<SparePartCardProps> = ({
       hover:border-qatar-maroon/100 transition-all duration-200 transform hover:scale-[1.01]`}>
       
       <Link 
-        href={`/${part.country?.code?.toLowerCase() || countryCode}/spare-parts/${part.id}`}
+        href={`/${part.country?.code?.toLowerCase() || currentCountry?.code.toLowerCase()}/spare-parts/${part.id}`}
         className="block w-full h-full"
       >
         <div className="relative aspect-[16/9] bg-gray-100 dark:bg-gray-800">
@@ -196,23 +196,25 @@ const SparePartCard: React.FC<SparePartCardProps> = ({
               </h3>
               
               {/* Favorite Button */}
-              <button
-                onClick={handleFavoriteClick}
-                className={`absolute bottom-3 ${language === 'ar' ? 'left-3' : 'right-3'} p-1.5 rounded-lg transition-all duration-200 border
-                  ${isFavorited
-                    ? 'bg-qatar-maroon/10 text-qatar-maroon border-qatar-maroon hover:bg-qatar-maroon hover:text-white'
-                    : 'bg-transparent border-gray-200 dark:border-gray-600 text-gray-400 hover:border-qatar-maroon hover:text-qatar-maroon'
-                  }
-                  transform active:scale-95 hover:scale-105`}
-                aria-label={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
-                disabled={isLoading}
-              >
-                {isFavorited ? (
-                  <HeartSolid className="h-4 w-4" />
-                ) : (
-                  <HeartOutline className="h-4 w-4" />
-                )}
-              </button>
+              <div className="absolute bottom-3 right-3 z-10">
+                <button
+                  onClick={handleFavoriteClick}
+                  className={`p-1.5 rounded-lg transition-all duration-200 border
+                    ${isFavorited
+                      ? 'bg-qatar-maroon/10 text-qatar-maroon border-qatar-maroon hover:bg-qatar-maroon hover:text-white'
+                      : 'bg-white/80 dark:bg-gray-800/80 border-gray-200 dark:border-gray-600 text-gray-400 hover:border-qatar-maroon hover:text-qatar-maroon'
+                    }
+                    transform active:scale-95 hover:scale-105 shadow-sm`}
+                  aria-label={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+                  disabled={isLoading}
+                >
+                  {isFavorited ? (
+                    <HeartSolid className="h-4 w-4" />
+                  ) : (
+                    <HeartOutline className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
             </div>
 
             <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
@@ -261,7 +263,7 @@ const SparePartCard: React.FC<SparePartCardProps> = ({
         </div>
       )} */}
 
-      <button
+      {/* <button
         onClick={handleFavoriteClick}
         className={`absolute top-3 ${language === 'ar' ? 'left-auto right-3' : 'right-auto left-3'} z-20 p-1.5 rounded-lg transition-all duration-200 border
           ${isFavorited
@@ -270,7 +272,7 @@ const SparePartCard: React.FC<SparePartCardProps> = ({
           }
           transform active:scale-95 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed`}
         aria-label={isFavorited ? t('spareParts.favorite.remove') || 'Remove from favorites' : t('spareParts.favorite.add') || 'Add to favorites'}
-        disabled={isLoading} 
+        disabled={isLoading}
       >
         {isLoading ? (
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-400 border-t-transparent"></div>
@@ -279,7 +281,7 @@ const SparePartCard: React.FC<SparePartCardProps> = ({
         ) : (
           <HeartOutline className="h-4 w-4" />
         )}
-      </button>
+      </button> */}
     </div>
   );
 };
