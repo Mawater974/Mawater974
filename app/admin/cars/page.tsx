@@ -123,19 +123,45 @@ export default function AdminCarsPage() {
     setIsAdmin(profile?.role === 'admin');
   };
 
+  // Function to get thumbnail URL with fallback
+  const getThumbnailUrl = (car: any) => {
+    // First try to get the thumbnail URL
+    if (car.thumbnail) return car.thumbnail;
+    
+    // If no thumbnail, try to get the main image from car_images
+    if (car.images && car.images.length > 0) {
+      const mainImage = car.images.find((img: any) => img.is_main) || car.images[0];
+      if (mainImage && mainImage.url) return mainImage.url;
+    }
+    
+    // Fallback to the image URL if it exists
+    if (car.image) return car.image;
+    
+    // If no images at all, return a placeholder
+    return '/placeholder-car.jpg';
+  };
+
   const fetchCars = async () => {
     try {
       setLoading(true);
+      
+      // Build the base query
       let query = supabase
         .from('cars')
         .select(`
           *,
-          brand:brands(name),
-          model:models(name),
-          user:profiles(full_name, email),
-          images:car_images(url, is_main)
-        `)
-        .eq('status', activeStatus);
+          brand:brands!inner(id, name, name_ar),
+          model:models!inner(id, name, name_ar),
+          user:profiles!inner(full_name, email, phone_number),
+          country:countries!inner(id, currency_code, code, name, name_ar),
+          city:cities!inner(id, name, name_ar),
+          car_images!car_images_car_id_fkey(id, image_url, thumbnail_url, is_main, display_order)
+        `);
+
+      // Filter by status if not 'all'
+      if (activeStatus !== 'all') {
+        query = query.eq('status', activeStatus);
+      }
 
       // Apply sorting
       switch (sortOrder) {
@@ -156,7 +182,43 @@ export default function AdminCarsPage() {
       const { data, error } = await query;
 
       if (error) throw error;
-      setCars(data);
+      
+      // Process the cars to ensure they have proper image URLs and structure
+      const processedCars = data.map((car: any) => {
+        // Ensure images array is properly formatted
+        const images = (car.car_images || []).map((img: any) => ({
+          id: img.id,
+          url: img.image_url,
+          thumbnail_url: img.thumbnail_url || img.image_url,
+          is_main: img.is_main,
+          display_order: img.display_order || 0
+        })).sort((a: any, b: any) => {
+          // Sort by is_main (main image first) then by display_order
+          if (a.is_main && !b.is_main) return -1;
+          if (!a.is_main && b.is_main) return 1;
+          return (a.display_order || 0) - (b.display_order || 0);
+        });
+
+        // Get the main image URL for the thumbnail
+        const mainImage = images.find((img: any) => img.is_main) || images[0];
+        const thumbnail = mainImage?.thumbnail_url || 
+                         mainImage?.url || 
+                         '/images/car-placeholder.jpg';
+
+        return {
+          ...car,
+          thumbnail,
+          images,
+          // Keep backward compatibility
+          image: mainImage?.url,
+          images_array: images.map((img: any) => ({
+            url: img.url,
+            is_main: img.is_main
+          }))
+        };
+      });
+      
+      setCars(processedCars);
     } catch (err) {
       console.error('Error fetching cars:', err);
       setError('Failed to load cars');
@@ -200,6 +262,30 @@ export default function AdminCarsPage() {
         .eq('id', carId);
 
       if (error) throw error;
+      
+      // Process the cars to ensure they have proper image URLs
+      const processedCars = cars.map((car: any) => ({
+        ...car,
+        // For admin, we'll use the first image as thumbnail
+        thumbnail: car.images?.find((img: any) => img.is_main)?.thumbnail_url || 
+                  car.images?.[0]?.thumbnail_url || 
+                  car.images?.[0]?.image_url || 
+                  '/images/car-placeholder.jpg',
+        // Ensure images array is properly formatted
+        images: (car.images || []).map((img: any) => ({
+          id: img.id,
+          url: img.image_url,
+          thumbnail_url: img.thumbnail_url || img.image_url,
+          is_main: img.is_main,
+          display_order: img.display_order
+        })).sort((a: any, b: any) => {
+          if (a.is_main && !b.is_main) return -1;
+          if (!a.is_main && b.is_main) return 1;
+          return (a.display_order || 0) - (b.display_order || 0);
+        })
+      }));
+      
+      setCars(processedCars);
 
       // Create notification for the user
       const car = cars.find(c => c.id === carId);

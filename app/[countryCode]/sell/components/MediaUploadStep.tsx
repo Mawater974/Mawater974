@@ -58,29 +58,29 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
 
   // Use a ref to track if we've initialized the files
   const hasInitialized = useRef(false);
-  
+
   // Initialize files from initialFiles
   useEffect(() => {
     // Only initialize once when the component mounts
     if (hasInitialized.current || !initialFiles || initialFiles.length === 0) {
       return;
     }
-    
+
     hasInitialized.current = true;
-    
+
     const initializedFiles = initialFiles.map(file => {
       // If it's already a proper ImageFile with preview, use it as is
       if ('preview' in file && file.preview) {
         // If it's a blob URL, make sure we track it
-        if (typeof file.preview === 'string' && 
-            (file.preview.startsWith('blob:') || file.preview.startsWith('data:'))) {
+        if (typeof file.preview === 'string' &&
+          (file.preview.startsWith('blob:') || file.preview.startsWith('data:'))) {
           if (!objectUrls.current.has(file.preview)) {
             objectUrls.current.add(file.preview);
           }
         }
         return { ...file };
       }
-      
+
       // If it's a File object, create a preview
       if ('raw' in file && file.raw instanceof File) {
         const previewUrl = URL.createObjectURL(file.raw);
@@ -96,11 +96,11 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
           lastModified: file.raw.lastModified
         };
       }
-      
+
       // Fallback for any other case
       return file;
     });
-    
+
     setFiles(initializedFiles);
     onFilesChange(initializedFiles);
   }, [initialFiles, onFilesChange]);
@@ -173,7 +173,7 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
 
   // Image upload limits
   const MAX_IMAGES = isFeatured ? 15 : 10;
-  
+
   // Supported image MIME types
   const SUPPORTED_IMAGE_TYPES = [
     'image/jpeg',
@@ -225,7 +225,7 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
         toType: 'image/jpeg',
         quality: 0.9
       }) as Blob;
-      
+
       return new File(
         [jpegBlob],
         file.name.replace(/\.[^/.]+$/, '.jpg'),
@@ -240,42 +240,42 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
   // Generate optimized image with specific settings
   const generateOptimizedImage = async (file: File, options: any): Promise<File> => {
     const fileType = file.type.toLowerCase();
-    
+
     // Skip non-image files or unsupported image types
     if (!fileType.startsWith('image/') || !SUPPORTED_IMAGE_TYPES.includes(fileType)) {
       console.warn(`Unsupported file type: ${fileType}. File will be uploaded as-is.`);
       return file;
     }
-    
+
     // Convert HEIC/HEIF to JPEG first
     let processedFile = file;
     if (fileType.includes('heic') || fileType.includes('heif')) {
       processedFile = await convertHeicToJpeg(file);
     }
-    
+
     try {
       console.log(`Processing ${options.purpose} version: ${file.name}`);
       console.log('Original file size:', (file.size / 1024 / 1024).toFixed(2), 'MB');
-      
+
       const compressedBlob = await imageCompression(processedFile, options) as Blob;
-      
+
       // Determine output format (convert all to webp for better compression, except for SVG)
       const outputFormat = fileType === 'image/svg+xml' ? 'image/svg+xml' : 'image/webp';
       const extension = getFileExtension(outputFormat);
-      
+
       // Create a new File object with the correct MIME type and extension
       const optimizedFile = new File(
         [compressedBlob],
         `${file.name.replace(/\.[^/.]+$/, '')}${options.suffix || ''}.${extension}`,
-        { 
+        {
           type: outputFormat,
           lastModified: Date.now()
         }
       );
-      
+
       console.log(`Optimized ${options.purpose} file size:`, (optimizedFile.size / 1024).toFixed(2), 'KB');
       console.log(`Compression ratio (${options.purpose}):`, ((file.size - optimizedFile.size) / file.size * 100).toFixed(2) + '%');
-      
+
       return optimizedFile;
     } catch (error) {
       console.error(`Error generating ${options.purpose} version:`, error);
@@ -287,21 +287,21 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
   const compressImage = async (file: File): Promise<{ original: File; thumbnail: File }> => {
     const fileType = file.type.toLowerCase();
     const isSvg = fileType === 'image/svg+xml';
-    
+
     // Skip processing for SVGs or unsupported types
     if (isSvg || !fileType.startsWith('image/') || !SUPPORTED_IMAGE_TYPES.includes(fileType)) {
       return { original: file, thumbnail: file };
     }
-    
+
     // Check if this is a featured listing
-    const isFeaturedListing = isFeatured || 
-                            window.location.pathname.includes('featured') || 
-                            new URLSearchParams(window.location.search).has('featured');
-    
+    const isFeaturedListing = isFeatured ||
+      window.location.pathname.includes('featured') ||
+      new URLSearchParams(window.location.search).has('featured');
+
     // High-res image settings
     const highResOptions = {
       maxSizeMB: isFeaturedListing ? 1.0 : 0.8,
-      maxWidthOrHeight: isFeaturedListing ? 2560 : 1920,
+      maxWidthOrHeight: isFeaturedListing ? 1920 : 1600,
       useWebWorker: true,
       maxIteration: 15,
       fileType: 'image/webp',
@@ -310,27 +310,27 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
       purpose: 'high-res',
       suffix: ''
     };
-    
-    // Thumbnail settings
+
+    // Thumbnail settings (for grid/list views)
     const thumbnailOptions = {
-      maxSizeMB: 0.2,
-      maxWidthOrHeight: 400,
+      maxSizeMB: 0.1, // Target ~80KB
+      maxWidthOrHeight: 600, // Middle of 400-600px range
       useWebWorker: true,
       maxIteration: 10,
       fileType: 'image/webp',
-      initialQuality: 0.70,
-      alwaysKeepResolution: false,
+      initialQuality: 0.80, // Slightly lower quality for faster loading
+      alwaysKeepResolution: true,
       purpose: 'thumbnail',
       suffix: '_thumb'
     };
-    
+
     try {
       // Process both versions in parallel
       const [highResFile, thumbnailFile] = await Promise.all([
         generateOptimizedImage(file, highResOptions),
         generateOptimizedImage(file, thumbnailOptions)
       ]);
-      
+
       return { original: highResFile, thumbnail: thumbnailFile };
     } catch (error) {
       console.error('Error processing image versions:', error);
@@ -343,14 +343,14 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
 
   const validateFields = () => {
     const newErrors: Record<string, string> = {};
-    
+
     if (files.length === 0) {
       newErrors.images = t('errors.images_required');
     }
-    
+
     setErrors(newErrors);
     setShowErrors(Object.keys(newErrors).length > 0);
-    
+
     return Object.keys(newErrors).length === 0;
   };
 
@@ -363,7 +363,7 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
       scrollToTop();
     }
   };
-  
+
   // Scroll to top on component mount
   useEffect(() => {
     scrollToTop();
@@ -372,27 +372,27 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
   // Process files (used for both drag & drop and file input)
   const processFiles = async (filesToProcess: File[]) => {
     if (!filesToProcess || filesToProcess.length === 0) return;
-    
+
     setIsLoading(true);
-    
+
     try {
       const processedFiles = await Promise.all(
         filesToProcess.map(async (file) => {
           try {
             // Skip non-image files
             if (!file.type.startsWith('image/')) return null;
-            
+
             // Generate both high-res and thumbnail versions
             const { original: highResFile, thumbnail: thumbnailFile } = await compressImage(file);
-            
+
             // Create preview URLs
             const previewUrl = URL.createObjectURL(highResFile);
             const thumbnailUrl = URL.createObjectURL(thumbnailFile);
-            
+
             // Store object URLs for cleanup
             objectUrls.current.add(previewUrl);
             objectUrls.current.add(thumbnailUrl);
-            
+
             // Create the ImageFile object with both versions
             const imageFile: ImageFile = {
               preview: previewUrl,
@@ -407,7 +407,7 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
               lastModified: highResFile.lastModified,
               originalName: file.name // Store original filename
             };
-            
+
             return imageFile;
           } catch (error) {
             console.error('Error processing file:', file.name, error);
@@ -415,10 +415,10 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
           }
         })
       );
-      
+
       // Filter out any null values from failed processing
       const validFiles = processedFiles.filter((file): file is ImageFile => file !== null);
-      
+
       if (validFiles.length > 0) {
         const updatedFiles = [...files, ...validFiles];
         setFiles(updatedFiles);
@@ -436,7 +436,7 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(e.target.files || []);
     if (selectedFiles.length === 0) return;
-    
+
     // Clear any existing errors when new files are selected
     if (errors.images) {
       setErrors(prev => {
@@ -449,7 +449,7 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
 
     const maxAllowed = isFeatured ? 15 : 10;
     const currentFileCount = selectedFiles.length + files.length;
-    
+
     if (files.length >= maxAllowed) {
       toast.error(t('sell.images.maxReached', { max: maxAllowed }), {
         duration: 3000,
@@ -460,7 +460,7 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
 
     if (currentFileCount > maxAllowed) {
       const canAdd = maxAllowed - files.length;
-      toast.error(t('sell.images.tooMany', { 
+      toast.error(t('sell.images.tooMany', {
         max: maxAllowed,
         current: files.length,
         canAdd: canAdd,
@@ -469,7 +469,7 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
         duration: 4000,
         position: 'top-center',
       });
-      
+
       // If we can still add some files, adjust the selection
       if (canAdd > 0) {
         await processFiles(selectedFiles.slice(0, canAdd));
@@ -479,7 +479,7 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
 
     // Process the selected files
     await processFiles(selectedFiles);
-    
+
     // Reset the input value to allow selecting the same file again
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -502,13 +502,13 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
-    
+
     const droppedFiles = Array.from(e.dataTransfer.files);
     if (droppedFiles.length === 0) return;
 
     const maxAllowed = isFeatured ? 15 : 10;
     const currentFileCount = droppedFiles.length + files.length;
-    
+
     if (files.length >= maxAllowed) {
       toast.error(t('sell.images.maxReached', { max: maxAllowed }), {
         duration: 3000,
@@ -519,7 +519,7 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
 
     if (currentFileCount > maxAllowed) {
       const canAdd = maxAllowed - files.length;
-      toast.error(t('sell.images.tooMany', { 
+      toast.error(t('sell.images.tooMany', {
         max: maxAllowed,
         current: files.length,
         canAdd: canAdd,
@@ -528,7 +528,7 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
         duration: 4000,
         position: 'top-center',
       });
-      
+
       // If we can still add some files, adjust the selection
       if (canAdd > 0) {
         await processFiles(droppedFiles.slice(0, canAdd));
@@ -545,7 +545,7 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
       const newFiles = [...prevFiles];
       const [movedFile] = newFiles.splice(dragIndex, 1);
       newFiles.splice(hoverIndex, 0, movedFile);
-      
+
       // If we're moving to the first position, update main photo
       if (hoverIndex === 0) {
         onSetMainPhoto(0);
@@ -554,7 +554,7 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
       } else if (dragIndex > mainPhotoIndex! && hoverIndex <= mainPhotoIndex!) {
         onSetMainPhoto(mainPhotoIndex! + 1);
       }
-      
+
       onFilesChange(newFiles);
       return newFiles;
     });
@@ -565,15 +565,15 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
     setFiles(prevFiles => {
       const updatedFiles = prevFiles.filter(file => file.id !== id);
       onFilesChange(updatedFiles);
-      
+
       // Get the preview URL to revoke
       const fileToRemove = prevFiles.find(file => file.id === id);
-      if (fileToRemove?.preview && typeof fileToRemove.preview === 'string' && 
-          (fileToRemove.preview.startsWith('blob:') || fileToRemove.preview.startsWith('data:'))) {
+      if (fileToRemove?.preview && typeof fileToRemove.preview === 'string' &&
+        (fileToRemove.preview.startsWith('blob:') || fileToRemove.preview.startsWith('data:'))) {
         URL.revokeObjectURL(fileToRemove.preview);
         objectUrls.current.delete(fileToRemove.preview);
       }
-      
+
       // If the removed image was the main photo, set the first image as main
       if (index === mainPhotoIndex) {
         onSetMainPhoto(0);
@@ -581,7 +581,7 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
         // Adjust main photo index if needed
         onSetMainPhoto(mainPhotoIndex! - 1);
       }
-      
+
       return updatedFiles;
     });
   };
@@ -602,7 +602,7 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
       isMain: index === 0 // Always make the first photo the main one
     }))];
   }, [files]);
-  
+
   // Ensure first image is always set as main
   useEffect(() => {
     if (allImages.length > 0 && mainPhotoIndex !== 0) {
@@ -617,11 +617,11 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
   const getNumberSuffix = (number: number) => {
     const lastDigit = number % 10;
     const lastTwoDigits = number % 100;
-    
+
     if (lastTwoDigits >= 11 && lastTwoDigits <= 13) {
       return 'th';
     }
-    
+
     switch (lastDigit) {
       case 1: return 'st';
       case 2: return 'nd';
@@ -643,15 +643,15 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
 
       {/* Main Photo Guidance */}
       {allImages.length > 0 && (
-        <div className="mt-8">             
+        <div className="mt-8">
           <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
             <p className="text-sm text-gray-600 dark:text-gray-300">
-              {mainPhotoIndex === null 
+              {mainPhotoIndex === null
                 ? t('sell.images.selectMain')
-                : t('sell.images.mainSelected', { 
-                    number: mainPhotoIndex + 1,
-                    suffix: getNumberSuffix(mainPhotoIndex + 1)
-                  })
+                : t('sell.images.mainSelected', {
+                  number: mainPhotoIndex + 1,
+                  suffix: getNumberSuffix(mainPhotoIndex + 1)
+                })
               }
             </p>
           </div>
@@ -679,11 +679,10 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
 
       {/* Upload Area when no images */}
       {allImages.length === 0 && (
-        <div 
+        <div
           onClick={() => !isLoading && fileInputRef.current?.click()}
-          className={`cursor-pointer flex flex-col items-center justify-center w-full h-64 border-2 border-dashed border-gray-600 rounded-lg bg-white dark:bg-[#2a3441] transition-colors group ${
-            isLoading ? 'opacity-70' : 'hover:bg-[white] dark:hover:bg-[#323d4d]'
-          }`}
+          className={`cursor-pointer flex flex-col items-center justify-center w-full h-64 border-2 border-dashed border-gray-600 rounded-lg bg-white dark:bg-[#2a3441] transition-colors group ${isLoading ? 'opacity-70' : 'hover:bg-[white] dark:hover:bg-[#323d4d]'
+            }`}
         >
           <div className="flex flex-col items-center justify-center pt-5 pb-6">
             {isLoading ? (
@@ -721,13 +720,12 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
       {allImages.length > 0 && (
         <div className="mt-6 text-center">
           {canAddMore ? (
-            <button 
+            <button
               type="button"
               onClick={() => !isLoading && fileInputRef.current?.click()}
               disabled={isLoading}
-              className={`inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-qatar-maroon focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon ${
-                isLoading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-qatar-maroon/90'
-              }`}
+              className={`inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-qatar-maroon focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon ${isLoading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-qatar-maroon/90'
+                }`}
             >
               {isLoading ? (
                 <>
@@ -760,9 +758,9 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
 
       {/* Photo Count */}
       <div className="text-center text-sm text-gray-400 mt-2">
-        {t('sell.images.count', { 
-          current: allImages.length, 
-          max: isFeatured ? 15 : 10 
+        {t('sell.images.count', {
+          current: allImages.length,
+          max: isFeatured ? 15 : 10
         })}
         {allImages.length > (isFeatured ? 15 : 10) && (
           <span className="text-red-500 ml-2">
@@ -804,7 +802,7 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
 
       <div className="flex justify-between">
         {onBack && (
-          <Button 
+          <Button
             type="button"
             variant="outline"
             onClick={() => {
@@ -816,7 +814,7 @@ const MediaUploadStep: React.FC<MediaUploadStepProps> = ({
             {t('common.back')}
           </Button>
         )}
-        <Button 
+        <Button
           type="submit"
           className="bg-qatar-maroon hover:bg-qatar-maroon/90 text-white ml-auto hover:shadow-md"
         >

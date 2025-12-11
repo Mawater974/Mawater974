@@ -1,4 +1,4 @@
-  import './globals.css'
+import './globals.css'
 import { Inter } from 'next/font/google'
 import { Providers } from './providers'
 import { config } from '@fortawesome/fontawesome-svg-core'
@@ -144,7 +144,7 @@ export default function RootLayout({
                       </main>
                       <AIChatButton />
                     </div>
-                    <Footer/>
+                    <Footer />
                   </AnalyticsProvider>
                 </Providers>
               </CountryProvider>

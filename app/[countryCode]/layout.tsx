@@ -28,7 +28,7 @@ export default function CountryLayout({
   useEffect(() => {
     if (!isLoading && countries.length > 0) {
       const country = countries.find(c => c.code.toUpperCase() === countryCode);
-      
+
       if (country) {
         // Set the current country and store it in localStorage
         setCurrentCountry(country);
@@ -39,7 +39,7 @@ export default function CountryLayout({
       }
     }
   }, [countryCode, countries, isLoading, setCurrentCountry, router]);
- 
+
   // Check if the country code is valid
   const isValidCountry = countries.some(c => c.code.toUpperCase() === countryCode);
   if (!isValidCountry) {
