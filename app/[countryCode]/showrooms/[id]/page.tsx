@@ -67,7 +67,7 @@ interface CarListingData {
   gearbox_type: string;
   body_type: string;
   condition: string;
-  images?: { url: string; is_main?: boolean }[];
+  images?: { image_url: string; thumbnail_url: string; is_main?: boolean }[];
   favorite: boolean;
   is_featured: boolean;
   color: string;
@@ -99,11 +99,11 @@ export default function ShowroomPage() {
   const [showCompareModal, setShowCompareModal] = useState(false);
   const [showCompareBar, setShowCompareBar] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
-  const [filters, setFilters] = useState<{sort?: 'newest' | 'oldest' | 'price_asc' | 'price_desc' | 'year_asc' | 'year_desc'}>({ sort: 'newest' });
+  const [filters, setFilters] = useState<{ sort?: 'newest' | 'oldest' | 'price_asc' | 'price_desc' | 'year_asc' | 'year_desc' }>({ sort: 'newest' });
   const [showSortOptions, setShowSortOptions] = useState(false);
   const [dealerInfo, setDealerInfo] = useState<any>(null);
   const { currentCountry } = useCountry();
-  
+
   const sortOptions = [
     { value: 'newest', label: t('car.sort.newest') },
     { value: 'oldest', label: t('car.sort.oldest') },
@@ -152,7 +152,7 @@ export default function ShowroomPage() {
 
     try {
       const isFavorited = favorites.includes(carId);
-      
+
       if (isFavorited) {
         // Remove from favorites
         const { error } = await supabase
@@ -194,7 +194,7 @@ export default function ShowroomPage() {
     const fetchShowroomData = async () => {
       try {
         setIsLoading(true);
-        
+
         // Fetch showroom details from dealerships table
         const { data: showroom, error: showroomError } = await supabase
           .from('dealerships')
@@ -205,20 +205,20 @@ export default function ShowroomPage() {
           `)
           .eq('id', id)
           .single();
-  
+
         if (showroomError || !showroom) {
           console.error('Error fetching showroom:', showroomError);
           setIsLoading(false);
           return;
         }
-        
+
         setShowroom(showroom);
-  
+
         // Check if user is owner
         if (user && showroom) {
           setIsOwner(user.id === showroom.user_id);
         }
-  
+
         // Fetch dealer profile information
         if (showroom?.user_id) {
           const { data: profileData, error: profileError } = await supabase
@@ -226,14 +226,14 @@ export default function ShowroomPage() {
             .select('*')
             .eq('id', showroom.user_id)
             .single();
-  
+
           if (profileError) {
             console.error('Error fetching dealer profile:', profileError);
           } else {
             setDealerInfo(profileData);
           }
         }
-  
+
         // Fetch car listings for this showroom
         const { data: carData, error: carError } = await supabase
           .from('cars')
@@ -242,7 +242,7 @@ export default function ShowroomPage() {
             brand:brands(id, name, name_ar),
             model:models(id, name, name_ar),
             user:profiles(full_name, email, phone_number, role),
-            images:car_images(url, is_main),
+            images:car_images(image_url,thumbnail_url, is_main),
             country:countries(id, name, name_ar, code, currency_code),
             city:cities(id, name, name_ar),
             is_featured
@@ -250,7 +250,7 @@ export default function ShowroomPage() {
           .eq('user_id', showroom.user_id)
           .eq('status', 'approved')
           .eq('country_id', showroom.country_id);
-  
+
         if (carError) {
           console.error('Error fetching car listings:', carError);
         } else {
@@ -283,31 +283,31 @@ export default function ShowroomPage() {
           }));
           setCarListings(processedCarData);
         }
-  
+
       } catch (error) {
         console.error('Error:', error);
       } finally {
         setIsLoading(false);
       }
     };
-    
+
     const fetchUserFavorites = async () => {
       if (!user) return;
-      
+
       try {
         const { data, error } = await supabase
           .from('favorites')
           .select('car_id')
           .eq('user_id', user.id);
-  
+
         if (error) throw error;
-        
+
         setFavorites(data.map(fav => fav.car_id));
       } catch (error) {
         console.error('Error fetching favorites:', error);
       }
     };
-  
+
     if (currentCountry) {
       fetchShowroomData();
       if (user) {
@@ -421,7 +421,7 @@ export default function ShowroomPage() {
       </div>
     );
   }
-  
+
   if (!showroom) {
     return (
       <div className="container mx-auto px-4 py-20">
@@ -432,7 +432,7 @@ export default function ShowroomPage() {
           <p className="text-gray-600 dark:text-gray-400 mb-6">
             {t('showroom.notFoundDesc')}
           </p>
-          <Link 
+          <Link
             href={`/${currentCountry?.code.toLowerCase()}/showrooms`}
             className="inline-flex items-center px-6 py-3 bg-qatar-maroon text-white rounded-lg hover:bg-qatar-maroon-dark transition-colors"
           >
@@ -444,303 +444,299 @@ export default function ShowroomPage() {
     );
   }
   return (
-    <div className="min-h-screen"> 
+    <div className="min-h-screen">
       <div className="container mx-auto px-4 py-8 ">
         {/* Hero Section */}
         <div className="relative w-full h-64 md:h-80 lg:h-96 mb-8 rounded-lg overflow-hidden">
           {/* Dealer Dashboard Link */}
           {profile?.role === 'dealer' && isOwner && (
-          <Link
-            href="/dealer-dashboard"
-            className="absolute top-4 right-4 z-10 bg-qatar-maroon text-white px-4 py-2 rounded-lg hover:bg-qatar-maroon/90 transition-colors flex items-center gap-2"
-          >
-            <span>{t('dashboard.dealerDashboard')}</span>
-            <ArrowRightIcon className="h-5 w-5" />
-          </Link>
-        )}
-        {showroom.logo_url ? (
-          <Image
-            src={showroom.logo_url}
-            alt={language === 'ar' && showroom.business_name_ar ? showroom.business_name_ar : showroom.business_name}
-            fill
-            className="object-cover w-full h-full"
-            priority
-          />
-        ) : (
-          <div className="w-full h-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-            <span className="text-gray-500 dark:text-gray-400 text-xl">
-              {t('showroom.logo')}
-            </span>
-          </div>
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-        <div className="absolute bottom-0 left-0 w-full p-6 text-white">
-          <h1 className="text-5xl font-bold mb-2">
-            {language === 'ar' && showroom.business_name_ar ? showroom.business_name_ar : showroom.business_name} {/*<span className="text-sm text-white dark:text-white hover:underline hover:text-qatar-maroon dark:hover:text-qatar-maroon">({t(`showroom.dealershipTypes.${showroom.dealership_type}`)})</span>*/}
-          </h1>
-        </div>
-      </div>
-
-      {/* Showroom Information */}
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-6 mb-6 border border-gray-200 dark:border-gray-700/50">
-        <div className="flex flex-col gap-4">
-          {/* Description */}
-          {(showroom.description || showroom.description_ar) && (
-            <div className="text-gray-700 dark:text-gray-300">
-              <p className="">
-                {language === 'ar' && showroom.description_ar ? showroom.description_ar : showroom.description}
-              </p>
-            </div>
-          )}
-
-          {/* Contact Information */}
-          <div className="flex flex-col gap-1">
-            <div 
-              className="flex items-center gap-2 text-gray-600 dark:text-gray-300 cursor-pointer hover:text-qatar-maroon transition-colors"
-              onClick={() => setShowMap(true)}
+            <Link
+              href="/dealer-dashboard"
+              className="absolute top-4 right-4 z-10 bg-qatar-maroon text-white px-4 py-2 rounded-lg hover:bg-qatar-maroon/90 transition-colors flex items-center gap-2"
             >
-              <MapPinIcon className="h-5 w-5 flex-shrink-0" />
-              <span className="font-medium">{t('showroom.address')}:</span>
-              <span className="text-gray-500 dark:text-gray-400 hover:underline hover:text-qatar-maroon dark:hover:text-qatar-maroon">
-                {language === 'ar' && showroom.location_ar ? showroom.location_ar : showroom.location}, <span>{showroom.city && language === 'ar' && showroom.city.name_ar ? showroom.city.name_ar : showroom.city?.name}, </span>
-                <span>{showroom.country && language === 'ar' && showroom.country.name_ar ? showroom.country.name_ar : showroom.country?.name}</span>
+              <span>{t('dashboard.dealerDashboard')}</span>
+              <ArrowRightIcon className="h-5 w-5" />
+            </Link>
+          )}
+          {showroom.logo_url ? (
+            <Image
+              src={showroom.logo_url}
+              alt={language === 'ar' && showroom.business_name_ar ? showroom.business_name_ar : showroom.business_name}
+              fill
+              className="object-cover w-full h-full"
+              priority
+            />
+          ) : (
+            <div className="w-full h-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+              <span className="text-gray-500 dark:text-gray-400 text-xl">
+                {t('showroom.logo')}
               </span>
             </div>
-            <MapModal 
-              isOpen={showMap} 
-              onClose={() => setShowMap(false)}
-              address={`${showroom.location}, ${showroom.city?.name || ''}, ${showroom.country?.name || ''}`}
-              title={t('showroom.location')}
-            />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+          <div className="absolute bottom-0 left-0 w-full p-6 text-white">
+            <h1 className="text-5xl font-bold mb-2">
+              {language === 'ar' && showroom.business_name_ar ? showroom.business_name_ar : showroom.business_name} {/*<span className="text-sm text-white dark:text-white hover:underline hover:text-qatar-maroon dark:hover:text-qatar-maroon">({t(`showroom.dealershipTypes.${showroom.dealership_type}`)})</span>*/}
+            </h1>
           </div>
-          
-          {dealerInfo?.phone_number && (
-            <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-              <PhoneIcon className="h-5 w-5" />
-              <span>{t('showroom.phone')}: </span>
-              <a href={`tel:${dealerInfo.phone_number}`} className="text-gray-500 dark:text-gray-400 hover:underline hover:text-qatar-maroon dark:hover:text-qatar-maroon">
-                <span dir="ltr" className="text-left">{dealerInfo.phone_number.replace(/^(\+\d{1,3})(\d+)/, '$1-$2')}</span>
-              </a>
-            </div>
-          )}
+        </div>
 
-          {dealerInfo?.email && (
-            <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-              <EnvelopeIcon className="h-5 w-5" />
-              <span>{t('showroom.email')}: </span>
-              <a href={`mailto:${dealerInfo.email}`} className="text-gray-500 dark:text-gray-400 hover:underline hover:text-qatar-maroon dark:hover:text-qatar-maroon">
-                {dealerInfo.email}
-              </a>
-            </div>
-          )}
+        {/* Showroom Information */}
+        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-6 mb-6 border border-gray-200 dark:border-gray-700/50">
+          <div className="flex flex-col gap-4">
+            {/* Description */}
+            {(showroom.description || showroom.description_ar) && (
+              <div className="text-gray-700 dark:text-gray-300">
+                <p className="">
+                  {language === 'ar' && showroom.description_ar ? showroom.description_ar : showroom.description}
+                </p>
+              </div>
+            )}
 
-          {/* Dealership Type */}
-          {/* <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
+            {/* Contact Information */}
+            <div className="flex flex-col gap-1">
+              <div
+                className="flex items-center gap-2 text-gray-600 dark:text-gray-300 cursor-pointer hover:text-qatar-maroon transition-colors"
+                onClick={() => setShowMap(true)}
+              >
+                <MapPinIcon className="h-5 w-5 flex-shrink-0" />
+                <span className="font-medium">{t('showroom.address')}:</span>
+                <span className="text-gray-500 dark:text-gray-400 hover:underline hover:text-qatar-maroon dark:hover:text-qatar-maroon">
+                  {language === 'ar' && showroom.location_ar ? showroom.location_ar : showroom.location}, <span>{showroom.city && language === 'ar' && showroom.city.name_ar ? showroom.city.name_ar : showroom.city?.name}, </span>
+                  <span>{showroom.country && language === 'ar' && showroom.country.name_ar ? showroom.country.name_ar : showroom.country?.name}</span>
+                </span>
+              </div>
+              <MapModal
+                isOpen={showMap}
+                onClose={() => setShowMap(false)}
+                address={`${showroom.location}, ${showroom.city?.name || ''}, ${showroom.country?.name || ''}`}
+                title={t('showroom.location')}
+              />
+            </div>
+
+            {dealerInfo?.phone_number && (
+              <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
+                <PhoneIcon className="h-5 w-5" />
+                <span>{t('showroom.phone')}: </span>
+                <a href={`tel:${dealerInfo.phone_number}`} className="text-gray-500 dark:text-gray-400 hover:underline hover:text-qatar-maroon dark:hover:text-qatar-maroon">
+                  <span dir="ltr" className="text-left">{dealerInfo.phone_number.replace(/^(\+\d{1,3})(\d+)/, '$1-$2')}</span>
+                </a>
+              </div>
+            )}
+
+            {dealerInfo?.email && (
+              <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
+                <EnvelopeIcon className="h-5 w-5" />
+                <span>{t('showroom.email')}: </span>
+                <a href={`mailto:${dealerInfo.email}`} className="text-gray-500 dark:text-gray-400 hover:underline hover:text-qatar-maroon dark:hover:text-qatar-maroon">
+                  {dealerInfo.email}
+                </a>
+              </div>
+            )}
+
+            {/* Dealership Type */}
+            {/* <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
             <span className="font-medium">{t('showroom.dealershipType')}: </span>
             <span>
               <span className="text-gray-500 dark:text-gray-400">{t(`showroom.dealershipTypes.${showroom.dealership_type}`)}</span>
             </span>
           </div> */}
 
-          {/* Opening Hours */}
-          <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300 flex-wrap sm:flex-nowrap">
-            <div className="flex items-center gap-2">
-              <ClockIcon className="h-5 w-5 flex-shrink-0" />
-              <span className="whitespace-nowrap">{t('showroom.openingHours')}:</span>
+            {/* Opening Hours */}
+            <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300 flex-wrap sm:flex-nowrap">
+              <div className="flex items-center gap-2">
+                <ClockIcon className="h-5 w-5 flex-shrink-0" />
+                <span className="whitespace-nowrap">{t('showroom.openingHours')}:</span>
+              </div>
+              <span className="text-gray-700 dark:text-gray-300 dark:text-gray-400">
+                {language === 'ar' ? showroom.opening_hours_ar || showroom.opening_hours : showroom.opening_hours}
+              </span>
             </div>
-            <span className="text-gray-700 dark:text-gray-300 dark:text-gray-400">
-              {language === 'ar' ? showroom.opening_hours_ar || showroom.opening_hours : showroom.opening_hours}
-            </span>
           </div>
         </div>
-      </div>
 
-      {showroom.business_type === 'showroom' ? (
-        <div>
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-4 mb-4 border border-gray-200 dark:border-gray-700/50">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 ">
-              <div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white">{t('showroom.availableCars')} <span className="text-sm text-gray-500">({carListings.length})</span></h3>
-                <p className="text-gray-700 dark:text-gray-300 mt-2">
-                  {t('showroom.availableCarsDesc')}
-                </p>
-              </div>
-              <div className="flex-shrink-0">
-                <div className="relative inline-flex items-center gap-3">
-                  {/* Compare Button */}
-                  <button
-                    onClick={handleCompareClick}
-                    className={`px-4 py-2 rounded-xl font-medium transition-all duration-200 flex items-center gap-2 border ${
-                      compareMode
+        {showroom.business_type === 'showroom' ? (
+          <div>
+            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-4 mb-4 border border-gray-200 dark:border-gray-700/50">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 ">
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white">{t('showroom.availableCars')} <span className="text-sm text-gray-500">({carListings.length})</span></h3>
+                  <p className="text-gray-700 dark:text-gray-300 mt-2">
+                    {t('showroom.availableCarsDesc')}
+                  </p>
+                </div>
+                <div className="flex-shrink-0">
+                  <div className="relative inline-flex items-center gap-3">
+                    {/* Compare Button */}
+                    <button
+                      onClick={handleCompareClick}
+                      className={`px-4 py-2 rounded-xl font-medium transition-all duration-200 flex items-center gap-2 border ${compareMode
                         ? 'bg-qatar-maroon text-white hover:bg-qatar-maroon/90 transform border-qatar-maroon'
                         : 'bg-white dark:bg-gray-800/90 text-gray-900 dark:text-white hover:bg-gray-50 hover:border-qatar-maroon dark:hover:bg-gray-700/50 border-gray-200 dark:border-gray-700/50'
-                    }`}
-                  >
-                    <AdjustmentsHorizontalIcon className="h-5 w-5" />
-                    {compareMode ? (
-                      selectedCars.length > 0 
-                        ? `${t('car.compare.selected', {count: selectedCars.length })}/2` 
-                        : t('car.compare.select')
-                    ) : (
-                      t('car.compare.button')
-                    )}
-                  </button>
-                  
-                  {/* Sort Button */}
-                  <div className="relative">
-                    <button 
-                      onClick={() => setShowSortOptions(!showSortOptions)}
-                    className={`flex items-center px-4 py-2 bg-white dark:bg-gray-800/90 border border-gray-200 dark:border-gray-700/50 rounded-xl text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 hover:bg-gray-50 hover:border-qatar-maroon transition-colors ${language === 'ar' ? 'flex-row-reverse' : ''}`}
+                        }`}
                     >
-                      <span>{sortOptions.find(opt => opt.value === filters.sort)?.label || t('car.sort.newest')}</span>
-                      <ChevronDownIcon className="h-4 w-4" />
+                      <AdjustmentsHorizontalIcon className="h-5 w-5" />
+                      {compareMode ? (
+                        selectedCars.length > 0
+                          ? `${t('car.compare.selected', { count: selectedCars.length })}/2`
+                          : t('car.compare.select')
+                      ) : (
+                        t('car.compare.button')
+                      )}
                     </button>
-                  
-                    {showSortOptions && (
-                    <div 
-                      className={`absolute z-10 mt-2 w-48 rounded-md shadow-lg bg-white dark:bg-gray-800/90 ring-1 ring-black ring-opacity-5 focus:outline-none ${language === 'ar' ? 'left-0' : 'right-0'}`}
-                      role="menu"
-                      aria-orientation="vertical"
-                      aria-labelledby="menu-button"
-                      tabIndex={-1}
-                    >
-                      <div className="py-1" role="none">
-                        {sortOptions.map((option) => (
-                          <button
-                            key={option.value}
-                            onClick={() => handleSort(option.value)}
-                            className={`w-full text-left px-4 py-2 text-sm ${
-                              filters.sort === option.value
-                                ? 'bg-qatar-maroon text-white'
-                                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                            } ${language === 'ar' ? 'text-right' : 'text-left'}`}
-                            role="menuitem"
-                            tabIndex={-1}
-                          >
-                            {option.label}
-                          </button>
-                        ))}
-                      </div>
+
+                    {/* Sort Button */}
+                    <div className="relative">
+                      <button
+                        onClick={() => setShowSortOptions(!showSortOptions)}
+                        className={`flex items-center px-4 py-2 bg-white dark:bg-gray-800/90 border border-gray-200 dark:border-gray-700/50 rounded-xl text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 hover:bg-gray-50 hover:border-qatar-maroon transition-colors ${language === 'ar' ? 'flex-row-reverse' : ''}`}
+                      >
+                        <span>{sortOptions.find(opt => opt.value === filters.sort)?.label || t('car.sort.newest')}</span>
+                        <ChevronDownIcon className="h-4 w-4" />
+                      </button>
+
+                      {showSortOptions && (
+                        <div
+                          className={`absolute z-10 mt-2 w-48 rounded-md shadow-lg bg-white dark:bg-gray-800/90 ring-1 ring-black ring-opacity-5 focus:outline-none ${language === 'ar' ? 'left-0' : 'right-0'}`}
+                          role="menu"
+                          aria-orientation="vertical"
+                          aria-labelledby="menu-button"
+                          tabIndex={-1}
+                        >
+                          <div className="py-1" role="none">
+                            {sortOptions.map((option) => (
+                              <button
+                                key={option.value}
+                                onClick={() => handleSort(option.value)}
+                                className={`w-full text-left px-4 py-2 text-sm ${filters.sort === option.value
+                                  ? 'bg-qatar-maroon text-white'
+                                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                  } ${language === 'ar' ? 'text-right' : 'text-left'}`}
+                                role="menuitem"
+                                tabIndex={-1}
+                              >
+                                {option.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    )}
                   </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Compare Mode Banner */}
-          {compareMode && (
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="bg-white dark:bg-gray-800/95 backdrop-blur-md border border-gray-200/50 dark:border-gray-700/50 rounded-xl p-4 mb-6 shadow-xl"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="p-2 rounded-full bg-qatar-maroon/10">
-                    <AdjustmentsHorizontalIcon className="h-5 w-5 text-qatar-maroon" />
+            {/* Compare Mode Banner */}
+            {compareMode && (
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="bg-white dark:bg-gray-800/95 backdrop-blur-md border border-gray-200/50 dark:border-gray-700/50 rounded-xl p-4 mb-6 shadow-xl"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="p-2 rounded-full bg-qatar-maroon/10">
+                      <AdjustmentsHorizontalIcon className="h-5 w-5 text-qatar-maroon" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-gray-900 dark:text-white tracking-tight">
+                        {t('car.compare.title')}
+                      </h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        {selectedCars.length} of 2 {t('car.compare.cars')}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-base font-bold text-gray-900 dark:text-white tracking-tight">
-                      {t('car.compare.title')}
-                    </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {selectedCars.length} of 2 {t('car.compare.cars')}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <button
-                    onClick={handleCompareClick}
-                    className={`px-3 sm:px-6 py-2 rounded-xl font-medium transition-all duration-200 flex items-center gap-2 border border-gray-200 dark:border-gray-700/50 ${
-                      'bg-qatar-maroon text-white hover:bg-qatar-maroon/90 transform'
-                    }`}
-                  >
-                    <AdjustmentsHorizontalIcon className="h-5 w-5" />
-                    {selectedCars.length > 0 
-                      ? `${selectedCars.length}/2` 
-                      : '0/2'}
-                  </button>
-                  <button
-                    onClick={exitCompareMode}
-                    className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-                  >
-                    <XMarkIcon className="h-5 w-5" />
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          {/* Car Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {isLoading ? (
-              <div className="col-span-full flex items-center justify-center min-h-[400px]">
-                <LoadingSpinner />
-              </div>
-            ) : sortedCarListings.length === 0 ? (
-              <div className="col-span-full text-center py-8 text-gray-500 dark:text-gray-300">
-                {t('showroom.noCars')}
-              </div>
-            ) : (
-              sortedCarListings.map((car) => (
-                <div key={`car-${car.id}`} className="relative">
-                  <CarCard 
-                    car={{
-                      ...car,
-                      featured: car.is_featured,
-                    }} 
-                    isFavorite={favorites.includes(car.id as number)}
-                    onFavoriteToggle={() => handleFavoriteToggle(car.id as number)}
-                    featured={car.is_featured}
-                  />
-                  {compareMode && (
+                  <div className="flex items-center gap-4">
                     <button
-                      onClick={() => handleCompareToggle(car as any)}
-                      className={`absolute top-2 left-2 p-2 rounded-lg z-10 transition-all border-2 ${
-                        selectedCars.some(c => c.id === car.id)
+                      onClick={handleCompareClick}
+                      className={`px-3 sm:px-6 py-2 rounded-xl font-medium transition-all duration-200 flex items-center gap-2 border border-gray-200 dark:border-gray-700/50 ${'bg-qatar-maroon text-white hover:bg-qatar-maroon/90 transform'
+                        }`}
+                    >
+                      <AdjustmentsHorizontalIcon className="h-5 w-5" />
+                      {selectedCars.length > 0
+                        ? `${selectedCars.length}/2`
+                        : '0/2'}
+                    </button>
+                    <button
+                      onClick={exitCompareMode}
+                      className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                    >
+                      <XMarkIcon className="h-5 w-5" />
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Car Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {isLoading ? (
+                <div className="col-span-full flex items-center justify-center min-h-[400px]">
+                  <LoadingSpinner />
+                </div>
+              ) : sortedCarListings.length === 0 ? (
+                <div className="col-span-full text-center py-8 text-gray-500 dark:text-gray-300">
+                  {t('showroom.noCars')}
+                </div>
+              ) : (
+                sortedCarListings.map((car) => (
+                  <div key={`car-${car.id}`} className="relative">
+                    <CarCard
+                      car={{
+                        ...car,
+                        featured: car.is_featured,
+                      }}
+                      isFavorite={favorites.includes(car.id as number)}
+                      onFavoriteToggle={() => handleFavoriteToggle(car.id as number)}
+                      featured={car.is_featured}
+                    />
+                    {compareMode && (
+                      <button
+                        onClick={() => handleCompareToggle(car as any)}
+                        className={`absolute top-2 left-2 p-2 rounded-lg z-10 transition-all border-2 ${selectedCars.some(c => c.id === car.id)
                           ? 'bg-qatar-maroon border-qatar-maroon text-white'
                           : 'bg-white/80 dark:bg-gray-800/80 border-gray-400 dark:border-gray-400 hover:bg-qatar-maroon hover:text-white'
-                      }`}
-                    >
-                      <div className="w-5 h-5 flex items-center justify-center">
-                        {selectedCars.some(c => c.id === car.id) && (
-                          <motion.div
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            className="w-4 h-4 bg-white rounded-sm"
-                          />
-                        )}
-                      </div>
-                    </button>
-                  )}
-                </div>
-              ))
+                          }`}
+                      >
+                        <div className="w-5 h-5 flex items-center justify-center">
+                          {selectedCars.some(c => c.id === car.id) && (
+                            <motion.div
+                              initial={{ scale: 0 }}
+                              animate={{ scale: 1 }}
+                              className="w-4 h-4 bg-white rounded-sm"
+                            />
+                          )}
+                        </div>
+                      </button>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Compare Modal */}
+            {showCompareModal && (
+              <CarCompareModal
+                isOpen={showCompareModal}
+                onClose={handleCompareClose}
+                cars={selectedCars}
+              />
             )}
           </div>
+        ) : (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 text-center">
+            <h2 className="text-xl font-semibold mb-4">{t('showroom.notShowroom')}</h2>
+            <p className="text-gray-600 dark:text-gray-300">
+              {t('showroom.notShowroomDesc')}
+            </p>
+          </div>
+        )}
 
-          {/* Compare Modal */}
-          {showCompareModal && (
-            <CarCompareModal
-              isOpen={showCompareModal}
-              onClose={handleCompareClose}
-              cars={selectedCars}
-            />
-          )}
-        </div>
-      ) : (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 text-center">
-          <h2 className="text-xl font-semibold mb-4">{t('showroom.notShowroom')}</h2>
-          <p className="text-gray-600 dark:text-gray-300">
-            {t('showroom.notShowroomDesc')}
-          </p>
-        </div>
-      )}
-      
+      </div>
+      <LoginPopup delay={5000} />
     </div>
-    <LoginPopup delay={5000} />
-  </div>
   );
 }
