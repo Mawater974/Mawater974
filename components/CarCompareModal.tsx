@@ -10,8 +10,9 @@ import { useLanguage } from '../contexts/LanguageContext';
 
 interface CarImage {
   id: number;
-  url: string;
+  image_url: string;
   is_main?: boolean;
+  thumbnail_url?: string;
 }
 
 interface ExtendedCar extends Omit<Car, 'brand_id' | 'model_id'> {
@@ -31,7 +32,7 @@ interface CarCompareModalProps {
 
 const formatValue = (value: any, type: string) => {
   const { formatPrice } = useCountry();
-  
+
   switch (type) {
     case 'price':
       return formatPrice(Number(value));
@@ -80,7 +81,7 @@ export default function CarCompareModal({ isOpen, onClose, cars }: CarCompareMod
 
   // Initialize current image indices and sort cars
   const initializeIndices = () => {
-    const indices: {[key: number]: number} = {};
+    const indices: { [key: number]: number } = {};
     cars.forEach((car) => {
       indices[car.id] = 0; // Start with the first (main) image for each car
     });
@@ -91,7 +92,7 @@ export default function CarCompareModal({ isOpen, onClose, cars }: CarCompareMod
   const goToNextImage = (carId: number) => {
     const car = cars.find(c => c.id === carId);
     if (!car) return;
-    
+
     setCurrentImageIndices(prev => ({
       ...prev,
       [carId]: (prev[carId] || 0) < car.images.length - 1 ? (prev[carId] || 0) + 1 : 0
@@ -101,7 +102,7 @@ export default function CarCompareModal({ isOpen, onClose, cars }: CarCompareMod
   const goToPrevImage = (carId: number) => {
     const car = cars.find(c => c.id === carId);
     if (!car) return;
-    
+
     setCurrentImageIndices(prev => ({
       ...prev,
       [carId]: (prev[carId] || 0) > 0 ? (prev[carId] || 0) - 1 : car.images.length - 1
@@ -115,116 +116,116 @@ export default function CarCompareModal({ isOpen, onClose, cars }: CarCompareMod
   }, [cars]);
 
   const specs = [
-  { 
-    label: t('carSpecs.brand', { defaultValue: 'Brand' }), 
-    key: 'brand',
-    format: (value: any) => value?.name || '-'
-  },
-  { 
-    label: t('carSpecs.model', { defaultValue: 'Model' }), 
-    key: 'model',
-    format: (value: any) => value?.name || '-'
-  },
-  { 
-    label: t('carSpecs.year', { defaultValue: 'Year' }), 
-    key: 'year' 
-  },
-  { 
-    label: t('carSpecs.price', { defaultValue: 'Price' }), 
-    key: 'price',
-    format: (value: number) => {
-      return value ? formatPrice(value) : '-';
-    }
-  },
-  { 
-    label: t('carSpecs.mileage', { defaultValue: 'Mileage' }), 
-    key: 'mileage',
-    format: (value: number) => value ? `${new Intl.NumberFormat(language === 'ar' ? 'ar' : 'en').format(value)} ${t('carSpecs.km', { defaultValue: 'km' })}` : '-'
-  },
-  { 
-    label: t('carSpecs.fuelType', { defaultValue: 'Fuel Type' }), 
-    key: 'fuel_type',
-    format: (value: any) => {
-      if (!value) return '-';
-      const translation = t(`car.fuelType.${value.toLowerCase()}`, { defaultValue: value });
-      return translation === value.toLowerCase() ? value : translation;
-    }
-  },
-  { 
-    label: t('carSpecs.gearboxType', { defaultValue: 'Gearbox Type' }), 
-    key: 'gearbox_type',
-    format: (value: any) => {
-      if (!value) return '-';
-      const translation = t(`car.gearboxType.${value.toLowerCase()}`, { defaultValue: value });
-      return translation === value.toLowerCase() ? value : translation;
-    }
-  },
-  { 
-    label: t('carSpecs.bodyType', { defaultValue: 'Body Type' }), 
-    key: 'body_type',
-    format: (value: any) => {
-      if (!value) return '-';
-      const translation = t(`car.bodyType.${value.toLowerCase()}`, { defaultValue: value });
-      return translation === value.toLowerCase() ? value : translation;
-    }
-  },
-  { 
-    label: t('carSpecs.color', { defaultValue: 'Color' }), 
-    key: 'color',
-    format: (value: any) => {
-      if (!value) return '-';
-      const translation = t(`car.color.${value.toLowerCase()}`, { defaultValue: value });
-      return translation === value.toLowerCase() ? value : translation;
-    }
-  },
-  { 
-    label: t('carSpecs.condition', { defaultValue: 'Condition' }), 
-    key: 'condition',
-    format: (value: any) => {
-      if (!value) return '-';
-      const translation = t(`car.condition.${value.toLowerCase().replace(' ', '_')}`, { defaultValue: value });
-      return translation === value.toLowerCase().replace(' ', '_') ? value : translation;
-    }
-  },
-  { 
-    label: t('carSpecs.location', { defaultValue: 'Location' }), 
-    key: 'location',
-    format: (value: any) => {
-      if (!value) return '-';
-      if (typeof value === 'object') {
-        return language === 'ar' ? (value.name_ar || value.name) : value.name;
+    {
+      label: t('carSpecs.brand', { defaultValue: 'Brand' }),
+      key: 'brand',
+      format: (value: any) => value?.name || '-'
+    },
+    {
+      label: t('carSpecs.model', { defaultValue: 'Model' }),
+      key: 'model',
+      format: (value: any) => value?.name || '-'
+    },
+    {
+      label: t('carSpecs.year', { defaultValue: 'Year' }),
+      key: 'year'
+    },
+    {
+      label: t('carSpecs.price', { defaultValue: 'Price' }),
+      key: 'price',
+      format: (value: number) => {
+        return value ? formatPrice(value) : '-';
       }
-      return value;
+    },
+    {
+      label: t('carSpecs.mileage', { defaultValue: 'Mileage' }),
+      key: 'mileage',
+      format: (value: number) => value ? `${new Intl.NumberFormat(language === 'ar' ? 'ar' : 'en').format(value)} ${t('carSpecs.km', { defaultValue: 'km' })}` : '-'
+    },
+    {
+      label: t('carSpecs.fuelType', { defaultValue: 'Fuel Type' }),
+      key: 'fuel_type',
+      format: (value: any) => {
+        if (!value) return '-';
+        const translation = t(`car.fuelType.${value.toLowerCase()}`, { defaultValue: value });
+        return translation === value.toLowerCase() ? value : translation;
+      }
+    },
+    {
+      label: t('carSpecs.gearboxType', { defaultValue: 'Gearbox Type' }),
+      key: 'gearbox_type',
+      format: (value: any) => {
+        if (!value) return '-';
+        const translation = t(`car.gearboxType.${value.toLowerCase()}`, { defaultValue: value });
+        return translation === value.toLowerCase() ? value : translation;
+      }
+    },
+    {
+      label: t('carSpecs.bodyType', { defaultValue: 'Body Type' }),
+      key: 'body_type',
+      format: (value: any) => {
+        if (!value) return '-';
+        const translation = t(`car.bodyType.${value.toLowerCase()}`, { defaultValue: value });
+        return translation === value.toLowerCase() ? value : translation;
+      }
+    },
+    {
+      label: t('carSpecs.color', { defaultValue: 'Color' }),
+      key: 'color',
+      format: (value: any) => {
+        if (!value) return '-';
+        const translation = t(`car.color.${value.toLowerCase()}`, { defaultValue: value });
+        return translation === value.toLowerCase() ? value : translation;
+      }
+    },
+    {
+      label: t('carSpecs.condition', { defaultValue: 'Condition' }),
+      key: 'condition',
+      format: (value: any) => {
+        if (!value) return '-';
+        const translation = t(`car.condition.${value.toLowerCase().replace(' ', '_')}`, { defaultValue: value });
+        return translation === value.toLowerCase().replace(' ', '_') ? value : translation;
+      }
+    },
+    {
+      label: t('carSpecs.location', { defaultValue: 'Location' }),
+      key: 'location',
+      format: (value: any) => {
+        if (!value) return '-';
+        if (typeof value === 'object') {
+          return language === 'ar' ? (value.name_ar || value.name) : value.name;
+        }
+        return value;
+      }
+    },
+    {
+      label: t('carSpecs.cylinders', { defaultValue: 'Cylinders' }),
+      key: 'cylinders',
+      format: (value: any) => value || '-'
+    },
+    {
+      label: t('carSpecs.doors', { defaultValue: 'Doors' }),
+      key: 'doors',
+      format: (value: any) => value || '-'
+    },
+    {
+      label: t('carSpecs.driveType', { defaultValue: 'Drive Type' }),
+      key: 'drive_type',
+      format: (value: any) => {
+        if (!value) return '-';
+        const translation = t(`car.driveType.${value.toLowerCase()}`, { defaultValue: value });
+        return translation === value.toLowerCase() ? value : translation;
+      }
+    },
+    {
+      label: t('carSpecs.warranty', { defaultValue: 'Warranty' }),
+      key: 'warranty',
+      format: (value: any) => {
+        if (value === undefined || value === null) return '-';
+        return value ? t('common.yes') : t('common.no');
+      }
     }
-  },
-  { 
-    label: t('carSpecs.cylinders', { defaultValue: 'Cylinders' }), 
-    key: 'cylinders',
-    format: (value: any) => value || '-'
-  },
-  { 
-    label: t('carSpecs.doors', { defaultValue: 'Doors' }), 
-    key: 'doors',
-    format: (value: any) => value || '-'
-  },
-  { 
-    label: t('carSpecs.driveType', { defaultValue: 'Drive Type' }), 
-    key: 'drive_type',
-    format: (value: any) => {
-      if (!value) return '-';
-      const translation = t(`car.driveType.${value.toLowerCase()}`, { defaultValue: value });
-      return translation === value.toLowerCase() ? value : translation;
-    }
-  },
-  {   
-    label: t('carSpecs.warranty', { defaultValue: 'Warranty' }), 
-    key: 'warranty',
-    format: (value: any) => {
-      if (value === undefined || value === null) return '-';
-      return value ? t('common.yes') : t('common.no');
-    }
-  }
-];
+  ];
 
   return (
     <Transition appear show={isOpen} as={Fragment}>
@@ -275,20 +276,24 @@ export default function CarCompareModal({ isOpen, onClose, cars }: CarCompareMod
                           {car.images?.length > 0 ? (
                             <div className="relative w-full h-full">
                               <Image
-                                src={car.images[currentImageIndices[car.id] || 0]?.url || '/placeholder-car.jpg'}
+                                src={
+                                  car.images[currentImageIndices[car.id] || 0]?.thumbnail_url ||
+                                  car.images[currentImageIndices[car.id] || 0]?.image_url ||
+                                  '/placeholder-car.jpg'
+                                }
                                 alt={`${car.brand.name} ${car.model.name}`}
                                 fill
                                 className="object-cover"
                               />
                               {car.images.length > 1 && (
                                 <>
-                                  <button 
+                                  <button
                                     onClick={(e) => { e.stopPropagation(); goToPrevImage(car.id); }}
                                     className="absolute left-1 top-1/2 transform -translate-y-1/2 bg-black/50 text-white p-1 rounded-full"
                                   >
                                     <ChevronLeftIcon className="h-5 w-5" />
                                   </button>
-                                  <button 
+                                  <button
                                     onClick={(e) => { e.stopPropagation(); goToNextImage(car.id); }}
                                     className="absolute right-1 top-1/2 transform -translate-y-1/2 bg-black/50 text-white p-1 rounded-full"
                                   >
@@ -296,8 +301,8 @@ export default function CarCompareModal({ isOpen, onClose, cars }: CarCompareMod
                                   </button>
                                   <div className="absolute bottom-2 left-0 right-0 flex justify-center space-x-1">
                                     {car.images.map((_, idx) => (
-                                      <div 
-                                        key={idx} 
+                                      <div
+                                        key={idx}
                                         className={`h-1.5 w-1.5 rounded-full ${(currentImageIndices[car.id] || 0) === idx ? 'bg-white' : 'bg-white/50'}`}
                                       />
                                     ))}
@@ -318,7 +323,7 @@ export default function CarCompareModal({ isOpen, onClose, cars }: CarCompareMod
                       </div>
                     ))}
                   </div>
-                  
+
                   {specs.map((spec) => (
                     <div key={spec.key} className="mb-3 backdrop-blur-sm">
                       <div className="font-medium text-sm text-gray-700 dark:text-gray-300 mb-1">
@@ -350,21 +355,25 @@ export default function CarCompareModal({ isOpen, onClose, cars }: CarCompareMod
                         {car.images?.length > 0 ? (
                           <div className="relative w-full h-full group">
                             <Image
-                              src={car.images[currentImageIndices[car.id] || 0]?.url || '/placeholder-car.jpg'}
+                              src={
+                                car.images[currentImageIndices[car.id] || 0]?.thumbnail_url ||
+                                car.images[currentImageIndices[car.id] || 0]?.image_url ||
+                                '/placeholder-car.jpg'
+                              }
                               alt={`${car.brand.name} ${car.model.name}`}
                               fill
                               className="object-cover"
                             />
                             {car.images.length > 1 && (
                               <>
-                                <button 
+                                <button
                                   onClick={(e) => { e.stopPropagation(); goToPrevImage(car.id); }}
                                   className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/50 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                                   aria-label="Previous image"
                                 >
                                   <ChevronLeftIcon className="h-5 w-5" />
                                 </button>
-                                <button 
+                                <button
                                   onClick={(e) => { e.stopPropagation(); goToNextImage(car.id); }}
                                   className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/50 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                                   aria-label="Next image"
@@ -373,8 +382,8 @@ export default function CarCompareModal({ isOpen, onClose, cars }: CarCompareMod
                                 </button>
                                 <div className="absolute bottom-2 left-0 right-0 flex justify-center space-x-1">
                                   {car.images.map((_, idx) => (
-                                    <div 
-                                      key={idx} 
+                                    <div
+                                      key={idx}
                                       className={`h-2 w-2 rounded-full transition-colors ${(currentImageIndices[car.id] || 0) === idx ? 'bg-white' : 'bg-white/50'}`}
                                     />
                                   ))}
