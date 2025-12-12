@@ -55,10 +55,10 @@ export default function CarCard({
 
   return (
     <Link href={`/${currentCountry?.code.toLowerCase()}/cars/${car.id}`}>
-      <div 
+      <div
         className={`relative group bg-white dark:bg-gray-900/95 rounded-xl overflow-hidden border 
-          ${featured 
-            ? 'border-qatar-maroon shadow-lg shadow-qatar-maroon/20' 
+          ${featured
+            ? 'border-qatar-maroon shadow-lg shadow-qatar-maroon/20'
             : 'border-gray-200 dark:border-gray-700'} 
           hover:border-qatar-maroon/100 transition-all duration-200 transform hover:scale-[1.01] 
           ${isSelected ? 'border-qatar-maroon/100 shadow-lg shadow-qatar-maroon/50' : ''}`}
@@ -74,7 +74,7 @@ export default function CarCard({
           </div>
         )}*/}
 
-       
+
 
         <div className="relative aspect-[16/9] bg-gray-100 dark:bg-gray-800">
           <ImageCarousel
@@ -102,7 +102,7 @@ export default function CarCard({
                   {language === 'ar' && car.model?.name_ar ? car.model.name_ar : car.model?.name}{car.exact_model ? ` - ${car.exact_model}` : ''}
                 </span>
               </div>
-              
+
               {/* Favorite Button */}
               <button
                 onClick={handleFavoriteClick}
@@ -124,7 +124,7 @@ export default function CarCard({
 
             <div className="flex items-center gap-2 mt-1 text-sm text-gray-500 dark:text-gray-400">
               <span>{car.year}</span>•<div className="flex items-center gap-2 flex-1 truncate">
-              <span>{car.mileage?.toLocaleString('en-US') || '0'} {t('car.mileage.unit')}</span>
+                <span>{car.mileage?.toLocaleString('en-US') || '0'} {t('car.mileage.unit')}</span>
               </div>
               {/* <span>•</span> 
               <span>
@@ -140,7 +140,7 @@ export default function CarCard({
               </span>
             </div>
 
-           {/* <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+            {/* <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
               <div className="flex items-center gap-2 flex-1 truncate">
                 <span>{car.mileage?.toLocaleString('en-US') || '0'} {t('car.mileage.unit')}</span>
                  <span>•</span>
@@ -159,7 +159,7 @@ export default function CarCard({
                   </span>
                 )}
                 <span className="truncate">
-                  {car.city 
+                  {car.city
                     ? (language === 'ar' ? car.city.name_ar : car.city.name)
                     : car.country.name}
                 </span>
@@ -173,10 +173,10 @@ export default function CarCard({
 }
 
 // LazyImage component that only loads the image when it's in the viewport
-const LazyImage = ({ 
-  src, 
-  alt, 
-  fallback, 
+const LazyImage = ({
+  src,
+  alt,
+  fallback,
   className = '',
   width = 400,
   height = 225

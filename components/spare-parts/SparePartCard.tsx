@@ -48,7 +48,7 @@ type SparePart = Omit<SparePartType, 'images' | 'id' | 'user'> & {
   } | null;
   images: Array<{
     url: string;
-    is_primary?: boolean; 
+    is_primary?: boolean;
   }>;
   is_favorite?: boolean;
 };
@@ -70,33 +70,33 @@ const SparePartCard: React.FC<SparePartCardProps> = ({
 }) => {
   const { user } = useAuth();
   const { formatPrice: defaultFormatPrice, currentCountry } = useCountry();
-  
+
   // Format price using the spare part's country currency if available
   const formatPrice = (price: number, lang?: string) => {
     if (!part.country?.currency_code) {
       return defaultFormatPrice(price, lang);
     }
-    
+
     // Create a temporary country object with the spare part's currency
     const tempCountry = {
       ...(currentCountry || {}),
       currency_code: part.country.currency_code
     };
-    
+
     // Format the number according to the language
     const formattedNumber = price.toLocaleString(
       lang === 'ar' ? 'ar' : 'en'
     );
-    
+
     // Get translated currency code
     const currencyKey = `currency.${tempCountry.currency_code.toLowerCase()}`;
     const translatedCurrency = t(currencyKey);
-    
+
     // For Arabic, place the currency code after the number
     if (lang === 'ar') {
       return `${formattedNumber} ${translatedCurrency}`;
     }
-    
+
     // For English, place the currency code before the number
     return `${translatedCurrency} ${formattedNumber}`;
   };
@@ -109,7 +109,7 @@ const SparePartCard: React.FC<SparePartCardProps> = ({
   const handleFavoriteClick = async (e?: React.MouseEvent) => {
     e?.preventDefault?.();
     e?.stopPropagation?.();
-    
+
     if (!user) {
       toast.error(t('car.favorite.login'));
       router.push('/login');
@@ -118,7 +118,7 @@ const SparePartCard: React.FC<SparePartCardProps> = ({
 
     setIsLoading(true);
     const newFavoriteState = !isFavorited;
-    
+
     try {
       if (onToggleFavorite) {
         // Pass both partId and event to the onToggleFavorite callback
@@ -136,7 +136,7 @@ const SparePartCard: React.FC<SparePartCardProps> = ({
 
       setIsFavorited(newFavoriteState);
       toast.success(
-        newFavoriteState 
+        newFavoriteState
           ? t('favorites.added', { item: part.title })
           : t('favorites.removed', { item: part.title })
       );
@@ -150,21 +150,21 @@ const SparePartCard: React.FC<SparePartCardProps> = ({
 
   return (
     <div className={`relative group bg-white dark:bg-gray-900/95 rounded-xl overflow-hidden border 
-      ${featured 
-        ? 'border-qatar-maroon shadow-lg shadow-qatar-maroon/20' 
+      ${featured
+        ? 'border-qatar-maroon shadow-lg shadow-qatar-maroon/20'
         : 'border-gray-200 dark:border-gray-700'} 
       hover:border-qatar-maroon/100 transition-all duration-200 transform hover:scale-[1.01]`}>
-      
-      <Link 
+
+      <Link
         href={`/${part.country?.code?.toLowerCase() || currentCountry?.code.toLowerCase()}/spare-parts/${part.id}`}
         className="block w-full h-full"
       >
         <div className="relative aspect-[16/9] bg-gray-100 dark:bg-gray-800">
           {part.images && part.images.length > 0 ? (
             <div className="relative w-full h-full">
-              <LazyImage 
-                src={part.images.find(img => img.is_primary)?.url || part.images[0]?.url} 
-                alt={part.title} 
+              <LazyImage
+                src={part.images.find(img => img.is_primary)?.url || part.images[0]?.url}
+                alt={part.title}
                 fallback="/placeholder-spare-part.jpg"
                 className="w-full h-full object-cover"
               />
@@ -172,9 +172,9 @@ const SparePartCard: React.FC<SparePartCardProps> = ({
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-800">
               <div className="text-center p-4">
-                <Image 
-                  src="/placeholder-spare-part.jpg" 
-                  alt={part.title} 
+                <Image
+                  src="/placeholder-spare-part.jpg"
+                  alt={part.title}
                   width={200}
                   height={150}
                   className="mx-auto opacity-50"
@@ -194,7 +194,7 @@ const SparePartCard: React.FC<SparePartCardProps> = ({
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
                 {part.title}
               </h3>
-              
+
               {/* Favorite Button */}
               <div className="absolute bottom-3 right-3 z-10">
                 <button
@@ -244,7 +244,9 @@ const SparePartCard: React.FC<SparePartCardProps> = ({
                   </span>
                 )}
                 <span className="truncate">
-                  {part.city ? (language === 'ar' ? part.city.name_ar : part.city.name) : ''}
+                  {part.city
+                    ? (language === 'ar' && part.city.name_ar ? part.city.name_ar : part.city.name)
+                    : (part.country ? (language === 'ar' && part.country.name_ar ? part.country.name_ar : part.country.name) : '')}
                 </span>
               </div>
             )}
@@ -287,10 +289,10 @@ const SparePartCard: React.FC<SparePartCardProps> = ({
 };
 
 // LazyImage component that only loads the image when it's in the viewport
-const LazyImage = ({ 
-  src, 
-  alt, 
-  fallback, 
+const LazyImage = ({
+  src,
+  alt,
+  fallback,
   className = '',
   width = 400,
   height = 225

@@ -14,6 +14,7 @@ import { scrollToTop } from '@/utils/scrollToTop';
 import ImageCarousel from './ImageCarousel';
 import Image from 'next/image';
 import imageCompression from 'browser-image-compression';
+import { toast } from 'react-hot-toast';
 // @ts-ignore - heic2any doesn't have proper TypeScript types
 declare const heic2any: any;
 
@@ -211,6 +212,7 @@ const compressImage = async (file: File, isFeatured: boolean = false): Promise<{
 interface CarImage {
   url: string;
   is_main?: boolean;
+  thumbnail_url?: string;
 }
 
 interface Car {
@@ -301,6 +303,11 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
   const [imageFiles, setImageFiles] = useState<ImageFile[]>([]);
   const [mainPhotoIndex, setMainPhotoIndex] = useState<number | null>(null);
   const objectUrls = useRef<Set<string>>(new Set());
+
+  // Track pending changes (only applied on save)
+  const [newImagesToUpload, setNewImagesToUpload] = useState<ImageFile[]>([]);
+  const [imagesToDelete, setImagesToDelete] = useState<string[]>([]); // URLs of images to delete
+  const [originalImages, setOriginalImages] = useState<CarImage[]>([]); // Backup for cancel
   const [formData, setFormData] = useState<FormData>({
     brand_id: '',
     model_id: '',
@@ -332,38 +339,7 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
   useEffect(() => {
     if (!car) return;
 
-    // Reset form when car is null/undefined
-    setFormData({
-      brand_id: safeString(car.brand_id),
-      model_id: safeString(car.model_id),
-      year: car.year || new Date().getFullYear(),
-      mileage: safeString(car.mileage),
-      price: safeString(car.price),
-      color: car.color || '',
-      description: car.description || '',
 
-      fuel_type: car.fuel_type || '',
-      gearbox_type: car.gearbox_type || '',
-      body_type: car.body_type || '',
-      condition: car.condition || '',
-      cylinders: car.cylinders || '',
-      doors: car.doors || '',
-      drive_type: car.drive_type || '',
-      warranty: car.warranty || '',
-      exact_model: car.exact_model || '',
-      city_id: safeString(car.city_id),
-      is_featured: car.is_featured || false,
-    });
-
-    // Set initial images
-    if (Array.isArray(car.images)) {
-      setImages(car.images.map(img => ({
-        url: typeof img === 'string' ? img : img?.url || '',
-        is_main: typeof img === 'string' ? false : Boolean(img?.is_main)
-      })));
-    } else {
-      setImages([]);
-    }
 
     // Initialize form data
     setFormData({
@@ -391,10 +367,16 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
     const initialImages = Array.isArray(car.images)
       ? car.images.map((img) => ({
         url: typeof img === 'string' ? img : img?.url || '',
+        thumbnail_url: typeof img === 'string' ? undefined : img?.thumbnail_url,
         is_main: typeof img === 'string' ? false : Boolean(img?.is_main)
       }))
       : [];
     setImages(initialImages);
+    setOriginalImages(initialImages); // Backup for cancel
+
+    // Reset pending changes
+    setNewImagesToUpload([]);
+    setImagesToDelete([]);
   }, [car]);
 
   // Fetch initial data
@@ -527,53 +509,30 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
     }
   };
 
-  // Handle image upload with compression and HEIC/HEIF support
+  // Handle image upload - store locally, don't upload yet (upload happens on save)
   const handleImageUpload = async (files: File[]): Promise<void> => {
     if (!car) return;
 
     setUploading(true);
     try {
-      const uploadedImages: CarImage[] = [];
-      const newImageFiles: ImageFile[] = [];
+      const processedFiles: ImageFile[] = [];
 
       for (const file of files) {
         try {
           // Generate both high-res and thumbnail versions
           const { original: highResFile, thumbnail: thumbnailFile } = await compressImage(file, formData.is_featured);
 
-          const fileExt = highResFile.name.split('.').pop() || 'webp';
-          const baseFileName = `${Math.random().toString(36).substring(2, 15)}`;
-
-          // Upload the compressed file
-          const { error: uploadError } = await supabase.storage
-            .from('car-images')
-            .upload(filePath, compressedFile);
-
-          if (uploadError) throw uploadError;
-
-          // Get the public URL
-          const { data: { publicUrl } } = supabase.storage
-            .from('car-images')
-            .getPublicUrl(filePath);
-
-          // Create preview URLs for the UI
+          // Create preview URLs for the UI (no upload yet)
           const previewUrl = URL.createObjectURL(highResFile);
           const thumbnailPreviewUrl = URL.createObjectURL(thumbnailFile);
           objectUrls.current.add(previewUrl);
           objectUrls.current.add(thumbnailPreviewUrl);
 
-          // Add to uploaded images
-          const isMain = images.length === 0; // First image is main by default
-          uploadedImages.push({
-            url: highResUrl,
-            is_main: isMain
-          });
-
-          // Add to image files for local state management
-          newImageFiles.push({
+          // Create ImageFile object (will be uploaded on save)
+          const imageFile: ImageFile = {
             preview: previewUrl,
             thumbnailUrl: thumbnailPreviewUrl,
-            isMain,
+            isMain: images.length + newImagesToUpload.length + processedFiles.length === 0,
             id: `new-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
             type: 'new' as const,
             raw: highResFile,
@@ -582,92 +541,66 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
             size: highResFile.size,
             lastModified: highResFile.lastModified,
             originalName: file.name
-          });
+          };
+
+          processedFiles.push(imageFile);
         } catch (error) {
           console.error('Error processing image:', error);
           toast.error(t('car.images.uploadError'));
         }
       }
 
-      if (uploadedImages.length > 0) {
-        // Update state with new images
-        setImages(prev => [...prev, ...uploadedImages]);
-        setImageFiles(prev => [...prev, ...newImageFiles]);
+      if (processedFiles.length > 0) {
+        // Add to pending uploads (will be uploaded on save)
+        setNewImagesToUpload(prev => [...prev, ...processedFiles]);
+
+        // Update display to show new images immediately
+        const newCarImages: CarImage[] = processedFiles.map(file => ({
+          url: file.preview,
+          thumbnail_url: file.thumbnailUrl,
+          is_main: file.isMain
+        }));
+
+        setImages(prev => [...prev, ...newCarImages]);
 
         // If this is the first image, set it as main
-        if (images.length === 0 && uploadedImages.length > 0) {
+        if (images.length === 0 && newImagesToUpload.length === 0) {
           setMainPhotoIndex(0);
         }
 
-        toast.success(t('car.images.uploadSuccess'));
+        toast.success(t('car.images.addedLocally') || 'Images added. Click Save to upload.');
       }
     } catch (error) {
-      console.error('Error uploading images:', error);
+      console.error('Error processing images:', error);
       toast.error(t('car.images.uploadError'));
     } finally {
       setUploading(false);
     }
   };
 
-  // Set an image as the main photo
-  const handleSetMainImage = async (imageUrl: string) => {
+  // Set an image as the main photo - local only
+  const handleSetMainImage = (imageUrl: string) => {
     if (!car?.id) return;
 
-    setLoading(true);
-    try {
-      // Find the index of the image to set as main
-      const imageIndex = images.findIndex(img => img.url === imageUrl);
-      if (imageIndex === -1) return;
+    // Find the index of the image to set as main
+    const imageIndex = images.findIndex(img => img.url === imageUrl);
+    if (imageIndex === -1) return;
 
-      // Update all images to set is_main = false in the database
-      await supabase
-        .from('car_images')
-        .update({ is_main: false })
-        .eq('car_id', car.id);
+    // Reorder images to put the main one first locally
+    const newImages = [...images];
+    const [movedImage] = newImages.splice(imageIndex, 1);
 
-      // Set the selected image as main in the database
-      await supabase
-        .from('car_images')
-        .update({ is_main: true })
-        .eq('car_id', car.id)
-        .eq('url', imageUrl);
+    // Update is_main flags
+    const updatedImages = [{ ...movedImage, is_main: true }, ...newImages.map(img => ({ ...img, is_main: false }))];
 
-      // Reorder images to put the main one first
-      const newImages = [...images];
-      const [movedImage] = newImages.splice(imageIndex, 1);
-      newImages.unshift({ ...movedImage, is_main: true });
+    setImages(updatedImages);
+    setMainPhotoIndex(0);
 
-      // Update other images to set is_main = false
-      const updatedImages = newImages.map((img, idx) => ({
-        ...img,
-        is_main: idx === 0
-      }));
-
-      // Update local state
-      setImages(updatedImages);
-      setMainPhotoIndex(0);
-
-      // Update imageFiles to maintain consistency
-      setImageFiles(prev => {
-        const newImageFiles = [...prev];
-        const [movedFile] = newImageFiles.splice(imageIndex, 1);
-        newImageFiles.unshift({ ...movedFile, isMain: true });
-        return newImageFiles.map((file, idx) => ({
-          ...file,
-          isMain: idx === 0
-        }));
-      });
-
-      toast.success(t('car.images.setMainSuccess'));
-    } catch (error) {
-      console.error('Error setting main image:', error);
-      toast.error(t('car.images.setMainError'));
-    } finally {
-      setLoading(false);
-    }
+    toast.success(t('car.images.setMainSuccess'));
   };
 
   // Move an image to a new position
+  // Move an image to a new position - local only
   const moveImage = (dragIndex: number, hoverIndex: number) => {
     if (!car?.id) return;
 
@@ -676,110 +609,92 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
       const [movedImage] = newImages.splice(dragIndex, 1);
       newImages.splice(hoverIndex, 0, movedImage);
 
-      // If moved to first position, set as main
-      if (hoverIndex === 0) {
-        handleSetMainImage(movedImage.url);
-      } else if (dragIndex === 0) {
-        // If main photo was moved away, set new first photo as main
-        handleSetMainImage(newImages[0].url);
+      // Update is_main flags based on new order
+      const updatedImages = newImages.map((img, idx) => ({
+        ...img,
+        is_main: idx === 0
+      }));
+
+      if (hoverIndex === 0 || dragIndex === 0) {
+        setMainPhotoIndex(0);
       }
 
-      return newImages;
-    });
-
-    // Also update imageFiles to maintain consistency
-    setImageFiles(prev => {
-      const newImageFiles = [...prev];
-      const [movedFile] = newImageFiles.splice(dragIndex, 1);
-      newImageFiles.splice(hoverIndex, 0, movedFile);
-      return newImageFiles;
+      return updatedImages;
     });
   };
 
-  // Handle delete image with cleanup
-  const handleDeleteImage = async (imageUrl: string) => {
+  // Handle delete image - track locally, don't delete yet (deletion happens on save)
+  const handleDeleteImage = (imageUrl: string) => {
     if (!car?.id) return;
 
-    setLoading(true);
-    try {
-      // First, check if this is the main photo
-      const isMainPhoto = mainPhotoIndex === 0 &&
-        (imageFiles[0]?.url === imageUrl || imageFiles[0]?.preview === imageUrl);
+    // Check if this is an existing image (has a URL starting with http)
+    const isExistingImage = imageUrl.startsWith('http');
 
-      // Delete from storage
-      const urlParts = imageUrl.split('/');
-      const fileName = urlParts[urlParts.length - 1];
+    if (isExistingImage) {
+      // Track for deletion on save
+      setImagesToDelete(prev => [...prev, imageUrl]);
 
-      const { error: storageError } = await supabase.storage
-        .from('car-images')
-        .remove([`cars/${car.id}/${fileName}`]);
-
-      if (storageError) throw storageError;
-
-      // Delete from database
-      const { error: dbError } = await supabase
-        .from('car_images')
-        .delete()
-        .eq('car_id', car.id)
-        .eq('url', imageUrl);
-
-      if (dbError) throw dbError;
-
-      // Update local state
-      setImages(prev => {
-        const newImages = prev.filter(img => img.url !== imageUrl);
-        return newImages;
-      });
-
-      // Clean up object URL if it exists and update image files state
-      setImageFiles(prev => {
-        const newImageFiles = prev.filter(img => {
-          if (img.preview === imageUrl || img.url === imageUrl) {
-            // Clean up object URL if it exists
-            if (objectUrls.current.has(img.preview)) {
-              URL.revokeObjectURL(img.preview);
-              objectUrls.current.delete(img.preview);
-            }
-            return false;
+      // Remove from display
+      setImages(prev => prev.filter(img => img.url !== imageUrl));
+    } else {
+      // It's a new image (blob URL), remove from pending uploads
+      setNewImagesToUpload(prev => {
+        const imageToRemove = prev.find(img => img.preview === imageUrl);
+        if (imageToRemove) {
+          // Clean up object URLs
+          if (imageToRemove.preview && objectUrls.current.has(imageToRemove.preview)) {
+            URL.revokeObjectURL(imageToRemove.preview);
+            objectUrls.current.delete(imageToRemove.preview);
           }
-          return true;
-        });
-
-        // If we deleted the main photo and there are still images left,
-        // set the new first image as main
-        if (isMainPhoto && newImageFiles.length > 0) {
-          setMainPhotoIndex(0);
-          // Update the first image to be the main in the database
-          if (newImageFiles[0].type === 'existing') {
-            handleSetMainImage(newImageFiles[0].url);
+          if (imageToRemove.thumbnailUrl && objectUrls.current.has(imageToRemove.thumbnailUrl)) {
+            URL.revokeObjectURL(imageToRemove.thumbnailUrl);
+            objectUrls.current.delete(imageToRemove.thumbnailUrl);
           }
-        } else if (newImageFiles.length === 0) {
-          setMainPhotoIndex(null);
         }
-
-        return newImageFiles;
+        return prev.filter(img => img.preview !== imageUrl);
       });
-
-      toast.success(t('car.images.deleteSuccess'));
-    } catch (error) {
-      console.error('Error deleting image:', error);
-      toast.error(t('car.images.deleteError'));
-      // If there was an error, refresh the images to ensure consistency
-      if (car) {
-        const { data } = await supabase
-          .from('car_images')
-          .select('*')
-          .eq('car_id', car.id)
-          .order('is_main', { ascending: false });
-
-        if (data) {
-          setImages(data);
-          setMainPhotoIndex(data.length > 0 ? 0 : null);
-        }
-      }
-    } finally {
-      setLoading(false);
     }
+
+    // Update main photo index if needed
+    const remainingExistingImages = images.filter(img => img.url !== imageUrl && !imagesToDelete.includes(img.url));
+    const remainingNewImages = newImagesToUpload.filter(img => img.preview !== imageUrl);
+    const totalRemaining = remainingExistingImages.length + remainingNewImages.length;
+
+    if (totalRemaining === 0) {
+      setMainPhotoIndex(null);
+    } else if (mainPhotoIndex !== null && mainPhotoIndex >= totalRemaining) {
+      setMainPhotoIndex(0);
+    }
+
+    toast.success(t('car.images.markedForDeletion') || 'Image will be removed on save');
+  };
+
+  // Handle cancel - revert all changes
+  const handleCancel = () => {
+    // Revert to original images
+    setImages(originalImages);
+
+    // Clean up object URLs for new images that won't be used
+    newImagesToUpload.forEach(img => {
+      if (img.preview && objectUrls.current.has(img.preview)) {
+        URL.revokeObjectURL(img.preview);
+        objectUrls.current.delete(img.preview);
+      }
+      if (img.thumbnailUrl && objectUrls.current.has(img.thumbnailUrl)) {
+        URL.revokeObjectURL(img.thumbnailUrl);
+        objectUrls.current.delete(img.thumbnailUrl);
+      }
+    });
+
+    // Clear pending changes
+    setNewImagesToUpload([]);
+    setImagesToDelete([]);
+
+    // Reset main photo index
+    setMainPhotoIndex(originalImages.length > 0 ? 0 : null);
+
+    // Close modal
+    onClose();
   };
 
   // Clean up object URLs on unmount
@@ -844,27 +759,145 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
 
       if (error) throw error;
 
-      // Update images if any
+      // 1. Delete images that were marked for deletion
+      if (imagesToDelete.length > 0) {
+        for (const imageUrl of imagesToDelete) {
+          try {
+            // Extract filename from URL
+            const urlParts = imageUrl.split('/');
+            const fileName = urlParts[urlParts.length - 1];
+
+            // Delete from storage (both high-res and thumbnail)
+            await supabase.storage
+              .from('car-images')
+              .remove([`cars/${car.id}/${fileName}`]);
+
+            // Try to delete thumbnail too (may not exist for older images)
+            const thumbFileName = fileName.replace('.webp', '_thumb.webp');
+            await supabase.storage
+              .from('car-images')
+              .remove([`cars/${car.id}/${thumbFileName}`]);
+
+            // Delete from database
+            await supabase
+              .from('car_images')
+              .delete()
+              .eq('car_id', car.id)
+              .eq('image_url', imageUrl);
+          } catch (deleteError) {
+            console.error('Error deleting image:', imageUrl, deleteError);
+            // Continue with other deletions even if one fails
+          }
+        }
+      }
+
+      // 2. Upload new images
+      const uploadedMap = new Map<string, { url: string, thumbnail_url: string }>();
+
+      if (newImagesToUpload.length > 0) {
+        for (const imageFile of newImagesToUpload) {
+          try {
+            const highResFile = imageFile.raw!;
+            const thumbnailFile = imageFile.thumbnailRaw || highResFile;
+
+            const baseFileName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+            const fileExt = 'webp';
+
+            // Upload high-res version
+            const highResPath = `${car.id}/${baseFileName}.${fileExt}`;
+            const { error: highResError } = await supabase.storage
+              .from('car-images')
+              .upload(highResPath, highResFile, {
+                contentType: 'image/webp',
+                upsert: false
+              });
+
+            if (highResError) throw highResError;
+
+            // Upload thumbnail version
+            const thumbnailPath = `${car.id}/${baseFileName}_thumb.${fileExt}`;
+            const { error: thumbnailError } = await supabase.storage
+              .from('car-images')
+              .upload(thumbnailPath, thumbnailFile, {
+                contentType: 'image/webp',
+                upsert: false
+              });
+
+            if (thumbnailError) throw thumbnailError;
+
+            // Get public URLs
+            const { data: { publicUrl: highResUrl } } = supabase.storage
+              .from('car-images')
+              .getPublicUrl(highResPath);
+
+            const { data: { publicUrl: thumbnailUrl } } = supabase.storage
+              .from('car-images')
+              .getPublicUrl(thumbnailPath);
+
+            if (imageFile.preview) {
+              uploadedMap.set(imageFile.preview, { url: highResUrl, thumbnail_url: thumbnailUrl });
+            }
+
+            // Clean up object URLs
+            if (imageFile.preview && objectUrls.current.has(imageFile.preview)) {
+              objectUrls.current.delete(imageFile.preview); // Don't revoke yet, needed for map key
+            }
+            if (imageFile.thumbnailUrl && objectUrls.current.has(imageFile.thumbnailUrl)) {
+              URL.revokeObjectURL(imageFile.thumbnailUrl);
+              objectUrls.current.delete(imageFile.thumbnailUrl);
+            }
+          } catch (uploadError) {
+            console.error('Error uploading image:', uploadError);
+            toast.error(t('car.images.uploadError'));
+          }
+        }
+      }
+
+      // 3. Update database for all images (Insert new, Update existing) preserving order
       if (images.length > 0) {
-        // First, delete all existing images for this car
+        // Reset all is_main flags first to prevent unique constraint violations
         await supabase
           .from('car_images')
-          .delete()
+          .update({ is_main: false })
           .eq('car_id', car.id);
 
-        // Then insert the new ones with display_order
-        const imagesToInsert = images.map((img, index) => ({
-          car_id: car.id,
-          url: img.url,
-          is_main: img.is_main || false,
-          display_order: index  // Add display_order based on array index
-        }));
+        for (let i = 0; i < images.length; i++) {
+          const img = images[i];
+          const isMain = i === 0;
 
-        const { error: imagesError } = await supabase
-          .from('car_images')
-          .insert(imagesToInsert);
+          if (uploadedMap.has(img.url)) {
+            // It's a newly uploaded image - INSERT
+            const uploaded = uploadedMap.get(img.url)!;
+            const { error: insertError } = await supabase.from('car_images').insert({
+              car_id: car.id,
+              image_url: uploaded.url,
+              thumbnail_url: uploaded.thumbnail_url,
+              is_main: isMain,
+              display_order: i
+            });
 
-        if (imagesError) throw imagesError;
+            if (insertError) {
+              console.error('Error inserting new image:', insertError);
+              throw insertError;
+            }
+
+            // Now safe to revoke blob
+            URL.revokeObjectURL(img.url);
+          } else if (!imagesToDelete.includes(img.url) && !img.url.startsWith('blob:')) {
+            // It's an existing image - UPDATE
+            const { error: updateError } = await supabase.from('car_images').update({
+              display_order: i,
+              is_main: isMain
+            })
+              .eq('car_id', car.id)
+              .eq('image_url', img.url);
+
+            if (updateError) {
+              console.error('Error updating existing image:', updateError);
+              throw updateError;
+            }
+          }
+        }
       }
 
       // Call the onUpdate callback to refresh the parent component
@@ -924,7 +957,7 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
                     {t('myAds.edit.title')}
                   </Dialog.Title>
                   <button
-                    onClick={onClose}
+                    onClick={handleCancel}
                     className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                   >
                     <XMarkIcon className="h-6 w-6" />
@@ -1293,30 +1326,8 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
                                 preview={image.url}
                                 isMain={index === 0}
                                 onRemove={handleDeleteImage}
-                                onSetMain={() => {
-                                  if (index !== 0) {
-                                    const newImages = [...images];
-                                    const [movedImage] = newImages.splice(index, 1);
-                                    newImages.unshift(movedImage);
-                                    setImages(newImages);
-                                    setMainPhotoIndex(0);
-                                    handleSetMainImage(movedImage.url);
-                                  }
-                                }}
-                                moveImage={(dragIndex, hoverIndex) => {
-                                  const newImages = [...images];
-                                  const [movedImage] = newImages.splice(dragIndex, 1);
-                                  newImages.splice(hoverIndex, 0, movedImage);
-                                  setImages(newImages);
-
-                                  if (hoverIndex === 0) {
-                                    setMainPhotoIndex(0);
-                                    handleSetMainImage(movedImage.url);
-                                  } else if (dragIndex === 0) {
-                                    setMainPhotoIndex(0);
-                                    handleSetMainImage(newImages[0].url);
-                                  }
-                                }}
+                                onSetMain={() => handleSetMainImage(image.url)}
+                                moveImage={moveImage}
                                 t={t}
                                 totalImages={images.length}
                               />
@@ -1457,7 +1468,7 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
                   <div className="flex justify-end gap-3 mt-6">
                     <button
                       type="button"
-                      onClick={onClose}
+                      onClick={handleCancel}
                       className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600"
                     >
                       {t('common.cancel')}
@@ -1467,7 +1478,14 @@ const EditCarModal = ({ isOpen, onClose, car, onUpdate, onEditComplete }: EditCa
                       disabled={loading}
                       className="px-4 py-2 text-sm font-medium text-white bg-qatar-maroon border border-transparent rounded-md shadow-sm hover:bg-qatar-maroon/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar-maroon disabled:opacity-50"
                     >
-                      {loading ? t('common.saving') : t('common.save')}
+                      {loading ? (
+                        <span className="flex items-center">
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          {t('common.saving')}
+                        </span>
+                      ) : (
+                        t('common.save')
+                      )}
                     </button>
                   </div>
                 </form>
