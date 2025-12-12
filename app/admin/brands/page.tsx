@@ -62,7 +62,7 @@ export default function BrandsManagement() {
     };
 
     checkAdminAndFetchData();
-  }, [user, authLoading, router]);
+  }, [user?.id, authLoading, router]);
 
   const handleAddBrand = async () => {
     if (!newBrand.name.trim()) {

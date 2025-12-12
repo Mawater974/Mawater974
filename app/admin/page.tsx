@@ -126,9 +126,8 @@ export default function AdminDashboard() {
   // Fetch car listings when component mounts or carListingsStatus changes
   useEffect(() => {
     if (user && isAdmin) {
-      fetchCarListings(carListingsStatus);
     }
-  }, [user, isAdmin, carListingsStatus]);
+  }, [user?.id, isAdmin, carListingsStatus]);
   const [expandedBrands, setExpandedBrands] = useState<{ [key: string]: boolean }>({});
   const [showAllBrands, setShowAllBrands] = useState(false);
   const [countries, setCountries] = useState([
@@ -272,7 +271,7 @@ export default function AdminDashboard() {
     try {
       const { error } = await supabase
         .from('cars')
-        .update({ 
+        .update({
           status: newStatus,
           updated_at: new Date().toISOString()
         })
@@ -281,7 +280,7 @@ export default function AdminDashboard() {
       if (error) throw error;
 
       // Update local state
-      setCars(prevCars => prevCars.map(car => 
+      setCars(prevCars => prevCars.map(car =>
         car.id === carId ? { ...car, status: newStatus } : car
       ));
 
@@ -335,7 +334,7 @@ export default function AdminDashboard() {
     try {
       // Convert status to lowercase for case-insensitive comparison
       const statusLower = status.toLowerCase();
-      
+
       // First, get all cars with their related data
       const { data: carsData, error: carsError } = await supabase
         .from('cars')
@@ -347,7 +346,7 @@ export default function AdminDashboard() {
           car_images!inner(*)
         `)
         .order('created_at', { ascending: sortOrder === 'oldest' });
-      
+
       if (carsError) throw carsError;
 
       // Get all car images in a separate query for better performance
@@ -356,7 +355,7 @@ export default function AdminDashboard() {
         .from('car_images')
         .select('*')
         .in('car_id', carIds);
-      
+
       if (imagesError) throw imagesError;
 
       // Group images by car_id
@@ -375,19 +374,19 @@ export default function AdminDashboard() {
       const combinedData = carsData?.map(car => ({
         ...car,
         images: imagesByCarId[car.id] || [],
-        thumbnail: imagesByCarId[car.id]?.find(img => img.is_primary)?.url || 
-                  (imagesByCarId[car.id]?.[0]?.url || '')
+        thumbnail: imagesByCarId[car.id]?.find(img => img.is_primary)?.url ||
+          (imagesByCarId[car.id]?.[0]?.url || '')
       }));
-        
+
       // Filter by status in memory to handle case sensitivity
-      const filteredData = combinedData?.filter(car => 
+      const filteredData = combinedData?.filter(car =>
         car.status?.toLowerCase() === statusLower
       ) || [];
 
       if (error) throw error;
 
       setCarListings(filteredData);
-      
+
       // Update analytics with the count of pending cars
       if (statusLower === 'pending') {
         setAnalytics(prev => ({
@@ -415,7 +414,7 @@ export default function AdminDashboard() {
     try {
       const { error } = await supabase
         .from('cars')
-        .update({ 
+        .update({
           is_featured: !currentFeatured,
           updated_at: new Date().toISOString()
         })
@@ -424,8 +423,8 @@ export default function AdminDashboard() {
       if (error) throw error;
 
       // Update local state
-      setCars(cars.map(car => 
-        car.id === carId 
+      setCars(cars.map(car =>
+        car.id === carId
           ? { ...car, is_featured: !currentFeatured }
           : car
       ));
@@ -479,7 +478,7 @@ export default function AdminDashboard() {
           mileage: carData.mileage,
           description: carData.description,
           status: carData.status,
-            updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString()
         })
         .eq('id', carData.id);
 
@@ -497,7 +496,7 @@ export default function AdminDashboard() {
     try {
       const { error } = await supabase
         .from('cars')
-        .update({ 
+        .update({
           status: action,
           updated_at: new Date().toISOString()
         })
@@ -506,7 +505,7 @@ export default function AdminDashboard() {
       if (error) throw error;
 
       // Update local state
-      setCarListings(prevListings => prevListings.map(car => 
+      setCarListings(prevListings => prevListings.map(car =>
         car.id === carId ? { ...car, status: action } as ExtendedCar : car
       ));
 
@@ -522,7 +521,7 @@ export default function AdminDashboard() {
         }]);
 
       toast.success(`Car status updated to ${action} successfully`);
-      
+
       // Refresh data
       fetchCarListings(carListingsStatus);
     } catch (error) {
@@ -588,15 +587,15 @@ export default function AdminDashboard() {
         console.error('Error checking admin status:', error);
         router.push('/');
       }
-    };
+    }
 
     checkAdminStatus();
-  }, [user, router, authLoading]);
+  }, [user?.id, router, authLoading]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      
+
       // Fetch cars with their related data
       const { data: carsData, error: carsError } = await supabase
         .from('cars')
@@ -616,7 +615,7 @@ export default function AdminDashboard() {
         .from('car_images')
         .select('*')
         .in('car_id', carIds);
-      
+
       if (imagesError) throw imagesError;
 
       // Group images by car_id
@@ -785,7 +784,7 @@ export default function AdminDashboard() {
     return () => {
       carSubscription.unsubscribe();
     };
-  }, [user]);
+  }, [user?.id]);
 
   useEffect(() => {
     if (!cars) return;
@@ -900,7 +899,7 @@ export default function AdminDashboard() {
       try {
         const { error } = await supabase
           .from('cars')
-          .update({ 
+          .update({
             status: action,
             updated_at: new Date().toISOString()
           })
@@ -924,12 +923,12 @@ export default function AdminDashboard() {
       const date = new Date(timestamp);
       const now = new Date();
       const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-      
+
       if (diffInSeconds < 60) return 'Just now';
       if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
       if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
       if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
-      
+
       return date.toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',
@@ -1016,7 +1015,7 @@ export default function AdminDashboard() {
             </div>
           </div>
         </div>
-         
+
         {/* Pending Cars List */}
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg mt-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Pending Cars</h3>
@@ -1103,87 +1102,87 @@ export default function AdminDashboard() {
             {analytics?.carsByBrand
               .slice(0, showAllBrands ? undefined : 5)
               .map((item, index) => (
-              <div key={index} className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
-                <div 
-                  className="flex items-center justify-between cursor-pointer"
-                  onClick={() => toggleBrandExpansion(item.brand)}
-                >
-                  <div className="flex items-center space-x-3">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900 dark:text-white">{item.brand}</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                        ({item.count} cars)
+                <div key={index} className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+                  <div
+                    className="flex items-center justify-between cursor-pointer"
+                    onClick={() => toggleBrandExpansion(item.brand)}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div>
+                        <div className="text-sm font-medium text-gray-900 dark:text-white">{item.brand}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          ({item.count} cars)
+                        </div>
                       </div>
                     </div>
+                    <div className="flex items-center space-x-4">
+                      <span className="text-sm font-medium text-qatar-maroon dark:text-qatar-maroon-light">
+                        {((item.count / analytics.totalCars) * 100).toFixed(1)}%
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-4">
-                    <span className="text-sm font-medium text-qatar-maroon dark:text-qatar-maroon-light">
-                      {((item.count / analytics.totalCars) * 100).toFixed(1)}%
-                    </span>
-                  </div>
+
+                  {expandedBrands[item.brand] && (
+                    <div className="mt-4 pl-8 space-y-4">
+                      {/* Status Distribution */}
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-xs text-gray-600 dark:text-gray-300">
+                            <span>Active</span>
+                            <span>{item.activeCount} ({((item.activeCount / item.count) * 100).toFixed(1)}%)</span>
+                          </div>
+                          <div className="h-1.5 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-green-500 dark:bg-green-400"
+                              style={{ width: `${(item.activeCount / item.count) * 100}%` }}
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-xs text-gray-600 dark:text-gray-300">
+                            <span>Sold</span>
+                            <span>{item.soldCount} ({((item.soldCount / item.count) * 100).toFixed(1)}%)</span>
+                          </div>
+                          <div className="h-1.5 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-blue-500 dark:bg-blue-400"
+                              style={{ width: `${(item.soldCount / item.count) * 100}%` }}
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-xs text-gray-600 dark:text-gray-300">
+                            <span>Pending</span>
+                            <span>{item.pendingCount} ({((item.pendingCount / item.count) * 100).toFixed(1)}%)</span>
+                          </div>
+                          <div className="h-1.5 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-yellow-500 dark:bg-yellow-400"
+                              style={{ width: `${(item.pendingCount / item.count) * 100}%` }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Revenue Info */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-white dark:bg-gray-800 rounded-md p-3">
+                          <div className="text-xs text-gray-500 dark:text-gray-400">Total Revenue</div>
+                          <div className="text-sm font-medium text-gray-900 dark:text-white">
+                            {item.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} QAR
+                          </div>
+                        </div>
+                        <div className="bg-white dark:bg-gray-800 rounded-md p-3">
+                          <div className="text-xs text-gray-500 dark:text-gray-400">Average Price</div>
+                          <div className="text-sm font-medium text-gray-900 dark:text-white">
+                            {item.averagePrice.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} QAR
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
-
-                {expandedBrands[item.brand] && (
-                  <div className="mt-4 pl-8 space-y-4">
-                    {/* Status Distribution */}
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="space-y-1">
-                        <div className="flex justify-between text-xs text-gray-600 dark:text-gray-300">
-                          <span>Active</span>
-                          <span>{item.activeCount} ({((item.activeCount / item.count) * 100).toFixed(1)}%)</span>
-                        </div>
-                        <div className="h-1.5 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-green-500 dark:bg-green-400"
-                            style={{ width: `${(item.activeCount / item.count) * 100}%` }}
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        <div className="flex justify-between text-xs text-gray-600 dark:text-gray-300">
-                          <span>Sold</span>
-                          <span>{item.soldCount} ({((item.soldCount / item.count) * 100).toFixed(1)}%)</span>
-                        </div>
-                        <div className="h-1.5 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-blue-500 dark:bg-blue-400"
-                            style={{ width: `${(item.soldCount / item.count) * 100}%` }}
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        <div className="flex justify-between text-xs text-gray-600 dark:text-gray-300">
-                          <span>Pending</span>
-                          <span>{item.pendingCount} ({((item.pendingCount / item.count) * 100).toFixed(1)}%)</span>
-                        </div>
-                        <div className="h-1.5 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-yellow-500 dark:bg-yellow-400"
-                            style={{ width: `${(item.pendingCount / item.count) * 100}%` }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Revenue Info */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-white dark:bg-gray-800 rounded-md p-3">
-                        <div className="text-xs text-gray-500 dark:text-gray-400">Total Revenue</div>
-                        <div className="text-sm font-medium text-gray-900 dark:text-white">
-                          {item.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} QAR
-                        </div>
-                      </div>
-                      <div className="bg-white dark:bg-gray-800 rounded-md p-3">
-                        <div className="text-xs text-gray-500 dark:text-gray-400">Average Price</div>
-                        <div className="text-sm font-medium text-gray-900 dark:text-white">
-                          {item.averagePrice.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} QAR
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
+              ))}
           </div>
         </div>
 
@@ -1194,12 +1193,11 @@ export default function AdminDashboard() {
             {analytics?.recentActivity.map((activity) => (
               <div key={`${activity.timestamp}-${activity.action}`} className="flex items-start space-x-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                 <div className="flex-shrink-0">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                    activity.action === 'create' ? 'bg-green-100 dark:bg-green-900' :
-                    activity.action === 'update' ? 'bg-blue-100 dark:bg-blue-900' :
-                    activity.action === 'delete' ? 'bg-red-100 dark:bg-red-900' :
-                    'bg-gray-100 dark:bg-gray-900'
-                  }`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${activity.action === 'create' ? 'bg-green-100 dark:bg-green-900' :
+                      activity.action === 'update' ? 'bg-blue-100 dark:bg-blue-900' :
+                        activity.action === 'delete' ? 'bg-red-100 dark:bg-red-900' :
+                          'bg-gray-100 dark:bg-gray-900'
+                    }`}>
                     <div className="h-4 w-4"></div>
                   </div>
                 </div>
@@ -1241,7 +1239,7 @@ export default function AdminDashboard() {
               <div className="flex items-center gap-4">
                 <div className="flex items-center">
                   <span className="mr-2 text-sm text-gray-600 dark:text-gray-300">Sort:</span>
-                  <select 
+                  <select
                     value={sortOrder}
                     onChange={(e) => {
                       setSortOrder(e.target.value as 'newest' | 'oldest');
@@ -1266,11 +1264,10 @@ export default function AdminDashboard() {
                       setCarListingsStatus('pending');
                       fetchCarListings('pending');
                     }}
-                    className={`px-4 py-2 rounded-md text-sm font-medium ${
-                      carListingsStatus.toLowerCase() === 'pending'
+                    className={`px-4 py-2 rounded-md text-sm font-medium ${carListingsStatus.toLowerCase() === 'pending'
                         ? 'bg-yellow-500 text-white'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
-                    }`}
+                      }`}
                   >
                     Pending
                   </button>
@@ -1279,11 +1276,10 @@ export default function AdminDashboard() {
                       setCarListingsStatus('approved');
                       fetchCarListings('approved');
                     }}
-                    className={`px-4 py-2 rounded-md text-sm font-medium ${
-                      carListingsStatus === 'approved'
+                    className={`px-4 py-2 rounded-md text-sm font-medium ${carListingsStatus === 'approved'
                         ? 'bg-green-500 text-white'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
-                    }`}
+                      }`}
                   >
                     Approved
                   </button>
@@ -1292,11 +1288,10 @@ export default function AdminDashboard() {
                       setCarListingsStatus('rejected');
                       fetchCarListings('rejected');
                     }}
-                    className={`px-4 py-2 rounded-md text-sm font-medium ${
-                      carListingsStatus === 'rejected'
+                    className={`px-4 py-2 rounded-md text-sm font-medium ${carListingsStatus === 'rejected'
                         ? 'bg-red-500 text-white'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
-                    }`}
+                      }`}
                   >
                     Rejected
                   </button>
@@ -1305,11 +1300,10 @@ export default function AdminDashboard() {
                       setCarListingsStatus('Sold');
                       fetchCarListings('Sold');
                     }}
-                    className={`px-4 py-2 rounded-md text-sm font-medium ${
-                      carListingsStatus === 'Sold'
+                    className={`px-4 py-2 rounded-md text-sm font-medium ${carListingsStatus === 'Sold'
                         ? 'bg-blue-500 text-white'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
-                    }`}
+                      }`}
                   >
                     Sold
                   </button>
@@ -1334,7 +1328,7 @@ export default function AdminDashboard() {
                     </div>
                   )}
                 </div>
-                
+
                 {/* Car Details */}
                 <div className="p-4">
                   <div className="flex justify-between items-start mb-2">
@@ -1350,11 +1344,10 @@ export default function AdminDashboard() {
                       {/* Featured Toggle */}
                       <button
                         onClick={() => handleToggleFeature(car.id, car.is_featured)}
-                        className={`p-1.5 rounded-lg transition-colors duration-200 ${
-                          car.is_featured 
-                            ? 'text-yellow-500 hover:text-yellow-600' 
+                        className={`p-1.5 rounded-lg transition-colors duration-200 ${car.is_featured
+                            ? 'text-yellow-500 hover:text-yellow-600'
                             : 'text-gray-400 hover:text-yellow-500'
-                        }`}
+                          }`}
                         title={car.is_featured ? 'Remove from featured' : 'Add to featured'}
                       >
                         <div className="w-5 h-5"></div>
@@ -1426,7 +1419,7 @@ export default function AdminDashboard() {
           >
             <div className="w-6 h-6"></div>
           </button>
-          
+
           {images.length > 0 ? (
             <div className="flex-grow flex items-center justify-center">
               <Image
@@ -1449,11 +1442,10 @@ export default function AdminDashboard() {
                 <button
                   key={index}
                   onClick={() => setSelectedImage(image.url)}
-                  className={`w-16 h-16 rounded-md overflow-hidden border-2 ${
-                    selectedImage === image.url || (!selectedImage && index === 0)
+                  className={`w-16 h-16 rounded-md overflow-hidden border-2 ${selectedImage === image.url || (!selectedImage && index === 0)
                       ? 'border-qatar-maroon'
                       : 'border-transparent'
-                  }`}
+                    }`}
                 >
                   <Image
                     src={image.url}
@@ -1475,22 +1467,20 @@ export default function AdminDashboard() {
     <div className="flex items-center gap-2">
       <button
         onClick={() => setViewMode('grid')}
-        className={`p-2 rounded-md ${
-          viewMode === 'grid'
+        className={`p-2 rounded-md ${viewMode === 'grid'
             ? 'bg-qatar-maroon text-white'
             : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
-        }`}
+          }`}
         title="Grid View"
       >
         <div className="w-5 h-5"></div>
       </button>
       <button
         onClick={() => setViewMode('list')}
-        className={`p-2 rounded-md ${
-          viewMode === 'list'
+        className={`p-2 rounded-md ${viewMode === 'list'
             ? 'bg-qatar-maroon text-white'
             : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
-        }`}
+          }`}
         title="List View"
       >
         <div className="w-5 h-5"></div>
@@ -1536,18 +1526,17 @@ export default function AdminDashboard() {
             <div className="absolute top-2 right-2 flex gap-2">
               <button
                 onClick={() => handleToggleFeature(car.id, car.is_featured)}
-                className={`p-1.5 rounded-full ${
-                  car.is_featured
+                className={`p-1.5 rounded-full ${car.is_featured
                     ? 'bg-yellow-500 hover:bg-yellow-600'
                     : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
-                }`}
+                  }`}
                 title={car.is_featured ? 'Remove from featured' : 'Add to featured'}
               >
                 <div className="w-5 h-5"></div>
               </button>
             </div>
           </div>
-          
+
           <div className="p-4">
             <div className="flex justify-between items-start mb-2">
               <div>
@@ -1559,17 +1548,16 @@ export default function AdminDashboard() {
                 </p>
               </div>
               <div className="flex items-center">
-                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                  car.status === 'pending'
+                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${car.status === 'pending'
                     ? 'bg-yellow-100 text-yellow-800'
                     : car.status === 'approved'
-                    ? 'bg-green-100 text-green-800'
-                    : car.status === 'rejected'
-                    ? 'bg-red-100 text-red-800'
-                    : car.status === 'sold'
-                    ? 'bg-blue-100 text-blue-800'
-                    : 'bg-gray-100 text-gray-800'
-                }`}>
+                      ? 'bg-green-100 text-green-800'
+                      : car.status === 'rejected'
+                        ? 'bg-red-100 text-red-800'
+                        : car.status === 'sold'
+                          ? 'bg-blue-100 text-blue-800'
+                          : 'bg-gray-100 text-gray-800'
+                  }`}>
                   {car.status}
                 </span>
               </div>
@@ -1649,28 +1637,26 @@ export default function AdminDashboard() {
                 </div>
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                  car.status === 'pending'
+                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${car.status === 'pending'
                     ? 'bg-yellow-100 text-yellow-800'
                     : car.status === 'approved'
-                    ? 'bg-green-100 text-green-800'
-                    : car.status === 'rejected'
-                    ? 'bg-red-100 text-red-800'
-                    : car.status === 'sold'
-                    ? 'bg-blue-100 text-blue-800'
-                    : 'bg-gray-100 text-gray-800'
-                }`}>
+                      ? 'bg-green-100 text-green-800'
+                      : car.status === 'rejected'
+                        ? 'bg-red-100 text-red-800'
+                        : car.status === 'sold'
+                          ? 'bg-blue-100 text-blue-800'
+                          : 'bg-gray-100 text-gray-800'
+                  }`}>
                   {car.status}
                 </span>
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
                 <button
                   onClick={() => handleToggleFeature(car.id, car.is_featured)}
-                  className={`p-1.5 rounded-full ${
-                    car.is_featured
+                  className={`p-1.5 rounded-full ${car.is_featured
                       ? 'bg-yellow-500 hover:bg-yellow-600'
                       : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
-                  }`}
+                    }`}
                   title={car.is_featured ? 'Remove from featured' : 'Add to featured'}
                 >
                   <div className="w-5 h-5"></div>
@@ -1683,11 +1669,10 @@ export default function AdminDashboard() {
                       <button
                         onClick={() => handleCarStatusChange(car.id, 'approved')}
                         disabled={car.status === 'approved'}
-                        className={`p-1.5 rounded-md ${
-                          car.status === 'approved'
+                        className={`p-1.5 rounded-md ${car.status === 'approved'
                             ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                             : 'bg-green-500 text-white hover:bg-green-600'
-                        }`}
+                          }`}
                         title="Approve"
                       >
                         <div className="w-5 h-5"></div>
@@ -1695,11 +1680,10 @@ export default function AdminDashboard() {
                       <button
                         onClick={() => handleCarStatusChange(car.id, 'rejected')}
                         disabled={car.status === 'rejected'}
-                        className={`p-1.5 rounded-md ${
-                          car.status === 'rejected'
+                        className={`p-1.5 rounded-md ${car.status === 'rejected'
                             ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                             : 'bg-red-500 text-white hover:bg-red-600'
-                        }`}
+                          }`}
                         title="Reject"
                       >
                         <div className="w-5 h-5"></div>

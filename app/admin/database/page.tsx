@@ -21,14 +21,14 @@ interface DatabaseStats {
 
 const exportToCSV = (data: any[], filename: string) => {
   if (!data.length) return;
-  
+
   const headers = Object.keys(data[0]);
-  const rows = data.map(item => 
+  const rows = data.map(item =>
     headers.map(header => {
       const cell = item[header];
       const value = typeof cell === 'object' && cell !== null ? JSON.stringify(cell) : cell;
       return typeof value === 'string' && (value.includes(',') || value.includes('"'))
-        ? `"${value.replace(/"/g, '""')}"` 
+        ? `"${value.replace(/"/g, '""')}"`
         : value;
     })
   );
@@ -101,7 +101,7 @@ export default function AdminDatabasePage() {
     };
 
     checkAdminStatus();
-  }, [user, router, authLoading]);
+  }, [user?.id, router, authLoading]);
 
   const fetchDatabaseStats = async () => {
     setLoading(true);

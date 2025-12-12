@@ -120,7 +120,7 @@ interface SparePart {
   description_ar?: string | null;
   price: number;
   currency: string;
-  status: 'pending' | 'approved' | 'rejected' | 'expired' | 'sold' | 'archived' ;
+  status: 'pending' | 'approved' | 'rejected' | 'expired' | 'sold' | 'archived';
   created_at: string;
   is_featured: boolean;
   brand: {
@@ -251,42 +251,41 @@ const CarsTab = ({
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
       {cars.map((car) => (
-        <div 
-          key={car.id} 
+        <div
+          key={car.id}
           className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-200"
         >
-          <Link 
+          <Link
             href={`/${currentCountry?.code.toLowerCase()}/cars/${car.id}`}
             className="block group"
           >
             <div className="relative aspect-[16/9] bg-gray-100 dark:bg-gray-800">
-            {car.images && car.images.length > 0 ? (
-              <Image
-                src={car.images[0].url}
-                alt={`${car.brand?.name || ''} ${car.model?.name || ''}`}
-                fill
-                className="object-cover group-hover:brightness-90 transition-all duration-200"
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-gray-200 dark:bg-gray-700">
-                <span className="text-gray-400">No image</span>
-              </div>
-            )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-          </div>
+              {car.images && car.images.length > 0 ? (
+                <Image
+                  src={car.images[0].url}
+                  alt={`${car.brand?.name || ''} ${car.model?.name || ''}`}
+                  fill
+                  className="object-cover group-hover:brightness-90 transition-all duration-200"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-gray-200 dark:bg-gray-700">
+                  <span className="text-gray-400">No image</span>
+                </div>
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+            </div>
             <div className="p-4">
               <div className="flex justify-between items-start">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-qatar-maroon transition-colors">
                   {language === 'ar' && car.brand?.name_ar ? car.brand.name_ar : car.brand?.name} {language === 'ar' && car.model?.name_ar ? car.model.name_ar : car.model?.name}
                 </h3>
-                <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                  car.status === t('common.status.approved') ? 'bg-green-100 text-green-800' :
+                <span className={`px-2 py-1 text-xs font-medium rounded-full ${car.status === t('common.status.approved') ? 'bg-green-100 text-green-800' :
                   car.status === t('common.status.pending') ? 'bg-yellow-100 text-yellow-800' :
-                  car.status === t('common.status.rejected') ? 'bg-red-100 text-red-800' :
-                  car.status === t('common.status.expired') ? 'bg-gray-100 text-gray-800' :
-                  'bg-blue-100 text-blue-800'
-                }`}>
+                    car.status === t('common.status.rejected') ? 'bg-red-100 text-red-800' :
+                      car.status === t('common.status.expired') ? 'bg-gray-100 text-gray-800' :
+                        'bg-blue-100 text-blue-800'
+                  }`}>
                   {t(`common.status.${car.status.toLowerCase()}`)}
                 </span>
               </div>
@@ -295,7 +294,7 @@ const CarsTab = ({
               </p>
             </div>
           </Link>
-          
+
           <div className="p-4 pt-0">
             <div className="flex justify-between items-center">
               <button
@@ -415,12 +414,12 @@ const SparePartsTab = ({
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
       {spareParts.map((part) => (
-        <div 
-          key={part.id} 
+        <div
+          key={part.id}
           className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-200"
           onClick={(e) => handleSparePartClick(part, e)}
         >
-          <Link 
+          <Link
             href={`/${currentCountry?.code.toLowerCase()}/spare-parts/${part.id}`}
             className="block group"
           >
@@ -439,13 +438,12 @@ const SparePartsTab = ({
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-qatar-maroon transition-colors">
                   {language === 'ar' && part.name_ar ? part.name_ar : part.title}
                 </h3>
-                <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                  part.status === t('common.status.approved') ? 'bg-green-100 text-green-800' :
+                <span className={`px-2 py-1 text-xs font-medium rounded-full ${part.status === t('common.status.approved') ? 'bg-green-100 text-green-800' :
                   part.status === t('common.status.pending') ? 'bg-yellow-100 text-yellow-800' :
-                  part.status === t('common.status.rejected') ? 'bg-red-100 text-red-800' :
-                  part.status === t('common.status.expired') ? 'bg-gray-100 text-gray-800' :
-                  'bg-blue-100 text-blue-800'
-                }`}>
+                    part.status === t('common.status.rejected') ? 'bg-red-100 text-red-800' :
+                      part.status === t('common.status.expired') ? 'bg-gray-100 text-gray-800' :
+                        'bg-blue-100 text-blue-800'
+                  }`}>
                   {t(`common.status.${part.status.toLowerCase()}`)}
                 </span>
               </div>
@@ -454,7 +452,7 @@ const SparePartsTab = ({
               </p>
             </div>
           </Link>
-          
+
           <div className="p-4 pt-0">
             <div className="flex justify-between items-center">
               <button
@@ -519,11 +517,11 @@ export default function MyAdsPage() {
   const router = useRouter();
   const { t, language } = useLanguage();
   const { currentCountry } = useCountry();
-  
+
   const [activeTab, setActiveTab] = useState<TabType>('cars');
   const [sortOption, setSortOption] = useState<SortOption>(SORT_OPTIONS[0]);
   const [showSortOptions, setShowSortOptions] = useState(false);
-  
+
   const [cars, setCars] = useState<ExtendedCarWithStatus[]>([]);
   const [spareParts, setSpareParts] = useState<SparePart[]>([]);
   interface Notification {
@@ -547,7 +545,7 @@ export default function MyAdsPage() {
   const [showSoldModal, setShowSoldModal] = useState(false);
   const [deleteItemType, setDeleteItemType] = useState<'car' | 'sparePart'>('car');
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'expired' | 'sold' | 'archived'>('all');
-  
+
   const handleDeleteClick = (car: ExtendedCarWithStatus) => {
     setSelectedCar(car);
     setShowDeleteModal(true);
@@ -560,7 +558,7 @@ export default function MyAdsPage() {
 
   const handleDeleteConfirm = async () => {
     if ((!selectedCar && !selectedSparePart) || !deleteItemType) return;
-    
+
     setActionLoading(true);
     try {
       if (deleteItemType === 'car' && selectedCar) {
@@ -568,9 +566,9 @@ export default function MyAdsPage() {
           .from('cars')
           .update({ status: 'archived' })
           .eq('id', selectedCar.id);
-        
+
         if (error) throw error;
-        
+
         // Refresh cars data instead of updating locally
         await fetchCars();
       } else if (deleteItemType === 'sparePart' && selectedSparePart) {
@@ -578,12 +576,12 @@ export default function MyAdsPage() {
           .from('spare_parts')
           .update({ status: 'archived' })
           .eq('id', selectedSparePart.id);
-           
+
         if (error) throw error;
-         
+
         // Update local state to reflect the deletion
         setSpareParts(spareParts.filter(part => part.id !== selectedSparePart.id));
-       
+
         // Refresh spare parts data from server to ensure consistency
         await fetchSpareParts();
       }
@@ -601,212 +599,212 @@ export default function MyAdsPage() {
   };
 
   // Mark as Sold handler
-const handleSoldConfirm = async () => {
-  if (!selectedCar && !selectedSparePart) return;
-  
-  setActionLoading(true);
-  
-  try {
-    if (selectedCar) {
-      // Update car status in the database
-      const { error } = await supabase
+  const handleSoldConfirm = async () => {
+    if (!selectedCar && !selectedSparePart) return;
+
+    setActionLoading(true);
+
+    try {
+      if (selectedCar) {
+        // Update car status in the database
+        const { error } = await supabase
+          .from('cars')
+          .update({ status: 'sold' })
+          .eq('id', selectedCar.id);
+
+        if (error) throw error;
+
+        // Update local state directly
+        setCars(prevCars =>
+          prevCars.map(car =>
+            car.id === selectedCar.id ? { ...car, status: 'sold' } : car
+          )
+        );
+      } else if (selectedSparePart) {
+        // Update spare part status in the database
+        const { error } = await supabase
+          .from('spare_parts')
+          .update({ status: 'sold' })
+          .eq('id', selectedSparePart.id);
+
+        if (error) throw error;
+
+        // Update local state directly instead of refetching
+        setSpareParts(prevParts =>
+          prevParts.map(part =>
+            part.id === selectedSparePart.id ? { ...part, status: 'sold' } : part
+          )
+        );
+      }
+
+      // Close the modal and show success message
+      setShowSoldModal(false);
+      toast.success(t('myAds.markedAsSold'));
+    } catch (error) {
+      console.error('Error marking as sold:', error);
+      toast.error(t('myAds.error.markAsSold'));
+
+      // Re-fetch data from server on error to ensure consistency
+      if (selectedCar) {
+        fetchCars();
+      } else if (selectedSparePart) {
+        fetchSpareParts();
+      }
+    } finally {
+      setActionLoading(false);
+      setSelectedCar(null);
+      setSelectedSparePart(null);
+    }
+  };
+
+  const handleMarkSparePartAsSold = (sparePart: SparePart) => {
+    setSelectedSparePart(sparePart);
+    setShowSoldModal(true);
+  };
+
+  // Edit car handler
+  const handleEditCar = (car: ExtendedCarWithStatus) => {
+    setSelectedCar(car);
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditSparePart = (sparePart: SparePart) => {
+    setSelectedSparePart(sparePart);
+    setIsEditSparePartModalOpen(true);
+  };
+
+  const handleDeleteSparePart = (sparePart: SparePart) => {
+    setSelectedSparePart(sparePart);
+    setDeleteItemType('sparePart');
+    setShowDeleteModal(true);
+  };
+
+  const handleEditComplete = async (updatedCar: ExtendedCarWithStatus) => {
+    try {
+      setCars(cars.map(car =>
+        car.id === updatedCar.id ? updatedCar : car
+      ));
+      setIsEditModalOpen(false);
+      toast.success(t('myAds.updateSuccess'));
+      return true;
+    } catch (error) {
+      console.error('Error updating car:', error);
+      toast.error(t('myAds.updateError'));
+      return false;
+    }
+  };
+
+  const handleRenew = async (carId: number) => {
+    if (!user) return;
+
+    const car = cars.find(c => c.id === carId);
+    if (!car) {
+      toast.error(t('myAds.carNotFound'));
+      return;
+    }
+
+    // Check if the car is expired before renewal
+    if (car.status !== 'expired') {
+      toast.error(t('myAds.onlyExpiredCanRenew'));
+      return;
+    }
+
+    setRenewingCarId(carId);
+    try {
+      // Update status to approved and set expiration date to 30 days from now
+      const { error: updateError } = await supabase
         .from('cars')
-        .update({ status: 'sold' })
-        .eq('id', selectedCar.id);
+        .update({
+          status: 'approved',
+          expiration_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+        })
+        .eq('id', carId);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
 
-      // Update local state directly
-      setCars(prevCars => 
-        prevCars.map(car => 
-          car.id === selectedCar.id ? { ...car, status: 'sold' } : car
-        )
-      );
-    } else if (selectedSparePart) {
-      // Update spare part status in the database
-      const { error } = await supabase
-        .from('spare_parts')
-        .update({ status: 'sold' })
-        .eq('id', selectedSparePart.id);
+      // Update local state to reflect the new status and refresh data
+      setCars(cars.map(c =>
+        c.id === carId ? { ...c, status: 'approved' } : c
+      ));
 
-      if (error) throw error;
-
-      // Update local state directly instead of refetching
-      setSpareParts(prevParts => 
-        prevParts.map(part => 
-          part.id === selectedSparePart.id ? { ...part, status: 'sold' } : part
-        )
-      );
+      // Refresh data from server
+      await fetchCars();
+      toast.success(t('car.renewedSuccessfully'));
+    } catch (error) {
+      console.error('Error renewing car:', error);
+      toast.error(t('common.errorOccurred'));
+    } finally {
+      setRenewingCarId(null);
     }
-    
-    // Close the modal and show success message
-    setShowSoldModal(false);
-    toast.success(t('myAds.markedAsSold'));
-  } catch (error) {
-    console.error('Error marking as sold:', error);
-    toast.error(t('myAds.error.markAsSold'));
-    
-    // Re-fetch data from server on error to ensure consistency
-    if (selectedCar) {
-      fetchCars();
-    } else if (selectedSparePart) {
-      fetchSpareParts();
+  };
+
+  const handleRenewSparePart = async (sparePartId: string) => {
+    if (!user) return;
+
+    const sparePart = spareParts.find(p => p.id === sparePartId);
+    if (!sparePart) {
+      toast.error(t('myAds.sparePartNotFound'));
+      return;
     }
-  } finally {
-    setActionLoading(false);
-    setSelectedCar(null);
-    setSelectedSparePart(null);
-  }
-};
 
-const handleMarkSparePartAsSold = (sparePart: SparePart) => {
-  setSelectedSparePart(sparePart);
-  setShowSoldModal(true);
-};
+    // Check if the spare part is expired before renewal
+    if (sparePart.status !== 'expired') {
+      toast.error(t('myAds.onlyExpiredCanRenew'));
+      return;
+    }
 
-// Edit car handler
-const handleEditCar = (car: ExtendedCarWithStatus) => {
-  setSelectedCar(car);
-  setIsEditModalOpen(true);
-};
+    setRenewingSparePartId(sparePartId);
+    try {
+      // Update status and let database trigger handle the expiration date
+      const { error: updateError } = await supabase.rpc('renew_spare_part', {
+        part_id: sparePartId
+      });
 
-const handleEditSparePart = (sparePart: SparePart) => {
-  setSelectedSparePart(sparePart);
-  setIsEditSparePartModalOpen(true);
-};
+      if (updateError) throw updateError;
 
-const handleDeleteSparePart = (sparePart: SparePart) => {
-  setSelectedSparePart(sparePart);
-  setDeleteItemType('sparePart');
-  setShowDeleteModal(true);
-};
+      // Calculate new expiration date (30 days from now)
+      const newExpirationDate = new Date();
+      newExpirationDate.setDate(newExpirationDate.getDate() + 30);
 
-const handleEditComplete = async (updatedCar: ExtendedCarWithStatus) => {
-  try {
-    setCars(cars.map(car => 
-      car.id === updatedCar.id ? updatedCar : car
-    ));
-    setIsEditModalOpen(false);
-    toast.success(t('myAds.updateSuccess'));
-    return true;
-  } catch (error) {
-    console.error('Error updating car:', error);
-    toast.error(t('myAds.updateError'));
-    return false;
-  }
-};
-
-const handleRenew = async (carId: number) => {
-  if (!user) return;
-  
-  const car = cars.find(c => c.id === carId);
-  if (!car) {
-    toast.error(t('myAds.carNotFound'));
-    return;
-  }
-
-  // Check if the car is expired before renewal
-  if (car.status !== 'expired') {
-    toast.error(t('myAds.onlyExpiredCanRenew'));
-    return;
-  }
-
-  setRenewingCarId(carId);
-  try {
-    // Update status to approved and set expiration date to 30 days from now
-    const { error: updateError } = await supabase
-      .from('cars')
-      .update({ 
-        status: 'approved',
-        expiration_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-      })
-      .eq('id', carId);
-
-    if (updateError) throw updateError;
-
-    // Update local state to reflect the new status and refresh data
-    setCars(cars.map(c => 
-      c.id === carId ? { ...c, status: 'approved' } : c
-    ));
-    
-    // Refresh data from server
-    await fetchCars();
-    toast.success(t('car.renewedSuccessfully'));
-  } catch (error) {
-    console.error('Error renewing car:', error);
-    toast.error(t('common.errorOccurred'));
-  } finally {
-    setRenewingCarId(null);
-  }
-};
-
-const handleRenewSparePart = async (sparePartId: string) => {
-  if (!user) return;
-  
-  const sparePart = spareParts.find(p => p.id === sparePartId);
-  if (!sparePart) {
-    toast.error(t('myAds.sparePartNotFound'));
-    return;
-  }
-
-  // Check if the spare part is expired before renewal
-  if (sparePart.status !== 'expired') {
-    toast.error(t('myAds.onlyExpiredCanRenew'));
-    return;
-  }
-
-  setRenewingSparePartId(sparePartId);
-  try {
-    // Update status and let database trigger handle the expiration date
-    const { error: updateError } = await supabase.rpc('renew_spare_part', {
-      part_id: sparePartId
-    });
-
-    if (updateError) throw updateError;
-
-    // Calculate new expiration date (30 days from now)
-    const newExpirationDate = new Date();
-    newExpirationDate.setDate(newExpirationDate.getDate() + 30);
-
-    // Update local state optimistically
-    setSpareParts(prevParts => 
-      prevParts.map(p => 
-        p.id === sparePartId 
-          ? { 
-              ...p, 
+      // Update local state optimistically
+      setSpareParts(prevParts =>
+        prevParts.map(p =>
+          p.id === sparePartId
+            ? {
+              ...p,
               status: 'approved',
               expiration_date: newExpirationDate.toISOString()
-            } 
-          : p
-      )
-    );
-    
-    toast.success(t('spareParts.renewedSuccessfully'));
-  } catch (error) {
-    console.error('Error renewing spare part:', error);
-    toast.error(t('common.errorOccurred'));
-    // Refresh data from server to ensure consistency
-    await fetchSpareParts();
-  } finally {
-    setRenewingSparePartId(null);
-  }
-};
+            }
+            : p
+        )
+      );
+
+      toast.success(t('spareParts.renewedSuccessfully'));
+    } catch (error) {
+      console.error('Error renewing spare part:', error);
+      toast.error(t('common.errorOccurred'));
+      // Refresh data from server to ensure consistency
+      await fetchSpareParts();
+    } finally {
+      setRenewingSparePartId(null);
+    }
+  };
   useEffect(() => {
     if (user) {
       fetchCars();
       fetchSpareParts();
       fetchNotifications();
-      
+
       // Set up real-time subscription for view count updates
       const viewCountSubscription = supabase
         .channel('car_views_updates')
-        .on('postgres_changes', 
-          { 
-            event: 'UPDATE', 
-            schema: 'public', 
+        .on('postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
             table: 'cars',
             filter: `user_id=eq.${user.id}`
-          }, 
+          },
           (payload) => {
             setCars(currentCars => {
               return currentCars.map(car => {
@@ -824,11 +822,11 @@ const handleRenewSparePart = async (sparePartId: string) => {
         viewCountSubscription.unsubscribe();
       };
     }
-  }, [user, filter]);
+  }, [user?.id, filter]);
 
   const fetchSpareParts = async () => {
     if (!user) return;
-    
+
     try {
       setLoading(true);
       let query = supabase
@@ -875,9 +873,9 @@ const handleRenewSparePart = async (sparePartId: string) => {
           city:cities(id, name, name_ar, country_id),
           country:countries(id, name, name_ar, currency_code)
         `)
-         .eq('user_id', user?.id)
-         .neq('status', 'archived')
-         .eq(filter !== 'all' ? 'status' : '', filter !== 'all' ? filter.toLowerCase() : '')
+        .eq('user_id', user?.id)
+        .neq('status', 'archived')
+        .eq(filter !== 'all' ? 'status' : '', filter !== 'all' ? filter.toLowerCase() : '')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -1027,8 +1025,8 @@ const handleRenewSparePart = async (sparePartId: string) => {
           <nav className="-mb-px flex space-x-8">
             <button
               onClick={() => setActiveTab('cars')}
-              className={`${activeTab === 'cars' 
-                ? 'border-qatar-maroon text-qatar-maroon' 
+              className={`${activeTab === 'cars'
+                ? 'border-qatar-maroon text-qatar-maroon'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200'} 
                 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
             >
@@ -1036,8 +1034,8 @@ const handleRenewSparePart = async (sparePartId: string) => {
             </button>
             <button
               onClick={() => setActiveTab('spare-parts')}
-              className={`${activeTab === 'spare-parts' 
-                ? 'border-qatar-maroon text-qatar-maroon' 
+              className={`${activeTab === 'spare-parts'
+                ? 'border-qatar-maroon text-qatar-maroon'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200'} 
                 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
             >
@@ -1055,18 +1053,17 @@ const handleRenewSparePart = async (sparePartId: string) => {
                 <button
                   key={status}
                   onClick={() => setFilter(status as any)}
-                  className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    filter === status
-                      ? 'bg-qatar-maroon text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600'
-                  }`}
+                  className={`px-3 py-1 rounded-full text-xs font-medium ${filter === status
+                    ? 'bg-qatar-maroon text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600'
+                    }`}
                 >
                   {t(`common.status.${status}`)}
                 </button>
               ))}
             </div>
           </div>
-          
+
           {/* Sort dropdown */}
           <div className="relative">
             <button
@@ -1082,7 +1079,7 @@ const handleRenewSparePart = async (sparePartId: string) => {
                 <ArrowDownIcon className="ml-2 h-4 w-4" />
               )}
             </button>
-            
+
             {showSortOptions && (
               <div className="absolute sm:right md:left-0 mt-1 w-48 rounded-lg shadow-xl bg-white dark:bg-gray-800 ring-1 ring-gray-200 dark:ring-gray-700 z-50 overflow-hidden transition-all duration-150 ease-in-out transform origin-top-right">
                 <div className="py-1" role="menu">
@@ -1093,11 +1090,10 @@ const handleRenewSparePart = async (sparePartId: string) => {
                         setSortOption(option);
                         setShowSortOptions(false);
                       }}
-                      className={`block w-full text-left px-4 py-2 text-sm ${
-                        sortOption.id === option.id
-                          ? 'bg-gray-100 dark:bg-gray-700 text-qatar-maroon'
-                          : 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
-                      }`}
+                      className={`block w-full text-left px-4 py-2 text-sm ${sortOption.id === option.id
+                        ? 'bg-gray-100 dark:bg-gray-700 text-qatar-maroon'
+                        : 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        }`}
                       role="menuitem"
                     >
                       {language === 'en' ? option.name : option.name_ar}
@@ -1113,11 +1109,11 @@ const handleRenewSparePart = async (sparePartId: string) => {
         <div className="mb-8">
           {activeTab === 'cars' ? (
             filteredAndSortedCars.length > 0 ? (
-              <CarsTab 
-                loading={loading} 
-                cars={filteredAndSortedCars} 
-                t={t} 
-                currentCountry={currentCountry} 
+              <CarsTab
+                loading={loading}
+                cars={filteredAndSortedCars}
+                t={t}
+                currentCountry={currentCountry}
                 language={language}
                 isExpired={isExpired}
                 handleRenew={handleRenew}
@@ -1136,8 +1132,8 @@ const handleRenewSparePart = async (sparePartId: string) => {
               </div>
             )
           ) : filteredAndSortedSpareParts.length > 0 ? (
-            <SparePartsTab 
-              loading={loading} 
+            <SparePartsTab
+              loading={loading}
               spareParts={filteredAndSortedSpareParts}
               t={t}
               currentCountry={currentCountry}
@@ -1156,7 +1152,7 @@ const handleRenewSparePart = async (sparePartId: string) => {
                 {t('myAds.noSparePartsFound')}
               </p>
             </div>
-          )}  
+          )}
         </div>
       </div>
 
@@ -1319,7 +1315,7 @@ const handleRenewSparePart = async (sparePartId: string) => {
           }}
           onEditComplete={(formData: SparePartFormData) => {
             // Update the spare part in the local state
-            setSpareParts(prev => 
+            setSpareParts(prev =>
               prev.map(sp => {
                 if (sp.id === formData.id) {
                   // Create a new spare part with updated fields

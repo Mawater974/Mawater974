@@ -35,7 +35,7 @@ const getImageDimensions = (file: File): Promise<{ width: number; height: number
   return new Promise((resolve) => {
     const img = new Image();
     const objectUrl = URL.createObjectURL(file);
-    
+
     img.onload = () => {
       resolve({
         width: img.width,
@@ -43,12 +43,12 @@ const getImageDimensions = (file: File): Promise<{ width: number; height: number
       });
       URL.revokeObjectURL(objectUrl);
     };
-    
+
     img.onerror = () => {
       resolve({ width: 0, height: 0 });
       URL.revokeObjectURL(objectUrl);
     };
-    
+
     img.src = objectUrl;
   });
 };
@@ -61,7 +61,7 @@ const convertHeicToJpeg = async (file: File): Promise<File> => {
       toType: 'image/jpeg',
       quality: 0.9
     }) as Blob;
-    
+
     return new File(
       [jpegBlob],
       file.name.replace(/\.[^/.]+$/, '.jpg'),
@@ -76,14 +76,14 @@ const convertHeicToJpeg = async (file: File): Promise<File> => {
 // Compress image with optimized settings
 const compressImage = async (file: File, isFeatured: boolean = false): Promise<File> => {
   const fileType = file.type.toLowerCase();
-  
+
   // Skip non-image files or unsupported image types
   if (!fileType.startsWith('image/') ||
-      (fileType !== 'image/jpeg' &&
-       fileType !== 'image/png' &&
-       fileType !== 'image/webp' &&
-       !fileType.includes('heic') &&
-       !fileType.includes('heif'))) {
+    (fileType !== 'image/jpeg' &&
+      fileType !== 'image/png' &&
+      fileType !== 'image/webp' &&
+      !fileType.includes('heic') &&
+      !fileType.includes('heif'))) {
     console.warn(`Unsupported file type: ${fileType}. File will be uploaded as-is.`);
     return file;
   }
@@ -118,12 +118,12 @@ const compressImage = async (file: File, isFeatured: boolean = false): Promise<F
     };
 
     const compressedBlob = await imageCompression(processedFile, options);
-    
+
     // Create a new File object with the correct MIME type and extension
     return new File(
       [compressedBlob],
       `${file.name.replace(/\.[^/.]+$/, '')}.webp`,
-      { 
+      {
         type: 'image/webp',
         lastModified: Date.now()
       }
@@ -179,15 +179,15 @@ export type FormData = {
       exp_month: number;
       exp_year: number;
     },
-    client_attrabution_metadata:{
-    client_session_id: string;
-     
+    client_attrabution_metadata: {
+      client_session_id: string;
+
     }
   }
 
-    
 
-    
+
+
 };
 
 const initialFormData: FormData = {
@@ -201,7 +201,7 @@ const initialFormData: FormData = {
   images: [],
   country_id: null,
   city_id: '',
-  city: '', 
+  city: '',
   fuel_type: '',
   gearbox_type: '',
   body_type: '',
@@ -212,7 +212,7 @@ const initialFormData: FormData = {
   drive_type: '',
   warranty: '',
   warranty_months_remaining: '',
-  mainPhotoIndex: 0, 
+  mainPhotoIndex: 0,
   payment_intent_id: '',
   payment_method_id: '',
   payment_status: '',
@@ -230,7 +230,7 @@ const fuelTypes = ['Petrol', 'Diesel', 'Hybrid', 'Electric'];
 const gearboxTypes = ['Manual', 'Automatic'];
 const bodyTypes = ['Sedan', 'SUV', 'Hatchback', 'Coupe', 'Pickup', 'Truck', 'Van', 'Wagon', 'Convertible', 'Other'];
 const conditions = ['New', 'Excellent', 'Good', 'Not Working'];
-const colors =['White', 'Black', 'Silver', 'Gray', 'Red', 'Blue', 'Green', 'Yellow', 'Orange', 'Brown', 'Purple', 'Gold', 'Beige', 'Maroon', 'Navy', 'Bronze', 'Other'];
+const colors = ['White', 'Black', 'Silver', 'Gray', 'Red', 'Blue', 'Green', 'Yellow', 'Orange', 'Brown', 'Purple', 'Gold', 'Beige', 'Maroon', 'Navy', 'Bronze', 'Other'];
 
 export default function NewSellPage() {
   const { user } = useAuth();
@@ -239,44 +239,44 @@ export default function NewSellPage() {
   const stepParam = searchParams.get('step');
   const { t, currentLanguage } = useLanguage();
   const { currentCountry } = useCountry();
-  
+
   // Form state
   const [formData, setFormData] = useState<FormData>({
     ...initialFormData,
     country_id: currentCountry?.id || null,
   });
-  
+
   // Main photo state
   const [mainPhotoIndex, setMainPhotoIndex] = useState<number | null>(null);
-  
+
   // State for tracking payment completion
   const [paymentCompleted, setPaymentCompleted] = useState(false);
   const [paymentData, setPaymentData] = useState<any>(null);
-  
+
   // Check if current step is complete
   const isStepComplete = (stepIndex: number) => {
     const step = steps[stepIndex];
     if (!step) return false;
-    
+
     // Special handling for payment step
     if (step.id === 'payment') {
       return paymentCompleted;
     }
-    
+
     // Default validation for other steps
     return true;
   };
-  
+
   // Handle next step
   const handleNext = () => {
     if (currentStep < steps.length - 1) {
       setCurrentStep(prev => prev + 1);
     }
   };
-  
+
   // UI state - Initialize with step from URL if provided
   const [currentStep, setCurrentStep] = useState(0);
-  
+
   // Handle step parameter from URL
   useEffect(() => {
     if (stepParam) {
@@ -290,7 +290,7 @@ export default function NewSellPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPaymentCompleted, setIsPaymentCompleted] = useState(false);
-  
+
   // Data
   const [brands, setBrands] = useState<Brand[]>([]);
   const [models, setModels] = useState<Model[]>([]);
@@ -304,7 +304,7 @@ export default function NewSellPage() {
           .from('brands')
           .select('*')
           .order('name');
-        
+
         if (error) throw error;
         setBrands(data || []);
       } catch (error) {
@@ -336,7 +336,7 @@ export default function NewSellPage() {
         .select('*')
         .eq('brand_id', brandId)
         .order('name');
-      
+
       if (error) throw error;
       setModels(data || []);
     } catch (error) {
@@ -344,7 +344,7 @@ export default function NewSellPage() {
       toast.error('Failed to load models');
     }
   };
-  
+
   // Function to handle moving to the next step
   const goToNextStep = () => {
     if (currentStep < steps.length - 1) {
@@ -354,11 +354,11 @@ export default function NewSellPage() {
 
   // Steps configuration
   const steps = [
-    { 
-      id: 'plan', 
+    {
+      id: 'plan',
       title: t('sell.plan.title'),
       component: (
-        <PlanSelection 
+        <PlanSelection
           onSelectPlan={(isFeatured) => {
             setFormData(prev => ({ ...prev, is_featured: isFeatured }));
           }}
@@ -368,16 +368,16 @@ export default function NewSellPage() {
         />
       )
     },
-    { 
-      id: 'payment', 
+    {
+      id: 'payment',
       title: t('sell.payment.title'),
       condition: () => formData.is_featured === true && !paymentCompleted,
       component: (
         <div className="space-y-6">
           <h2 className="text-2xl font-bold text-center text-black dark:text-white">{t('sell.payment.title')}</h2>
           <p className="text-gray-600 text-center text-black dark:text-white">{t('sell.payment.description')}</p>
-          
-          <PaymentStep 
+
+          <PaymentStep
             formData={formData}
             onPaymentSuccess={(data) => {
               // Update form data with payment details
@@ -406,16 +406,16 @@ export default function NewSellPage() {
             }}
             onContinue={() => setPaymentCompleted(true)}
           />
-          
-          
+
+
         </div>
       )
     },
-    { 
-      id: 'basic-info', 
+    {
+      id: 'basic-info',
       title: t('sell.basic.title'),
       component: (
-        <BasicInfoStep 
+        <BasicInfoStep
           formData={formData}
           onFormChange={(field, value) => setFormData(prev => ({ ...prev, [field]: value }))}
           onNext={goToNextStep}
@@ -428,11 +428,11 @@ export default function NewSellPage() {
         />
       )
     },
-    { 
-      id: 'detailed-info', 
+    {
+      id: 'detailed-info',
       title: t('sell.details.title'),
       component: (
-        <DetailedInfoStep 
+        <DetailedInfoStep
           formData={formData}
           onFormChange={(field, value) => setFormData(prev => ({ ...prev, [field]: value }))}
           onNext={goToNextStep}
@@ -447,19 +447,19 @@ export default function NewSellPage() {
             { id: 'gearbox_type', name: t('sell.details.gearboxType'), type: 'select', options: gearboxTypes.map(type => t(`car.gearboxType.${type.toLowerCase()}`)), required: true },
             { id: 'body_type', name: t('sell.details.bodyType'), type: 'select', options: bodyTypes.map(type => t(`car.bodyType.${type.toLowerCase()}`)), required: true },
             { id: 'color', name: t('sell.details.color'), type: 'select', options: colors.map(type => t(`car.color.${type.toLowerCase()}`)), required: true },
-            { id: 'condition', name: t('sell.details.condition'), type: 'select', options:conditions.map(type => t(`car.condition.${type.toLowerCase().replace(' ', '_')}`)), required: true }, 
+            { id: 'condition', name: t('sell.details.condition'), type: 'select', options: conditions.map(type => t(`car.condition.${type.toLowerCase().replace(' ', '_')}`)), required: true },
             { id: 'cylinders', name: t('sell.details.cylinders'), type: 'select', options: cylinderOptions.map(type => t(`car.cylinders.${type.toLowerCase()}`)), required: true },
             { id: 'doors', name: t('sell.details.doors'), type: 'select', options: doorOptions.map(type => t(`car.doors.${type.toLowerCase()}`)), required: false },
             { id: 'drive_type', name: t('sell.details.driveType'), type: 'select', options: driveTypeOptions.map(type => t(`car.driveType.${type.toLowerCase()}`)), required: false },
             { id: 'warranty', name: t('sell.details.warranty'), type: 'select', options: warrantyOptions.map(type => t(`car.warranty.${type.toLowerCase()}`)), required: false },
-            { 
-              id: 'city_id', 
-              name: t('sell.details.city'), 
-              type: 'select', 
-              options: cities, 
+            {
+              id: 'city_id',
+              name: t('sell.details.city'),
+              type: 'select',
+              options: cities,
               optionValueKey: 'id',
               optionLabelKey: currentLanguage === 'ar' ? 'name_ar' : 'name',
-              required: true 
+              required: true
             },
             /*}...(formData.warranty === 'Yes' ? [{
               id: 'warranty_months_remaining',
@@ -472,11 +472,11 @@ export default function NewSellPage() {
         />
       )
     },
-    { 
-      id: 'media', 
+    {
+      id: 'media',
       title: t('sell.steps.images'),
       component: (
-        <MediaUploadStep 
+        <MediaUploadStep
           onFilesChange={(files) => {
             // Store both high-res and thumbnail versions in the form data
             setFormData(prev => ({ ...prev, images: files }));
@@ -497,11 +497,11 @@ export default function NewSellPage() {
         />
       )
     },
-    { 
-      id: 'preview', 
+    {
+      id: 'preview',
       title: t('sell.steps.review'),
       component: (
-        <PreviewStep 
+        <PreviewStep
           formData={formData}
           onSubmit={handleSubmit}
           onBack={() => setCurrentStep(prev => prev - 1)}
@@ -518,7 +518,7 @@ export default function NewSellPage() {
       )
     },
   ];
-  
+
   // Filter steps based on conditions (e.g., skip payment for free plan)
   const visibleSteps = useMemo(() => {
     return steps.filter(step => {
@@ -532,7 +532,7 @@ export default function NewSellPage() {
     try {
       setIsSubmitting(true);
       setError(null);
-      
+
       // Validate required fields
       const requiredFields = [
         { field: 'brand_id', message: t('errors.brand_required') },
@@ -543,18 +543,18 @@ export default function NewSellPage() {
         { field: 'description', message: t('errors.description_required') },
         { field: 'city_id', message: t('errors.city_id_required') },
       ];
-      
+
       for (const { field, message } of requiredFields) {
         if (!formData[field as keyof FormData]) {
           throw new Error(message);
         }
       }
-      
+
       // Validate images
       if (!formData.images || formData.images.length === 0) {
         throw new Error(t('errors.images_required'));
       }
-      
+
       // Helper function to safely parse numeric values
       const parseNumber = (value: string | number | undefined | null): number | null => {
         if (value === undefined || value === null || value === '') return null;
@@ -603,7 +603,7 @@ export default function NewSellPage() {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
-      
+
       // Save listing to database first to get the car ID
       // Ensure is_featured is included in the initial listing data
       const listingDataWithFeatured = {
@@ -617,9 +617,9 @@ export default function NewSellPage() {
         .insert([listingDataWithFeatured])
         .select()
         .single();
-        
+
       if (listingError) throw listingError;
-      
+
       // If this is a featured listing, update the car record with payment information
       if (formData.is_featured && formData.payment_intent_id && formData.payment_method_id) {
         const paymentData = {
@@ -653,19 +653,19 @@ export default function NewSellPage() {
           throw updateError;
         }
       }
-      
+
       // Helper function to convert any file-like object to a proper File
       const convertToFile = async (file: File | ImageFile): Promise<File> => {
         // If it's already a File object, return it
         if (file instanceof File) {
           return file;
         }
-        
+
         // If it's an ImageFile with a raw file object, return that
         if ('raw' in file && file.raw instanceof File) {
           return file.raw;
         }
-        
+
         // If it's an ImageFile with a preview URL, create a new File object
         if (file.preview) {
           try {
@@ -681,10 +681,10 @@ export default function NewSellPage() {
             throw new Error('Failed to process image');
           }
         }
-        
+
         throw new Error('Unsupported file format');
       };
-      
+
       // Upload images to storage and save to car_images table
       if (formData.images && formData.images.length > 0) {
         console.log('Starting image uploads...');
@@ -693,16 +693,16 @@ export default function NewSellPage() {
             // Get both high-res and thumbnail files
             const highResFile = file.raw;
             const thumbnailFile = file.thumbnailRaw || file.raw; // Fallback to original if no thumbnail
-            
+
             // Generate consistent file names with WebP extension
             const fileExt = 'webp';
             const timestamp = new Date().getTime();
             const randomStr = Math.random().toString(36).substring(2, 8);
-            
+
             // High-res file details
             const highResFileName = `${timestamp}-${randomStr}.${fileExt}`;
             const highResFilePath = `${listing.id}/${highResFileName}`;
-            
+
             // Thumbnail file details
             const thumbFileName = `${timestamp}-${randomStr}-thumb.${fileExt}`;
             const thumbFilePath = `${listing.id}/${thumbFileName}`;
@@ -757,9 +757,9 @@ export default function NewSellPage() {
 
             const imageUrl = highResUrlData.publicUrl;
             const thumbnailUrl = thumbUrlData?.publicUrl || imageUrl; // Fallback to high-res if thumbnail fails
-            
+
             const imageDimensions = await getImageDimensions(highResFile);
-            
+
             console.log('Images uploaded successfully:', {
               highResUrl: imageUrl,
               thumbnailUrl: thumbnailUrl,
@@ -795,7 +795,7 @@ export default function NewSellPage() {
         // Wait for all image uploads to complete
         await Promise.all(imagePromises);
       }
-      
+
       // Create notification for the user
       if (user) {
         // Get brand and model names from the form data
@@ -803,7 +803,7 @@ export default function NewSellPage() {
         const modelId = parseInt(formData.model_id);
         const brandName = brands.find(b => b.id === brandId)?.name || formData.brand_id;
         const modelName = models.find(m => m.id === modelId)?.name || formData.model_id;
-        
+
         try {
           await supabase.from('notifications').insert({
             user_id: user.id,
@@ -824,14 +824,14 @@ export default function NewSellPage() {
           // Don't fail the whole submission if notification fails
         }
       }
-      
+
       // Show success message and display success component
       toast.success(t('sell.listing_created'));
       setShowSuccess(true);
-      
+
       // Scroll to top to show success message
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      
+
     } catch (error: any) {
       console.error('Error creating listing:', error);
       setError(error.message || t('errors.general'));
@@ -840,7 +840,7 @@ export default function NewSellPage() {
       setIsSubmitting(false);
     }
   }
-  
+
   // Handle move to next step event from PaymentStep
   useEffect(() => {
     const handleMoveToNextStep = () => {
@@ -855,7 +855,7 @@ export default function NewSellPage() {
     };
 
     window.addEventListener('moveToNextStep', handleMoveToNextStep);
-    
+
     // Clean up event listener
     return () => {
       window.removeEventListener('moveToNextStep', handleMoveToNextStep);
@@ -912,12 +912,12 @@ export default function NewSellPage() {
 
       try {
         const paymentData = JSON.parse(paymentSuccess);
-        
+
         // Check if the payment was recent (within last 30 minutes)
         const paymentTime = new Date(paymentData.timestamp).getTime();
         const currentTime = new Date().getTime();
         const thirtyMinutes = 30 * 60 * 1000; // 30 minutes in milliseconds
-        
+
         if (currentTime - paymentTime < thirtyMinutes) {
           // Update form data with payment details
           setFormData(prev => ({
@@ -927,13 +927,13 @@ export default function NewSellPage() {
             payment_status: 'succeeded',
             payment_method_id: paymentData.payment_method_id,
           }));
-          
+
           // Move to the next step
           const currentStepIndex = steps.findIndex(step => step.id === 'payment');
           if (currentStepIndex !== -1) {
             setCurrentStep(Math.min(currentStepIndex + 1, steps.length - 1));
           }
-          
+
           // Clean up
           localStorage.removeItem('paymentSuccess');
         } else {
@@ -945,18 +945,18 @@ export default function NewSellPage() {
         localStorage.removeItem('paymentSuccess');
       }
     };
-    
+
     checkPaymentStatus();
-    
+
     // Also check when the page becomes visible again (in case of mobile browser tab switching)
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         checkPaymentStatus();
       }
     };
-    
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    
+
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
@@ -967,16 +967,16 @@ export default function NewSellPage() {
     async function fetchData() {
       try {
         setLoading(true);
-        
+
         // Fetch brands
         const { data: brandsData, error: brandsError } = await supabase
           .from('brands')
           .select('*')
           .order('name');
-          
+
         if (brandsError) throw brandsError;
         setBrands(brandsData || []);
-        
+
         // Fetch cities for current country
         if (currentCountry?.id) {
           const { data: citiesData, error: citiesError } = await supabase
@@ -984,11 +984,11 @@ export default function NewSellPage() {
             .select('*')
             .eq('country_id', currentCountry.id)
             .order('name');
-            
+
           if (citiesError) throw citiesError;
           setCities(citiesData || []);
         }
-        
+
       } catch (error) {
         console.error('Error fetching data:', error);
         toast.error(t('errors.loading_data'));
@@ -996,27 +996,27 @@ export default function NewSellPage() {
         setLoading(false);
       }
     }
-    
+
     fetchData();
   }, [currentCountry?.id, t]);
-  
+
   // Fetch models when brand changes
   useEffect(() => {
     async function fetchModels() {
       if (!formData.brand_id) return;
-      
+
       try {
         setLoading(true);
-        
+
         const { data: modelsData, error: modelsError } = await supabase
           .from('models')
           .select('*')
           .eq('brand_id', formData.brand)
           .order('name');
-          
+
         if (modelsError) throw modelsError;
         setModels(modelsData || []);
-        
+
       } catch (error) {
         console.error('Error fetching models:', error);
         toast.error(t('errors.loading_models'));
@@ -1024,7 +1024,7 @@ export default function NewSellPage() {
         setLoading(false);
       }
     }
-    
+
     fetchModels();
   }, [formData.brand, t]);
 
@@ -1037,19 +1037,19 @@ export default function NewSellPage() {
           const currentUrl = window.location.pathname;
           const referrer = document.referrer;
           const referrerUrl = referrer ? new URL(referrer) : null;
-          
+
           // Only track if:
           // 1. This is a direct visit (no referrer)
           // 2. Referrer is not our root page
           // 3. Referrer is from a different site
-          const shouldTrack = !referrer || 
-            (referrerUrl && referrerUrl.pathname !== '/') || 
+          const shouldTrack = !referrer ||
+            (referrerUrl && referrerUrl.pathname !== '/') ||
             (referrerUrl && referrerUrl.origin !== window.location.origin);
-          
+
           if (shouldTrack) {
             // Get real location from IP
             const geoInfo = await getCountryFromIP();
-            
+
             const response = await fetch('/api/analytics/page-view', {
               method: 'POST',
               headers: {
@@ -1065,7 +1065,7 @@ export default function NewSellPage() {
                 referrer_domain: referrerUrl ? referrerUrl.hostname : null
               })
             });
-  
+
             if (!response.ok) {
               const error = await response.json();
               console.error('Failed to track page view:', error);
@@ -1075,7 +1075,7 @@ export default function NewSellPage() {
           console.error('Failed to track page view:', error);
         }
       };
-  
+
       trackPageView();
     }
   }, [currentCountry?.code, user?.id]);
@@ -1128,7 +1128,7 @@ export default function NewSellPage() {
                           />
                         </svg>
                       </div>
-                      <div className="ml-3">  
+                      <div className="ml-3">
                         <p className="text-sm text-yellow-700 dark:text-yellow-200">
                           {t('sell.messages.reviewTime')}
                         </p>
@@ -1159,13 +1159,13 @@ export default function NewSellPage() {
   }
 
   // Render loading state
- if (loading) {
-     return (
-       <div className="flex col-span-full items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
-         <LoadingSpinner />
-       </div>
-     );
-   }
+  if (loading) {
+    return (
+      <div className="flex col-span-full items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
+        <LoadingSpinner />
+      </div>
+    );
+  }
 
   // Check if user is not logged in
   if (!user) {
@@ -1175,7 +1175,7 @@ export default function NewSellPage() {
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl overflow-hidden border border-gray-100 dark:border-gray-700 transition-all duration-300 transform hover:shadow-2xl">
             {/* Header */}
             <div className="bg-qatar-maroon p-6 text-center">
-             
+
               <h2 className="text-2xl font-bold text-white">
                 {t('sell.login_required')}
               </h2>
@@ -1183,7 +1183,7 @@ export default function NewSellPage() {
                 {t('sell.login_subtitle')}
               </p>
             </div>
-            
+
             {/* Content */}
             <div className="p-8">
               <div className="space-y-2">
@@ -1196,7 +1196,7 @@ export default function NewSellPage() {
                   </svg>
                   <span>{t('auth.login')}</span>
                 </Button>
-                
+
                 <div className="relative my-6">
                   <div className="absolute inset-0 flex items-center">
                     <div className="w-full border-t border-gray-200 dark:border-gray-700"></div>
@@ -1207,7 +1207,7 @@ export default function NewSellPage() {
                     </span>
                   </div>
                 </div>
-                
+
                 <Button
                   onClick={() => router.push(`/signup`)}
                   variant="outline"
@@ -1219,7 +1219,7 @@ export default function NewSellPage() {
                   <span>{t('auth.signup')}</span>
                 </Button>
               </div>
-              
+
               <div className="mt-6 text-center">
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   {t('sell.by_continuing')}{' '}
@@ -1238,7 +1238,7 @@ export default function NewSellPage() {
       </div>
     );
   }
-  
+
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900">
       {/* Hero Section */}
@@ -1251,35 +1251,32 @@ export default function NewSellPage() {
                 const stepNumber = index + 1;
                 const isActive = stepNumber === currentStep;
                 const isCompleted = stepNumber < currentStep;
-                
+
                 return (
                   <React.Fragment key={step.id}>
                     {/* Step indicator */}
                     <div className="flex flex-col items-center">
-                      <div className={`flex h-8 w-8 items-center justify-center rounded-full border-2 ${
-                        isActive || isCompleted 
-                          ? 'border-qatar-gold bg-qatar-gold' 
+                      <div className={`flex h-8 w-8 items-center justify-center rounded-full border-2 ${isActive || isCompleted
+                          ? 'border-qatar-gold bg-qatar-gold'
                           : 'border-white/30'
-                      }`}>
+                        }`}>
                         {isCompleted ? (
                           <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                           </svg>
                         ) : (
-                          <span className={`text-sm font-medium ${
-                            isActive ? 'text-white' : 'text-white/70'
-                          }`}>
+                          <span className={`text-sm font-medium ${isActive ? 'text-white' : 'text-white/70'
+                            }`}>
                             {stepNumber}
                           </span>
                         )}
                       </div>
-                      <span className={`mt-2 text-xs font-medium ${
-                        isActive ? 'text-white' : 'text-white/70'
-                      }`}>
+                      <span className={`mt-2 text-xs font-medium ${isActive ? 'text-white' : 'text-white/70'
+                        }`}>
                         {step.title}
                       </span>
                     </div>
-                    
+
                     {/* Connector line */}
                     {index < visibleSteps.length - 2 && (
                       <div className="h-0.5 w-16 bg-white/30 mx-2">
@@ -1294,10 +1291,10 @@ export default function NewSellPage() {
             </div>
           </div>
         )}
-        
+
         {/* Background Pattern */}
         <div className="absolute inset-0 opacity-10">
-          <svg 
+          <svg
             className="h-full w-full"
             width="404"
             height="404"
@@ -1319,15 +1316,15 @@ export default function NewSellPage() {
                   y="0"
                   width="4"
                   height="4"
-                  className="text-white/20" 
-                  fill="currentColor" 
+                  className="text-white/20"
+                  fill="currentColor"
                 />
               </pattern>
             </defs>
             <rect width="404" height="404" fill="url(#pattern-squares)" />
           </svg>
         </div>
-        
+
         {/* Hero Section - Only show on first step */}
         {currentStep === 0 && (
           <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -1339,7 +1336,7 @@ export default function NewSellPage() {
                 {t('sell.plan.subtitle')}
               </p>
             </div>
-            
+
             {/* Quick Benefits */}
             <div className="text-center mt-8">
               <span className="block text-white font-semibold mt-2">
@@ -1347,30 +1344,30 @@ export default function NewSellPage() {
               </span>
               <div className="mt-4 max-w-2xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-white/10 rounded-lg p-3 text-center hover:bg-white/20 transition">
-                  <FontAwesomeIcon 
-                    icon={faSearch} 
-                    className="h-6 w-6 mx-auto text-white mb-2" 
+                  <FontAwesomeIcon
+                    icon={faSearch}
+                    className="h-6 w-6 mx-auto text-white mb-2"
                   />
                   <span className="text-xs text-white">{t('sell.plan.benefits.reach')}</span>
                 </div>
                 <div className="bg-white/10 rounded-lg p-3 text-center hover:bg-white/20 transition">
-                  <FontAwesomeIcon 
-                    icon={faCamera} 
-                    className="h-6 w-6 mx-auto text-white mb-2" 
+                  <FontAwesomeIcon
+                    icon={faCamera}
+                    className="h-6 w-6 mx-auto text-white mb-2"
                   />
                   <span className="text-xs text-white">{t('sell.plan.benefits.photos')}</span>
                 </div>
                 <div className="bg-white/10 rounded-lg p-3 text-center hover:bg-white/20 transition">
-                  <FontAwesomeIcon 
-                    icon={faChartLine} 
-                    className="h-6 w-6 mx-auto text-white mb-2" 
+                  <FontAwesomeIcon
+                    icon={faChartLine}
+                    className="h-6 w-6 mx-auto text-white mb-2"
                   />
                   <span className="text-xs text-white">{t('sell.plan.benefits.insights')}</span>
                 </div>
                 <div className="bg-white/10 rounded-lg p-3 text-center hover:bg-white/20 transition">
-                  <FontAwesomeIcon 
-                    icon={faHeadset} 
-                    className="h-6 w-6 mx-auto text-white mb-2" 
+                  <FontAwesomeIcon
+                    icon={faHeadset}
+                    className="h-6 w-6 mx-auto text-white mb-2"
                   />
                   <span className="text-xs text-white">{t('sell.plan.benefits.support')}</span>
                 </div>
@@ -1389,11 +1386,11 @@ export default function NewSellPage() {
               {visibleSteps[currentStep].description || ''}
             </p>
           </div>
-          
+
           <div className="rounded-lg bg-white dark:bg-gray-900 p-6 shadow-lg dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
             {visibleSteps[currentStep].component}
           </div>
-          
+
           {/* Navigation Buttons - Only show for steps that don't have their own navigation */}
           {currentStep > 0 && !['basic-info', 'detailed-info', 'media'].includes(visibleSteps[currentStep].id) && (
             <div className="mt-6 flex justify-between">
@@ -1406,7 +1403,7 @@ export default function NewSellPage() {
               >
                 {t('common.back')}
               </Button>
-            
+
               {currentStep < visibleSteps.length - 1 && !['basic-info', 'detailed-info', 'media', 'preview'].includes(visibleSteps[currentStep].id) && (
                 <Button
                   type="button"
@@ -1419,16 +1416,15 @@ export default function NewSellPage() {
                     setCurrentStep(prev => prev + 1);
                   }}
                   disabled={isSubmitting || (visibleSteps[currentStep].id === 'payment' && !isPaymentCompleted)}
-                  className={`bg-qatar-maroon text-white hover:bg-qatar-maroon/90 hover:shadow-md ${
-                    visibleSteps[currentStep].id === 'payment' && !isPaymentCompleted ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
+                  className={`bg-qatar-maroon text-white hover:bg-qatar-maroon/90 hover:shadow-md ${visibleSteps[currentStep].id === 'payment' && !isPaymentCompleted ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
                 >
                   {t('common.next')}
                 </Button>
               )}
             </div>
           )}
-          
+
           {error && (
             <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-md">
               <p className="text-sm text-red-600 dark:text-red-400">{error}</p>

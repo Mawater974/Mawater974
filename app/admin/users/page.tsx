@@ -5,6 +5,7 @@ import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../contexts/AuthContext';
 import { Profile } from '../../../types/supabase';
 import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
 import LoadingSpinner from '../../../components/LoadingSpinner';
 
 interface UserWithStats extends Profile {
@@ -23,7 +24,7 @@ export default function AdminUsersPage() {
   useEffect(() => {
     checkAdminStatus();
     fetchUsers();
-  }, [user]);
+  }, [user?.id]);
 
   const checkAdminStatus = async () => {
     if (!user) return;
@@ -52,7 +53,7 @@ export default function AdminUsersPage() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      
+
       // Fetch users with their car counts
       const { data, error } = await supabase
         .from('profiles')
@@ -146,7 +147,7 @@ export default function AdminUsersPage() {
           <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Users Management</h2>
           </div>
-          
+
           {loading ? (
             <div className="p-6">
               <div className="animate-pulse space-y-4">
@@ -192,11 +193,10 @@ export default function AdminUsersPage() {
                         <div className="text-sm text-gray-900 dark:text-white">{user.country_name}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          user.role === 'admin' 
-                            ? 'bg-qatar-maroon text-white' 
-                            : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
-                        }`}>
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.role === 'admin'
+                          ? 'bg-qatar-maroon text-white'
+                          : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                          }`}>
                           {user.role}
                         </span>
                       </td>

@@ -58,7 +58,7 @@ interface ExtendedCar extends Car {
   exact_model?: string;
   rejection_reason?: any;
   expiration_date?: string;
-  
+
   brand?: {
     name: string;
   };
@@ -109,7 +109,7 @@ export default function AdminCarsPage() {
     checkAdminStatus();
     fetchCars();
     checkExpiredCars();
-  }, [user, activeStatus, sortOrder]);
+  }, [user?.id, activeStatus, sortOrder]);
 
   const checkAdminStatus = async () => {
     if (!user) return;
@@ -127,16 +127,16 @@ export default function AdminCarsPage() {
   const getThumbnailUrl = (car: any) => {
     // First try to get the thumbnail URL
     if (car.thumbnail) return car.thumbnail;
-    
+
     // If no thumbnail, try to get the main image from car_images
     if (car.images && car.images.length > 0) {
       const mainImage = car.images.find((img: any) => img.is_main) || car.images[0];
       if (mainImage && mainImage.url) return mainImage.url;
     }
-    
+
     // Fallback to the image URL if it exists
     if (car.image) return car.image;
-    
+
     // If no images at all, return a placeholder
     return '/placeholder-car.jpg';
   };
@@ -144,7 +144,7 @@ export default function AdminCarsPage() {
   const fetchCars = async () => {
     try {
       setLoading(true);
-      
+
       // Build the base query
       let query = supabase
         .from('cars')
@@ -182,7 +182,7 @@ export default function AdminCarsPage() {
       const { data, error } = await query;
 
       if (error) throw error;
-      
+
       // Process the cars to ensure they have proper image URLs and structure
       const processedCars = data.map((car: any) => {
         // Ensure images array is properly formatted
@@ -201,9 +201,9 @@ export default function AdminCarsPage() {
 
         // Get the main image URL for the thumbnail
         const mainImage = images.find((img: any) => img.is_main) || images[0];
-        const thumbnail = mainImage?.thumbnail_url || 
-                         mainImage?.url || 
-                         '/images/car-placeholder.jpg';
+        const thumbnail = mainImage?.thumbnail_url ||
+          mainImage?.url ||
+          '/images/car-placeholder.jpg';
 
         return {
           ...car,
@@ -217,7 +217,7 @@ export default function AdminCarsPage() {
           }))
         };
       });
-      
+
       setCars(processedCars);
     } catch (err) {
       console.error('Error fetching cars:', err);
@@ -237,11 +237,11 @@ export default function AdminCarsPage() {
             type,
             title_en: t(`notifications.${type}.title_en`),
             title_ar: t(`notifications.${type}.title_ar`),
-            message_en: t(`notifications.${type}.message_en`, { 
+            message_en: t(`notifications.${type}.message_en`, {
               brand: brandName,
               model: modelName
             }),
-            message_ar: t(`notifications.${type}.message_ar`, { 
+            message_ar: t(`notifications.${type}.message_ar`, {
               brand: brandName,
               model: modelName
             })
@@ -262,15 +262,15 @@ export default function AdminCarsPage() {
         .eq('id', carId);
 
       if (error) throw error;
-      
+
       // Process the cars to ensure they have proper image URLs
       const processedCars = cars.map((car: any) => ({
         ...car,
         // For admin, we'll use the first image as thumbnail
-        thumbnail: car.images?.find((img: any) => img.is_main)?.thumbnail_url || 
-                  car.images?.[0]?.thumbnail_url || 
-                  car.images?.[0]?.image_url || 
-                  '/images/car-placeholder.jpg',
+        thumbnail: car.images?.find((img: any) => img.is_main)?.thumbnail_url ||
+          car.images?.[0]?.thumbnail_url ||
+          car.images?.[0]?.image_url ||
+          '/images/car-placeholder.jpg',
         // Ensure images array is properly formatted
         images: (car.images || []).map((img: any) => ({
           id: img.id,
@@ -284,7 +284,7 @@ export default function AdminCarsPage() {
           return (a.display_order || 0) - (b.display_order || 0);
         })
       }));
-      
+
       setCars(processedCars);
 
       // Create notification for the user
@@ -529,7 +529,7 @@ export default function AdminCarsPage() {
 
       // Refresh the cars list after updating
       await fetchCars();
-      
+
       toast('Successfully updated expired cars', { icon: '✅' });
     } catch (err) {
       console.error('Error in checkExpiredCars:', err);
@@ -542,9 +542,9 @@ export default function AdminCarsPage() {
     try {
       // Show loading toast
       const loadingToastId = toast.loading('Preparing export...');
-      
+
       // Filter cars by specified statuses
-      const filteredCars = cars.filter(car => 
+      const filteredCars = cars.filter(car =>
         statuses.includes(car.status as CarStatus)
       );
 
@@ -585,7 +585,7 @@ export default function AdminCarsPage() {
         exact_model: car?.exact_model ?? '',
         rejection_reason: car?.rejection_reason ?? null,
         expiration_date: car?.expiration_date ?? '',
-        
+
         // Additional descriptive fields
         brand_name: car?.brand?.name ?? '',
         model_name: car?.model?.name ?? '',
@@ -626,19 +626,19 @@ export default function AdminCarsPage() {
         try {
           // Define columns for CSV in a comprehensive order
           const columns = [
-            'ID', 'User ID', 'Brand ID', 'Model ID', 
-            'Year', 'Mileage', 'Price', 'Color', 
-            'Description', 'Fuel Type', 'Gearbox Type', 
-            'Body Type', 'Condition', 'Status', 
-            'Images', 'Thumbnail', 'Created At', 
-            'Updated At', 'Image', 'Is Featured', 
-            'Location', 'Cylinders', 'Views Count', 
-            'Dealership ID', 'Country ID', 'City ID', 
+            'ID', 'User ID', 'Brand ID', 'Model ID',
+            'Year', 'Mileage', 'Price', 'Color',
+            'Description', 'Fuel Type', 'Gearbox Type',
+            'Body Type', 'Condition', 'Status',
+            'Images', 'Thumbnail', 'Created At',
+            'Updated At', 'Image', 'Is Featured',
+            'Location', 'Cylinders', 'Views Count',
+            'Dealership ID', 'Country ID', 'City ID',
             'Exact Model', 'Expiration Date',
             // Additional descriptive fields
-            'Brand Name', 'Model Name', 
-            'Country Name', 'City Name', 
-            'Dealership Name', 
+            'Brand Name', 'Model Name',
+            'Country Name', 'City Name',
+            'Dealership Name',
             'User Full Name', 'User Email'
           ];
 
@@ -681,9 +681,9 @@ export default function AdminCarsPage() {
               car?.dealership?.name?.replace(/,/g, ';') ?? '',
               car?.user?.full_name?.replace(/,/g, ';') ?? '',
               car?.user?.email?.replace(/,/g, ';') ?? ''
-            ].map(value => 
-              value !== null && value !== undefined 
-                ? `"${String(value).replace(/"/g, '""')}"` 
+            ].map(value =>
+              value !== null && value !== undefined
+                ? `"${String(value).replace(/"/g, '""')}"`
                 : '""'
             ).join(','))
           ].join('\n');
@@ -706,7 +706,7 @@ export default function AdminCarsPage() {
 
       // Dismiss loading toast and show success message
       toast.dismiss(loadingToastId);
-      
+
       if (exportCount > 0) {
         const formatMsg = format === 'both' ? 'JSON and CSV formats' : `${format.toUpperCase()} format`;
         toast.success(`Exported ${filteredCars.length} cars with status: ${statuses.join(', ')} in ${formatMsg}`);
@@ -726,10 +726,10 @@ export default function AdminCarsPage() {
   const exportSoldCars = (format?: 'json' | 'csv' | 'both') => exportCarsByStatus(['sold'], format);
   const exportExpiredCars = (format?: 'json' | 'csv' | 'both') => exportCarsByStatus(['expired'], format);
   const exportHiddenCars = (format?: 'json' | 'csv' | 'both') => exportCarsByStatus(['hidden'], format);
-  
+
   // Export all statuses together
   const exportAllCars = (format?: 'json' | 'csv' | 'both') => exportCarsByStatus([
-    'pending', 'approved', 'rejected', 
+    'pending', 'approved', 'rejected',
     'sold', 'expired', 'hidden'
   ], format);
 
@@ -772,7 +772,7 @@ export default function AdminCarsPage() {
         exact_model: car?.exact_model ?? '',
         rejection_reason: car?.rejection_reason ?? null,
         expiration_date: car?.expiration_date ?? '',
-        
+
         // Additional descriptive fields
         brand_name: car?.brand?.name ?? '',
         model_name: car?.model?.name ?? '',
@@ -810,19 +810,19 @@ export default function AdminCarsPage() {
 
       // Define columns for CSV in a comprehensive order
       const columns = [
-        'ID', 'User ID', 'Brand ID', 'Model ID', 
-        'Year', 'Mileage', 'Price', 'Color', 
-        'Description', 'Fuel Type', 'Gearbox Type', 
-        'Body Type', 'Condition', 'Status', 
-        'Images', 'Thumbnail', 'Created At', 
-        'Updated At', 'Image', 'Is Featured', 
-        'Location', 'Cylinders', 'Views Count', 
-        'Dealership ID', 'Country ID', 'City ID', 
+        'ID', 'User ID', 'Brand ID', 'Model ID',
+        'Year', 'Mileage', 'Price', 'Color',
+        'Description', 'Fuel Type', 'Gearbox Type',
+        'Body Type', 'Condition', 'Status',
+        'Images', 'Thumbnail', 'Created At',
+        'Updated At', 'Image', 'Is Featured',
+        'Location', 'Cylinders', 'Views Count',
+        'Dealership ID', 'Country ID', 'City ID',
         'Exact Model', 'Expiration Date',
         // Additional descriptive fields
-        'Brand Name', 'Model Name', 
-        'Country Name', 'City Name', 
-        'Dealership Name', 
+        'Brand Name', 'Model Name',
+        'Country Name', 'City Name',
+        'Dealership Name',
         'User Full Name', 'User Email'
       ];
 
@@ -866,9 +866,9 @@ export default function AdminCarsPage() {
           car?.dealership?.name?.replace(/,/g, ';') ?? '',
           car?.user?.full_name?.replace(/,/g, ';') ?? '',
           car?.user?.email?.replace(/,/g, ';') ?? ''
-        ].map(value => 
-          value !== null && value !== undefined 
-            ? `"${String(value).replace(/"/g, '""')}"` 
+        ].map(value =>
+          value !== null && value !== undefined
+            ? `"${String(value).replace(/"/g, '""')}"`
             : '""'
         ).join(','))
       ].join('\n');
@@ -993,22 +993,20 @@ export default function AdminCarsPage() {
             <PlusIcon className="h-5 w-5 mr-2" />
             Add New Car
           </button>
-          
+
           {/* View mode toggle */}
           <div className="flex rounded-md shadow-sm">
             <button
               onClick={() => setViewMode('grid')}
-              className={`px-3 py-2 text-sm font-medium rounded-l-md ${
-                viewMode === 'grid' ? 'bg-indigo-100 text-indigo-700' : 'bg-white text-gray-700 hover:bg-gray-50'
-              }`}
+              className={`px-3 py-2 text-sm font-medium rounded-l-md ${viewMode === 'grid' ? 'bg-indigo-100 text-indigo-700' : 'bg-white text-gray-700 hover:bg-gray-50'
+                }`}
             >
               Grid
             </button>
             <button
               onClick={() => setViewMode('detail')}
-              className={`px-3 py-2 text-sm font-medium rounded-r-md ${
-                viewMode === 'detail' ? 'bg-indigo-100 text-indigo-700' : 'bg-white text-gray-700 hover:bg-gray-50'
-              }`}
+              className={`px-3 py-2 text-sm font-medium rounded-r-md ${viewMode === 'detail' ? 'bg-indigo-100 text-indigo-700' : 'bg-white text-gray-700 hover:bg-gray-50'
+                }`}
             >
               List
             </button>
@@ -1061,21 +1059,19 @@ export default function AdminCarsPage() {
                 <div className="flex items-center space-x-2 border border-gray-300 dark:border-gray-600 rounded-lg p-1">
                   <button
                     onClick={() => setViewMode('grid')}
-                    className={`px-3 py-1.5 rounded-md ${
-                      viewMode === 'grid'
+                    className={`px-3 py-1.5 rounded-md ${viewMode === 'grid'
                         ? 'bg-qatar-maroon text-white'
                         : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'
-                    }`}
+                      }`}
                   >
                     Grid
                   </button>
                   <button
                     onClick={() => setViewMode('detail')}
-                    className={`px-3 py-1.5 rounded-md ${
-                      viewMode === 'detail'
+                    className={`px-3 py-1.5 rounded-md ${viewMode === 'detail'
                         ? 'bg-qatar-maroon text-white'
                         : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'
-                    }`}
+                      }`}
                   >
                     Detail
                   </button>
@@ -1268,10 +1264,9 @@ export default function AdminCarsPage() {
                     onClick={() => setActiveStatus(status)}
                     className={`
                       whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm
-                      ${
-                        activeStatus === status
-                          ? 'border-qatar-maroon text-qatar-maroon'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      ${activeStatus === status
+                        ? 'border-qatar-maroon text-qatar-maroon'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                       }
                     `}
                   >
@@ -1331,11 +1326,10 @@ export default function AdminCarsPage() {
                         {/* Featured Toggle */}
                         <button
                           onClick={() => handleToggleFeature(car.id, car.is_featured)}
-                          className={`p-1.5 rounded-lg transition-colors duration-200 ${
-                            car.is_featured 
-                              ? 'text-yellow-500 hover:text-yellow-600' 
+                          className={`p-1.5 rounded-lg transition-colors duration-200 ${car.is_featured
+                              ? 'text-yellow-500 hover:text-yellow-600'
                               : 'text-gray-400 hover:text-yellow-500'
-                          }`}
+                            }`}
                           title={car.is_featured ? 'Remove from featured' : 'Add to featured'}
                         >
                           <StarIcon className="h-5 w-5" />
@@ -1478,18 +1472,17 @@ export default function AdminCarsPage() {
                       </td>
                       <td className="px-6 py-4">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                          ${
-                            car.status === 'approved'
-                              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                              : car.status === 'rejected'
+                          ${car.status === 'approved'
+                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                            : car.status === 'rejected'
                               ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
                               : car.status === 'sold'
-                              ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                              : car.status === 'hidden'
-                              ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-                              : car.status === 'pending'
-                              ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-                              : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+                                ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                                : car.status === 'hidden'
+                                  ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                                  : car.status === 'pending'
+                                    ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                                    : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
                           }
                         `}>
                           {car.status}

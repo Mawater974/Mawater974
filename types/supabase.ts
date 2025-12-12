@@ -176,3 +176,31 @@ export interface Database {
     }
   }
 }
+
+export type Brand = Database['public']['Tables']['brands']['Row'];
+export type Model = Database['public']['Tables']['models']['Row'];
+export type City = Database['public']['Tables']['cities']['Row'] & { name_ar?: string | null };
+export type Car = Database['public']['Tables']['cars']['Row'];
+
+export type Profile = {
+  id: string;
+  updated_at: string | null;
+  username: string | null;
+  full_name: string | null;
+  avatar_url: string | null;
+  website: string | null;
+  role: string | null;
+  email: string | null;
+  phone_number: string | null;
+  country_code: string | null;
+};
+
+export type Country = {
+  id: number;
+  name: string;
+  code: string;
+  currency_code: string;
+  currency_symbol: string;
+  phone_code: string;
+  flag_url: string | null;
+};

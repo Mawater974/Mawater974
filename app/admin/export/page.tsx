@@ -37,7 +37,7 @@ export default function AdminExportPage() {
 
   useEffect(() => {
     checkAdminStatus();
-  }, [user]);
+  }, [user?.id]);
 
   const checkAdminStatus = async () => {
     if (!user) {
@@ -71,7 +71,7 @@ export default function AdminExportPage() {
     setIsLoading(true);
     try {
       let query = supabase.from(tableName).select('*');
-      
+
       // Add special handling for certain tables
       if (tableName === 'cars') {
         // For cars, we need to fetch all statuses and include related data
@@ -131,7 +131,7 @@ export default function AdminExportPage() {
       } else if (tableName === 'dealerships') {
         query = supabase.from(tableName).select('*, country:country_id(id, name, code), city:city_id(id, name)');
       }
-      
+
       const { data, error } = await query;
 
       if (error) {
@@ -180,7 +180,7 @@ export default function AdminExportPage() {
           return;
         }
       }
-      
+
       const timestamp = new Date().toISOString().split('T')[0];
       const filename = `${selectedTable}_export_${timestamp}`;
 
@@ -215,7 +215,7 @@ export default function AdminExportPage() {
         // Create CSV content
         const csvRows = [
           columns.join(','), // Header
-          ...data.map(item => 
+          ...data.map(item =>
             columns.map(column => {
               const value = item[column];
               if (value === null || value === undefined) return '""';
@@ -271,20 +271,19 @@ export default function AdminExportPage() {
   return (
     <div className="p-4">
       <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Data Export</h1>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Table Selection */}
         <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Select Data to Export</h2>
           <div className="space-y-4">
             {exportableTables.map((table) => (
-              <div 
+              <div
                 key={table.name}
-                className={`p-3 rounded-lg cursor-pointer transition-all ${
-                  selectedTable === table.name 
-                    ? 'bg-qatar-maroon text-white' 
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
-                }`}
+                className={`p-3 rounded-lg cursor-pointer transition-all ${selectedTable === table.name
+                  ? 'bg-qatar-maroon text-white'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
                 onClick={() => handleTableSelect(table.name)}
               >
                 <h3 className="font-medium">{table.label}</h3>
@@ -299,28 +298,26 @@ export default function AdminExportPage() {
         {/* Export Options */}
         <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Export Options</h2>
-          
+
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Format
             </label>
             <div className="flex space-x-4">
               <button
-                className={`px-4 py-2 rounded-md ${
-                  exportFormat === 'json' 
-                    ? 'bg-qatar-maroon text-white' 
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
-                }`}
+                className={`px-4 py-2 rounded-md ${exportFormat === 'json'
+                  ? 'bg-qatar-maroon text-white'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
                 onClick={() => setExportFormat('json')}
               >
                 JSON
               </button>
               <button
-                className={`px-4 py-2 rounded-md ${
-                  exportFormat === 'csv' 
-                    ? 'bg-qatar-maroon text-white' 
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
-                }`}
+                className={`px-4 py-2 rounded-md ${exportFormat === 'csv'
+                  ? 'bg-qatar-maroon text-white'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
                 onClick={() => setExportFormat('csv')}
               >
                 CSV
@@ -350,7 +347,7 @@ export default function AdminExportPage() {
         {/* Data Preview */}
         <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Data Preview</h2>
-          
+
           {selectedTable ? (
             <>
               <div className="mb-2 text-sm text-gray-600 dark:text-gray-400">
@@ -360,7 +357,7 @@ export default function AdminExportPage() {
                   <span>Loading data...</span>
                 )}
               </div>
-              
+
               <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-md overflow-auto max-h-80">
                 {exportableData[selectedTable] && exportableData[selectedTable].length > 0 ? (
                   <pre className="text-xs text-gray-800 dark:text-gray-200 whitespace-pre-wrap">

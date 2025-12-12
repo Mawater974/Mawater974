@@ -39,6 +39,8 @@ export default function ShowroomsPage() {
         return;
       }
 
+      if (!currentCountry) return;
+
       // Fetch approved dealerships from the dealerships table
       const { data, error } = await supabase
         .from('dealerships')
@@ -58,7 +60,7 @@ export default function ShowroomsPage() {
         throw error;
       }
 
-      
+
 
       // Transform the data to match the Showroom interface
       const transformedData = data.map(dealership => ({
@@ -84,7 +86,7 @@ export default function ShowroomsPage() {
         user_id: dealership.user_id
       }));
 
-      
+
       setShowrooms(transformedData);
     } catch (error) {
       console.error('Error fetching showrooms:', error);
@@ -116,7 +118,7 @@ export default function ShowroomsPage() {
   }, [currentCountry, getCitiesByCountry]);
 
   // Track page view when component mounts
-    /*useEffect(() => {
+  useEffect(() => {
     if (currentCountry?.code) {
       const trackPageView = async () => {
         try {
@@ -124,19 +126,19 @@ export default function ShowroomsPage() {
           const currentUrl = window.location.pathname;
           const referrer = document.referrer;
           const referrerUrl = referrer ? new URL(referrer) : null;
-          
+
           // Only track if:
           // 1. This is a direct visit (no referrer)
           // 2. Referrer is not our root page
           // 3. Referrer is from a different site
-          const shouldTrack = !referrer || 
-            (referrerUrl && referrerUrl.pathname !== '/') || 
+          const shouldTrack = !referrer ||
+            (referrerUrl && referrerUrl.pathname !== '/') ||
             (referrerUrl && referrerUrl.origin !== window.location.origin);
-          
+
           if (shouldTrack) {
             // Get real location from IP
             const geoInfo = await getCountryFromIP();
-            
+
             const response = await fetch('/api/analytics/page-view', {
               method: 'POST',
               headers: {
@@ -165,18 +167,18 @@ export default function ShowroomsPage() {
 
       trackPageView();
     }
-  }, [currentCountry?.code, user?.id]);*/
-  
+  }, [currentCountry?.code, user?.id]);
+
   const filteredShowrooms = showrooms.filter(showroom => {
     const searchText = searchQuery.toLowerCase();
-    const nameMatch = language === 'ar' 
+    const nameMatch = language === 'ar'
       ? (showroom.name_ar?.toLowerCase().includes(searchText) || showroom.name.toLowerCase().includes(searchText))
       : showroom.name.toLowerCase().includes(searchText);
-    
+
     const descriptionMatch = language === 'ar'
       ? (showroom.description_ar?.toLowerCase().includes(searchText) || showroom.description.toLowerCase().includes(searchText))
       : showroom.description.toLowerCase().includes(searchText);
-    
+
     const matchesSearch = nameMatch || descriptionMatch;
     const matchesLocation = !selectedLocation || showroom.city_id?.toString() === selectedLocation;
     const matchesDealershipType = !selectedDealershipType || showroom.dealershipType === selectedDealershipType;
@@ -191,107 +193,107 @@ export default function ShowroomsPage() {
       </div>
     );
   }
-  
+
   return (
-  <div className="min-h-screen">
-    <div className="container mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4 md:mb-0">
-          {t('showroom.title')}
-        </h1>
-        <button
-          onClick={handleRegisterClick}
-          className="bg-qatar-maroon text-white px-6 py-3 rounded-lg hover:bg-qatar-maroon/90 transition-colors"
-        >
-          {t('showroom.registerDealership')}
-        </button>
-      </div>
-
-      {/* Search and Filter */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="relative">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t('showroom.searchPlaceholder')}
-              className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-qatar-maroon focus:border-qatar-maroon dark:bg-gray-700 dark:text-white"
-            />
-          </div>
-          <div className="relative">
-            <MapPinIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <select
-              value={selectedLocation}
-              onChange={(e) => setSelectedLocation(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-qatar-maroon focus:border-qatar-maroon dark:bg-gray-700 dark:text-white appearance-none"
-            >
-              <option value="">{t('showroom.allLocations')}</option>
-              {cities.map(city => (
-                <option key={city.id} value={city.id.toString()}>
-                  {currentLanguage === 'ar' ? city.name_ar : city.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="relative">
-          <select
-            value={selectedDealershipType}
-            onChange={(e) => setSelectedDealershipType(e.target.value as DealershipType | '')}
-            className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-qatar-maroon focus:border-qatar-maroon dark:bg-gray-700 dark:text-white appearance-none"
+    <div className="min-h-screen">
+      <div className="container mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4 md:mb-0">
+            {t('showroom.title')}
+          </h1>
+          <button
+            onClick={handleRegisterClick}
+            className="bg-qatar-maroon text-white px-6 py-3 rounded-lg hover:bg-qatar-maroon/90 transition-colors"
           >
-            <option value="">{t('showroom.allDealershipTypes')}</option>
-            <option value="official">{t('showroom.dealershipTypes.official')}</option>
-            <option value="private">{t('showroom.dealershipTypes.private')}</option>
-          </select>
+            {t('showroom.registerDealership')}
+          </button>
+        </div>
+
+        {/* Search and Filter */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="relative">
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={t('showroom.searchPlaceholder')}
+                className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-qatar-maroon focus:border-qatar-maroon dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+            <div className="relative">
+              <MapPinIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <select
+                value={selectedLocation}
+                onChange={(e) => setSelectedLocation(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-qatar-maroon focus:border-qatar-maroon dark:bg-gray-700 dark:text-white appearance-none"
+              >
+                <option value="">{t('showroom.allLocations')}</option>
+                {cities.map(city => (
+                  <option key={city.id} value={city.id.toString()}>
+                    {currentLanguage === 'ar' ? city.name_ar : city.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="relative">
+              <select
+                value={selectedDealershipType}
+                onChange={(e) => setSelectedDealershipType(e.target.value as DealershipType | '')}
+                className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-qatar-maroon focus:border-qatar-maroon dark:bg-gray-700 dark:text-white appearance-none"
+              >
+                <option value="">{t('showroom.allDealershipTypes')}</option>
+                <option value="official">{t('showroom.dealershipTypes.official')}</option>
+                <option value="private">{t('showroom.dealershipTypes.private')}</option>
+              </select>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Featured Showrooms */}
-      {filteredShowrooms.some(showroom => showroom.featured === true) && (
-        <div className="mb-12">
-          <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-6">
-            {t('showroom.featuredShowrooms')}
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredShowrooms
-              .filter(showroom => showroom.featured === true)
-              .map((showroom) => (
-                <ShowroomCard key={showroom.id} showroom={showroom} />
-              ))}
-          </div>
-        </div>
-      )}
-
-      {/* All Showrooms */}
-      <div>
-        <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-6">
-          {t('showroom.allShowrooms')}
-        </h2>
-        {filteredShowrooms.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredShowrooms
-              .filter(showroom => showroom.featured !== true)
-              .map((showroom) => (
-                <ShowroomCard key={showroom.id} showroom={showroom} />
-              ))}
-          </div>
-        ) : (
-          <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-            {t('showroom.noResults')}
+        {/* Featured Showrooms */}
+        {filteredShowrooms.some(showroom => showroom.featured === true) && (
+          <div className="mb-12">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-6">
+              {t('showroom.featuredShowrooms')}
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredShowrooms
+                .filter(showroom => showroom.featured === true)
+                .map((showroom) => (
+                  <ShowroomCard key={showroom.id} showroom={showroom} />
+                ))}
+            </div>
           </div>
         )}
-      </div>
 
-      <DealershipRegistrationModal
-        isOpen={isRegistrationModalOpen}
-        onClose={() => setIsRegistrationModalOpen(false)}
-      />
+        {/* All Showrooms */}
+        <div>
+          <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-6">
+            {t('showroom.allShowrooms')}
+          </h2>
+          {filteredShowrooms.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredShowrooms
+                .filter(showroom => showroom.featured !== true)
+                .map((showroom) => (
+                  <ShowroomCard key={showroom.id} showroom={showroom} />
+                ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+              {t('showroom.noResults')}
+            </div>
+          )}
+        </div>
+
+        <DealershipRegistrationModal
+          isOpen={isRegistrationModalOpen}
+          onClose={() => setIsRegistrationModalOpen(false)}
+        />
+      </div>
+      <LoginPopup delay={5000} />
     </div>
-    <LoginPopup delay={5000} />
-  </div>
   );
 }

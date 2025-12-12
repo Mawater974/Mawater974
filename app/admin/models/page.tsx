@@ -63,7 +63,7 @@ export default function ModelsManagement() {
     };
 
     checkAdminAndFetchBrands();
-  }, [user, authLoading, router]);
+  }, [user?.id, authLoading, router]);
 
   useEffect(() => {
     const fetchModels = async () => {
@@ -130,7 +130,7 @@ export default function ModelsManagement() {
     try {
       const { error } = await supabase
         .from('models')
-        .update({ 
+        .update({
           name: model.name,
           name_ar: model.name_ar
         })
@@ -198,150 +198,150 @@ export default function ModelsManagement() {
 
           {/* Brand Selection */}
           <div className="mb-8">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Select Brand
-          </label>
-          <select
-            value={selectedBrand || ''}
-            onChange={(e) => setSelectedBrand(e.target.value)}
-            className="w-full border dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-qatar-maroon dark:focus:ring-qatar-maroon-light"
-          >
-            <option value="">Select a brand</option>
-            {brands.map((brand) => (
-              <option key={brand.id} value={brand.id}>
-                {brand.name}
-              </option>
-            ))}
-          </select>
-        </div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Select Brand
+            </label>
+            <select
+              value={selectedBrand || ''}
+              onChange={(e) => setSelectedBrand(e.target.value)}
+              className="w-full border dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-qatar-maroon dark:focus:ring-qatar-maroon-light"
+            >
+              <option value="">Select a brand</option>
+              {brands.map((brand) => (
+                <option key={brand.id} value={brand.id}>
+                  {brand.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        {selectedBrand && (
-          <>
-            {/* Add New Model Form */}
-            <div className="mb-8">
-              <h2 className="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-200">Add New Model</h2>
-              <div className="flex gap-4 flex-wrap">
-                <input
-                  type="text"
-                  placeholder="Model Name (English)"
-                  value={newModel.name}
-                  onChange={(e) => setNewModel({ ...newModel, name: e.target.value })}
-                  className="flex-1 border dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-qatar-maroon dark:focus:ring-qatar-maroon-light min-w-[200px]"
-                />
-                <input
-                  type="text"
-                  placeholder="Model Name (Arabic)"
-                  value={newModel.name_ar}
-                  onChange={(e) => setNewModel({ ...newModel, name_ar: e.target.value })}
-                  className="flex-1 border dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-qatar-maroon dark:focus:ring-qatar-maroon-light min-w-[200px]"
-                />
-                <button
-                  onClick={handleAddModel}
-                  className="bg-qatar-maroon hover:bg-qatar-maroon-dark dark:bg-qatar-maroon-light dark:hover:bg-qatar-maroon text-white px-4 py-2 rounded transition-colors duration-200"
-                >
-                  Add Model
-                </button>
+          {selectedBrand && (
+            <>
+              {/* Add New Model Form */}
+              <div className="mb-8">
+                <h2 className="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-200">Add New Model</h2>
+                <div className="flex gap-4 flex-wrap">
+                  <input
+                    type="text"
+                    placeholder="Model Name (English)"
+                    value={newModel.name}
+                    onChange={(e) => setNewModel({ ...newModel, name: e.target.value })}
+                    className="flex-1 border dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-qatar-maroon dark:focus:ring-qatar-maroon-light min-w-[200px]"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Model Name (Arabic)"
+                    value={newModel.name_ar}
+                    onChange={(e) => setNewModel({ ...newModel, name_ar: e.target.value })}
+                    className="flex-1 border dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-qatar-maroon dark:focus:ring-qatar-maroon-light min-w-[200px]"
+                  />
+                  <button
+                    onClick={handleAddModel}
+                    className="bg-qatar-maroon hover:bg-qatar-maroon-dark dark:bg-qatar-maroon-light dark:hover:bg-qatar-maroon text-white px-4 py-2 rounded transition-colors duration-200"
+                  >
+                    Add Model
+                  </button>
+                </div>
               </div>
-            </div>
 
-            {/* Models Table */}
-            <div className="overflow-x-auto">
-              {loading ? (
-                <tr>
-                  <td colSpan={3} className="px-6 py-4 text-center">
-                    <LoadingSpinner />
-                  </td>
-                </tr>
-              ) : models.length === 0 ? (
-                <tr>
-                  <td colSpan={3} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
-                    No models found for this brand
-                  </td>
-                </tr>
-              ) : (
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                  <thead className="bg-gray-50 dark:bg-gray-900/50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Model Name (English)
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Model Name (Arabic)
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                    {models.map((model) => (
-                      <tr key={model.id}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                          {editingModel?.id === model.id ? (
-                            <input
-                              type="text"
-                              value={editingModel.name}
-                              onChange={(e) => setEditingModel({ ...editingModel, name: e.target.value })}
-                              className="w-full border dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                            />
-                          ) : (
-                            <span>{model.name}</span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                          {editingModel?.id === model.id ? (
-                            <input
-                              type="text"
-                              value={editingModel.name_ar || ''}
-                              onChange={(e) => setEditingModel({ ...editingModel, name_ar: e.target.value })}
-                              className="w-full border dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                            />
-                          ) : (
-                            <span className="font-arabic">{model.name_ar || '-'}</span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {editingModel?.id === model.id ? (
-                            <div className="flex space-x-2">
-                              <button
-                                onClick={() => handleUpdateModel(editingModel)}
-                                className="bg-green-500 dark:bg-green-600 text-white px-2 py-1 rounded hover:bg-green-600 dark:hover:bg-green-700 transition-colors duration-200"
-                              >
-                                Save
-                              </button>
-                              <button
-                                onClick={() => setEditingModel(null)}
-                                className="bg-gray-500 dark:bg-gray-600 text-white px-2 py-1 rounded hover:bg-gray-600 dark:hover:bg-gray-700 transition-colors duration-200"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="flex space-x-2">
-                              <button
-                                onClick={() => setEditingModel(model)}
-                                className="bg-blue-500 dark:bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-600 dark:hover:bg-blue-700 transition-colors duration-200"
-                              >
-                                Edit
-                              </button>
-                              <button
-                                onClick={() => handleDeleteModel(model.id)}
-                                className="bg-red-500 dark:bg-red-600 text-white px-2 py-1 rounded hover:bg-red-600 dark:hover:bg-red-700 transition-colors duration-200"
-                              >
-                                Delete
-                              </button>
-                            </div>
-                          )}
-                        </td>
+              {/* Models Table */}
+              <div className="overflow-x-auto">
+                {loading ? (
+                  <tr>
+                    <td colSpan={3} className="px-6 py-4 text-center">
+                      <LoadingSpinner />
+                    </td>
+                  </tr>
+                ) : models.length === 0 ? (
+                  <tr>
+                    <td colSpan={3} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                      No models found for this brand
+                    </td>
+                  </tr>
+                ) : (
+                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead className="bg-gray-50 dark:bg-gray-900/50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          Model Name (English)
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          Model Name (Arabic)
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          Actions
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </>
-        )}
-      </div>
+                    </thead>
+                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                      {models.map((model) => (
+                        <tr key={model.id}>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                            {editingModel?.id === model.id ? (
+                              <input
+                                type="text"
+                                value={editingModel.name}
+                                onChange={(e) => setEditingModel({ ...editingModel, name: e.target.value })}
+                                className="w-full border dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                              />
+                            ) : (
+                              <span>{model.name}</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                            {editingModel?.id === model.id ? (
+                              <input
+                                type="text"
+                                value={editingModel.name_ar || ''}
+                                onChange={(e) => setEditingModel({ ...editingModel, name_ar: e.target.value })}
+                                className="w-full border dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                              />
+                            ) : (
+                              <span className="font-arabic">{model.name_ar || '-'}</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {editingModel?.id === model.id ? (
+                              <div className="flex space-x-2">
+                                <button
+                                  onClick={() => handleUpdateModel(editingModel)}
+                                  className="bg-green-500 dark:bg-green-600 text-white px-2 py-1 rounded hover:bg-green-600 dark:hover:bg-green-700 transition-colors duration-200"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  onClick={() => setEditingModel(null)}
+                                  className="bg-gray-500 dark:bg-gray-600 text-white px-2 py-1 rounded hover:bg-gray-600 dark:hover:bg-gray-700 transition-colors duration-200"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex space-x-2">
+                                <button
+                                  onClick={() => setEditingModel(model)}
+                                  className="bg-blue-500 dark:bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-600 dark:hover:bg-blue-700 transition-colors duration-200"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteModel(model.id)}
+                                  className="bg-red-500 dark:bg-red-600 text-white px-2 py-1 rounded hover:bg-red-600 dark:hover:bg-red-700 transition-colors duration-200"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </>
+          )}
+        </div>
       </main>
     </div>
   );

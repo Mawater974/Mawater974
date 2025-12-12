@@ -91,11 +91,11 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
   const handlePrevImage = () => {
     if (!car?.images?.length) return;
     if (showFullImage) {
-      setFullImageIndex((prev) => 
+      setFullImageIndex((prev) =>
         prev === 0 ? car.images.length - 1 : prev - 1
       );
     } else {
-      setCurrentImageIndex((prev) => 
+      setCurrentImageIndex((prev) =>
         prev === 0 ? car.images.length - 1 : prev - 1
       );
     }
@@ -104,11 +104,11 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
   const handleNextImage = () => {
     if (!car?.images?.length) return;
     if (showFullImage) {
-      setFullImageIndex((prev) => 
+      setFullImageIndex((prev) =>
         prev === car.images.length - 1 ? 0 : prev + 1
       );
     } else {
-      setCurrentImageIndex((prev) => 
+      setCurrentImageIndex((prev) =>
         prev === car.images.length - 1 ? 0 : prev + 1
       );
     }
@@ -126,7 +126,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       if (!showFullImage) return;
-      
+
       if (e.key === 'Escape') {
         closeFullImage();
       } else if (e.key === 'ArrowLeft') {
@@ -144,7 +144,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
     if (user && car) {
       const isOwner = user.id === car.user_id;
     }
-  }, [user, car]);
+  }, [user?.id, car]);
 
   useEffect(() => {
     if (car && !viewCounted) {
@@ -166,7 +166,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
             .eq('id', car.id);
 
           if (updateError) throw updateError;
-          
+
           // Update local state
           setCar(prev => prev ? { ...prev, views_count: currentViews + 1 } : null);
           setViewCounted(true);
@@ -306,15 +306,15 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
             }));
 
             // Ensure we have at least one image
-            const images = processedImages.length > 0 
-              ? processedImages 
+            const images = processedImages.length > 0
+              ? processedImages
               : [{
-                  id: 'fallback',
-                  image_url: '/images/car-placeholder.jpg',
-                  thumbnail_url: '/images/car-placeholder.jpg',
-                  is_main: true,
-                  display_order: 0
-                }];
+                id: 'fallback',
+                image_url: '/images/car-placeholder.jpg',
+                thumbnail_url: '/images/car-placeholder.jpg',
+                is_main: true,
+                display_order: 0
+              }];
 
             return {
               ...carData,
@@ -343,15 +343,15 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
             }));
 
             // Ensure we have at least one image
-            const images = processedImages.length > 0 
-              ? processedImages 
+            const images = processedImages.length > 0
+              ? processedImages
               : [{
-                  id: 'fallback',
-                  image_url: '/images/car-placeholder.jpg',
-                  thumbnail_url: '/images/car-placeholder.jpg',
-                  is_main: true,
-                  display_order: 0
-                }];
+                id: 'fallback',
+                image_url: '/images/car-placeholder.jpg',
+                thumbnail_url: '/images/car-placeholder.jpg',
+                is_main: true,
+                display_order: 0
+              }];
 
             return {
               ...carData,
@@ -412,7 +412,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
       parentComments.forEach(comment => {
         comment.replies = replyComments.get(comment.id) || [];
         // Sort replies by created_at
-        comment.replies.sort((a, b) => 
+        comment.replies.sort((a, b) =>
           new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
         );
       });
@@ -428,7 +428,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
       fetchComments();
     }
   }, [carId]);
-  
+
 
   useEffect(() => {
     if (car) {
@@ -444,19 +444,19 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
         const currentUrl = window.location.pathname;
         const referrer = document.referrer;
         const referrerUrl = referrer ? new URL(referrer) : null;
-        
+
         // Only track if:
         // 1. This is a direct visit (no referrer)
         // 2. Referrer is not our root page
         // 3. Referrer is from a different site
-        const shouldTrack = !referrer || 
-          (referrerUrl && referrerUrl.pathname !== '/') || 
+        const shouldTrack = !referrer ||
+          (referrerUrl && referrerUrl.pathname !== '/') ||
           (referrerUrl && referrerUrl.origin !== window.location.origin);
-        
+
         if (shouldTrack) {
           // Get real location from IP
           const geoInfo = await getCountryFromIP();
-          
+
           const response = await fetch('/api/analytics/page-view', {
             method: 'POST',
             headers: {
@@ -512,15 +512,15 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
     };
 
     checkFavoriteStatus();
-  }, [user, car]);
+  }, [user?.id, car]);
 
   const handleFavoriteClick = async () => {
     if (!user || !car || isUpdatingFavorite) return;
-  
+
     const wasFavorite = isFavorite;
     setIsUpdatingFavorite(true);
     setIsFavorite(!wasFavorite); // Optimistic update
-  
+
     try {
       if (wasFavorite) {
         const { error } = await supabase
@@ -548,7 +548,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
     try {
       await navigator.share({
         title: `${car?.brand.name} ${car?.model.name}${car?.exact_model ? ` - ${car?.exact_model}` : ''} (${car?.year})`,
-        text: t('car.details.share.title', { 
+        text: t('car.details.share.title', {
           year: car?.year,
           brand: car?.brand.name,
           model: `${car?.model.name}${car?.exact_model ? ` - ${car?.exact_model}` : ''}`
@@ -563,9 +563,9 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
   const handleContactSeller = () => {
     if (car) {
       trackContactSeller(
-        (car.id as number).toString(), 
-        `${car.brand?.name} ${car.model?.name}`, 
-        car.is_dealer ? 'dealer' : 'private', 
+        (car.id as number).toString(),
+        `${car.brand?.name} ${car.model?.name}`,
+        car.is_dealer ? 'dealer' : 'private',
         'button'
       );
     }
@@ -580,7 +580,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
         year: 'numeric'
       });
     }
-    
+
     return new Date(dateString).toLocaleDateString('en-QA', {
       year: 'numeric',
       month: 'long',
@@ -595,10 +595,10 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
     try {
       const { error } = await supabase
         .from('car_reports')
-        .insert([{ 
+        .insert([{
           car_id: parseInt(carId as string), // Convert string ID to integer
           user_id: user.id,
-          reason: reportReason, 
+          reason: reportReason,
           description: reportDescription,
           status: 'Pending',
           country_code: carCountry?.code || currentCountry?.code || 'QA' // Include country code for filtering reports by country
@@ -657,12 +657,12 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
 
       // Update comments state based on whether it's a reply or new comment
       if (replyTo) {
-        setComments(prevComments => 
+        setComments(prevComments =>
           prevComments.map(parentComment => {
             if (parentComment.id === replyTo.id) {
               return {
                 ...parentComment,
-                replies: [...(parentComment.replies || []), comment].sort((a, b) => 
+                replies: [...(parentComment.replies || []), comment].sort((a, b) =>
                   new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
                 )
               };
@@ -698,12 +698,12 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
 
   const handleSaveEdit = async () => {
     if (!editingComment || !editContent.trim()) return;
-  
+
     setIsSubmittingEdit(true);
     try {
       const { data: updatedComment, error } = await supabase
         .from('comments')
-        .update({ 
+        .update({
           content: editContent.trim(),
           updated_at: new Date().toISOString()  // Update comment's updated_at
         })
@@ -718,24 +718,24 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
           )
         `)
         .single();
-  
+
       if (error) throw error;
-  
+
       // Update car's updated_at
       const { error: carError } = await supabase
         .from('cars')
-        .update({ 
+        .update({
           updated_at: updatedComment.updated_at  // Use the same timestamp as the comment
         })
         .eq('id', car?.id);
-  
+
       if (carError) {
         console.error('Error updating car timestamp:', carError);
       }
-  
+
       // Update comments state
       if (editingComment.parent_id) {
-        setComments(prevComments => 
+        setComments(prevComments =>
           prevComments.map(parentComment => {
             if (parentComment.id === editingComment.parent_id) {
               return {
@@ -757,7 +757,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
           )
         );
       }
-  
+
       setEditingComment(null);
       setEditContent('');
       toast.success(t('car.details.commentUpdated'));
@@ -767,7 +767,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
       setIsSubmittingEdit(false);
     }
   };
-  
+
   const handleDeleteComment = async (comment: CommentWithReplies) => {
     if (!window.confirm(t('car.details.deleteConfirm'))) return;
 
@@ -782,7 +782,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
 
       // Update comments state
       if (comment.parent_id) {
-        setComments(prevComments => 
+        setComments(prevComments =>
           prevComments.map(parentComment => {
             if (parentComment.id === comment.parent_id) {
               return {
@@ -872,34 +872,32 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
                     </div>
                   )}
                   {car.images && car.images.length > 1 && (
-                      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
-                        {car.images.map((_, index) => (
-                          <button
-                            key={index}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setCurrentImageIndex(index);
-                            }}
-                            className={`h-1.5 rounded-full transition-all duration-200 ${
-                              index === currentImageIndex 
-                                ? 'w-4 bg-qatar-maroon' 
-                                : 'w-1.5 bg-white/60 hover:bg-white'
+                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+                      {car.images.map((_, index) => (
+                        <button
+                          key={index}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setCurrentImageIndex(index);
+                          }}
+                          className={`h-1.5 rounded-full transition-all duration-200 ${index === currentImageIndex
+                              ? 'w-4 bg-qatar-maroon'
+                              : 'w-1.5 bg-white/60 hover:bg-white'
                             }`}
-                            aria-label={`Go to image ${index + 1}`}
-                          />
-                        ))}
-                      </div>
-                    )}
+                          aria-label={`Go to image ${index + 1}`}
+                        />
+                      ))}
+                    </div>
+                  )}
                   )}
                   {car.status && car.status !== 'approved' && (
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <div className={`text-4xl font-bold transform rotate-[-15deg] px-6 py-3 rounded-lg ${
-                        car.status === 'sold' ? 'bg-green-600/90 text-white' :
-                        car.status === 'expired' ? 'bg-amber-600/90 text-white' :
-                        car.status === 'hidden' ? 'bg-gray-800/90 text-white' :
-                        'text-qatar-maroon bg-white/80 dark:bg-black/70'
-                      }`}>
+                      <div className={`text-4xl font-bold transform rotate-[-15deg] px-6 py-3 rounded-lg ${car.status === 'sold' ? 'bg-green-600/90 text-white' :
+                          car.status === 'expired' ? 'bg-amber-600/90 text-white' :
+                            car.status === 'hidden' ? 'bg-gray-800/90 text-white' :
+                              'text-qatar-maroon bg-white/80 dark:bg-black/70'
+                        }`}>
                         {car.status.toUpperCase()}
                       </div>
                     </div>
@@ -923,7 +921,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
                 </>
               )}
             </div>
-            
+
 
             {/* Thumbnail Grid */}
             {car.images && car.images.length > 1 && (
@@ -933,9 +931,8 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
                     key={index}
                     src={image.image_url || image.url}
                     alt={`${car.brand?.name || ''} ${car.model?.name || ''} thumbnail ${index + 1}`}
-                    className={`w-full aspect-[4/3] object-cover rounded-lg cursor-pointer ${
-                      currentImageIndex === index ? 'ring-2 ring-qatar-maroon' : ''
-                    }`}
+                    className={`w-full aspect-[4/3] object-cover rounded-lg cursor-pointer ${currentImageIndex === index ? 'ring-2 ring-qatar-maroon' : ''
+                      }`}
                     onClick={() => setCurrentImageIndex(index)}
                   />
                 ))}
@@ -1009,12 +1006,11 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
                         />
                         {car.status && car.status !== 'approved' && (
                           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                            <div className={`text-6xl font-bold transform rotate-[-15deg] px-8 py-4 rounded-lg ${
-                              car.status === 'sold' ? 'bg-green-600/90 text-white' :
-                              car.status === 'expired' ? 'bg-amber-600/90 text-white' :
-                              car.status === 'hidden' ? 'bg-gray-800/90 text-white' :
-                              'text-qatar-maroon bg-white/80 dark:bg-black/80'
-                            }`}>
+                            <div className={`text-6xl font-bold transform rotate-[-15deg] px-8 py-4 rounded-lg ${car.status === 'sold' ? 'bg-green-600/90 text-white' :
+                                car.status === 'expired' ? 'bg-amber-600/90 text-white' :
+                                  car.status === 'hidden' ? 'bg-gray-800/90 text-white' :
+                                    'text-qatar-maroon bg-white/80 dark:bg-black/80'
+                              }`}>
                               {car.status.toUpperCase()}
                             </div>
                           </div>
@@ -1041,8 +1037,8 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
                   {currentLanguage === 'ar' && car.brand?.name_ar ? car.brand.name_ar : car.brand.name} {currentLanguage === 'ar' && car.model?.name_ar ? car.model.name_ar : car.model.name}{car.exact_model ? ` - ${car.exact_model}` : ''} {car.year}
                 </h1>
                 <div className="mt-2 flex items-center space-x-4 rtl:space-x-reverse mb-2">
-                  <p className="text-2xl font-bold text-qatar-maroon" 
-                  dir={currentLanguage === 'ar' ? 'rtl' : 'ltr'}>
+                  <p className="text-2xl font-bold text-qatar-maroon"
+                    dir={currentLanguage === 'ar' ? 'rtl' : 'ltr'}>
                     {car.price.toLocaleString('en-US')} {t(`common.currency.${car.country?.currency_code}`)}
 
                   </p>
@@ -1052,9 +1048,8 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
                 <button
                   onClick={handleFavoriteClick}
                   disabled={isUpdatingFavorite}
-                  className={`p-2 rounded-full ${
-                    isFavorite ? 'text-qatar-maroon' : 'text-gray-400 hover:text-qatar-maroon'
-                  }`}
+                  className={`p-2 rounded-full ${isFavorite ? 'text-qatar-maroon' : 'text-gray-400 hover:text-qatar-maroon'
+                    }`}
                 >
                   {isFavorite ? (
                     <HeartIconSolid className="h-6 w-6" />
@@ -1192,7 +1187,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
                 </div>
               )}
 
-              
+
 
               {/* Drive Type */}
               {car.drive_type && (
@@ -1216,10 +1211,10 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
                   <span className="text-sm font-medium text-gray-600 dark:text-gray-300">{t('car.warranty.label')}</span>
                 </div>
                 <p className="text-gray-900 dark:text-white font-semibold">
-                  {car.warranty === 'Yes' 
-                    ? (car.warranty_months_remaining && car.warranty_months_remaining > 0 
-                        ? t('car.warranty.yesWithMonths', { months: car.warranty_months_remaining })
-                        : t('car.warranty.yes'))
+                  {car.warranty === 'Yes'
+                    ? (car.warranty_months_remaining && car.warranty_months_remaining > 0
+                      ? t('car.warranty.yesWithMonths', { months: car.warranty_months_remaining })
+                      : t('car.warranty.yes'))
                     : t('car.warranty.no')}
                 </p>
               </div>
@@ -1233,7 +1228,7 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
                   <span className="text-sm font-medium text-gray-600 dark:text-gray-300">{t('car.details.location')}</span>
                 </div>
                 <p className="text-gray-900 dark:text-white font-semibold">
-                  {carCity 
+                  {carCity
                     ? (currentLanguage === 'ar' && carCity.name_ar ? carCity.name_ar : carCity.name)
                     : (car?.city?.name || t('common.notSpecified'))}
                 </p>
@@ -1416,8 +1411,8 @@ export default function CarDetailsPage({ params: propParams }: { params?: { id: 
                     {comment.replies && comment.replies.length > 0 && (
                       <div className="border-t border-gray-100 dark:border-gray-700">
                         {comment.replies.map((reply) => (
-                          <div 
-                            key={reply.id} 
+                          <div
+                            key={reply.id}
                             className="p-4 bg-gray-50 dark:bg-gray-800/50 border-l-4 border-qatar-maroon/20 mr-0 ml-8 rtl:ml-0 rtl:mr-8 relative before:absolute before:top-0 before:h-full before:w-px before:bg-qatar-maroon/10 before:right-auto before:left-[-2px] rtl:before:right-[-2px] rtl:before:left-auto"
                           >
                             <div className="flex justify-between items-start mb-2">

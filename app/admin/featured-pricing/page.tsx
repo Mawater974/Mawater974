@@ -28,7 +28,7 @@ const FeaturedPricingPage = () => {
 
     fetchCountries();
     fetchPricingData();
-  }, [user]);
+  }, [user?.id]);
 
   const fetchCountries = async () => {
     try {

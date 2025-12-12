@@ -314,8 +314,8 @@ export default function ShowroomPage() {
         fetchUserFavorites();
       }
     }
-  }, [currentCountry]);
-  const handleCompareToggle = (car: CarWithLocation) => {
+  }, [currentCountry, id, user?.id]);
+  const handleCompareToggle = (car: CarListingData) => {
     setSelectedCars((prev) => {
       const isSelected = prev.some((c) => c.id === car.id);
       if (isSelected) {
@@ -362,7 +362,7 @@ export default function ShowroomPage() {
   };
 
   // Track page view when component mounts
-  /*useEffect(() => {
+  useEffect(() => {
     if (currentCountry?.code && showroom) {
       const trackPageView = async () => {
         try {
@@ -370,19 +370,19 @@ export default function ShowroomPage() {
           const currentUrl = window.location.pathname;
           const referrer = document.referrer;
           const referrerUrl = referrer ? new URL(referrer) : null;
-          
+
           // Only track if:
           // 1. This is a direct visit (no referrer)
           // 2. Referrer is not our root page
           // 3. Referrer is from a different site
-          const shouldTrack = !referrer || 
-            (referrerUrl && referrerUrl.pathname !== '/') || 
+          const shouldTrack = !referrer ||
+            (referrerUrl && referrerUrl.pathname !== '/') ||
             (referrerUrl && referrerUrl.origin !== window.location.origin);
-          
+
           if (shouldTrack) {
             // Get real location from IP
             const geoInfo = await getCountryFromIP();
-            
+
             const response = await fetch('/api/analytics/page-view', {
               method: 'POST',
               headers: {
@@ -412,7 +412,7 @@ export default function ShowroomPage() {
 
       trackPageView();
     }
-  }, [currentCountry?.code, showroom, user?.id]);*/
+  }, [currentCountry?.code, showroom, user?.id]);
 
   if (isLoading) {
     return (
@@ -722,7 +722,7 @@ export default function ShowroomPage() {
               <CarCompareModal
                 isOpen={showCompareModal}
                 onClose={handleCompareClose}
-                cars={selectedCars}
+                cars={selectedCars as any}
               />
             )}
           </div>

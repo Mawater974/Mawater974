@@ -36,7 +36,7 @@ export default function FavoritesPage() {
     const loadFavorites = async () => {
       // Wait for authentication to complete
       if (isAuthLoading) return;
-      
+
       // Redirect to login if no user
       if (!user) {
         router.push(`/${countryCode}/login?redirect=/favorites`);
@@ -47,14 +47,14 @@ export default function FavoritesPage() {
     };
 
     loadFavorites();
-  }, [user, isAuthLoading, currentCountry?.id, countryCode]);
+  }, [user?.id, isAuthLoading, currentCountry?.id, countryCode]);
 
   const fetchFavorites = async () => {
     if (!user) return;
-    
+
     try {
       setLoading(true);
-      
+
       // First get both car and spare part favorites
       const { data: favData, error: favError } = await supabase
         .from('favorites')
@@ -126,6 +126,7 @@ export default function FavoritesPage() {
               model:models(id, name, name_ar),
               category:spare_part_categories(id, name_en, name_ar),
               city:cities(id, name, name_ar),
+              country:countries(id, name, name_ar, code, currency_code),
               images:spare_part_images(url, is_primary)
             `)
             .in('id', sparePartIds);
@@ -152,7 +153,7 @@ export default function FavoritesPage() {
       ];
 
       // Sort by favorite creation date, newest first
-      allFavorites.sort((a, b) => 
+      allFavorites.sort((a, b) =>
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
 
@@ -187,7 +188,7 @@ export default function FavoritesPage() {
 
       // Update local state with animation
       setFavorites(prev => prev.filter(item => item.id !== itemId));
-      
+
       toast.success(t('favorites.success.removed'), {
         icon: '💔',
         position: 'bottom-right',
@@ -198,32 +199,32 @@ export default function FavoritesPage() {
     }
   };
 
- // Track page view
- /*useEffect(() => {
-  const trackPageView = async () => {
-    try {
-      const response = await fetch('/api/analytics/page-view', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          countryCode: '--', // Default to Qatar since this is a global page
-          userId: user?.id,
-          pageType: 'favorites'
-        })
-      });
-
-      if (!response.ok) {
-        console.error('Failed to track page view:', await response.json());
-      }
-    } catch (error) {
-      console.error('Failed to track page view:', error);
-    }
-  };
-
-  trackPageView();
-}, [user?.id]);*/
+  // Track page view
+  /*useEffect(() => {
+   const trackPageView = async () => {
+     try {
+       const response = await fetch('/api/analytics/page-view', {
+         method: 'POST',
+         headers: {
+           'Content-Type': 'application/json',
+         },
+         body: JSON.stringify({
+           countryCode: '--', // Default to Qatar since this is a global page
+           userId: user?.id,
+           pageType: 'favorites'
+         })
+       });
+ 
+       if (!response.ok) {
+         console.error('Failed to track page view:', await response.json());
+       }
+     } catch (error) {
+       console.error('Failed to track page view:', error);
+     }
+   };
+ 
+   trackPageView();
+ }, [user?.id]);*/
 
   if (loading) {
     return (
@@ -244,7 +245,7 @@ export default function FavoritesPage() {
             {t(`favorites.count${favorites.length === 1 ? '' : '_plural'}`, { count: favorites.length })}
           </span>
         </div>
-        
+
         {favorites.length === 0 ? (
           <div className="text-center py-12">
             <div className="mb-4">

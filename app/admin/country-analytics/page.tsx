@@ -48,9 +48,9 @@ const exportToCSV = (data: any[], filename: string) => {
 
   const csvContent = [
     headers.join(','),
-    ...rows.map(row => row.map(cell => 
-      typeof cell === 'string' && cell.includes(',') 
-        ? `"${cell}"` 
+    ...rows.map(row => row.map(cell =>
+      typeof cell === 'string' && cell.includes(',')
+        ? `"${cell}"`
         : cell
     ).join(','))
   ].join('\n');
@@ -58,7 +58,7 @@ const exportToCSV = (data: any[], filename: string) => {
   // Create and download the file
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
-  
+
   // Create object URL and download
   const url = URL.createObjectURL(blob);
   link.href = url;
@@ -105,7 +105,7 @@ export default function CountryAnalyticsPage() {
 
   useEffect(() => {
     checkAdminStatus();
-  }, [user]);
+  }, [user?.id]);
 
   const checkAdminStatus = async () => {
     if (!user) return;
@@ -166,14 +166,14 @@ export default function CountryAnalyticsPage() {
             .select('id', { count: 'exact' })
             .eq('country_id', country.id)
             .then(({ count }) => count || 0),
-          
+
           // Total cars
           supabase
             .from('cars')
             .select('id', { count: 'exact' })
             .eq('country_id', country.id)
             .then(({ count }) => count || 0),
-          
+
           // Total dealers
           supabase
             .from('profiles')
@@ -181,7 +181,7 @@ export default function CountryAnalyticsPage() {
             .eq('country_id', country.id)
             .eq('role', 'dealer')
             .then(({ count }) => count || 0),
-          
+
           // Listing stats by status
           supabase
             .from('cars')
@@ -192,7 +192,7 @@ export default function CountryAnalyticsPage() {
               pending: data?.filter(car => car.status === 'pending').length || 0,
               sold: data?.filter(car => car.status === 'sold').length || 0
             })),
-          
+
           // New users this month
           supabase
             .from('profiles')
@@ -200,7 +200,7 @@ export default function CountryAnalyticsPage() {
             .eq('country_id', country.id)
             .gte('created_at', firstDayOfMonth)
             .then(({ count }) => count || 0),
-          
+
           // New dealers this month
           supabase
             .from('profiles')
@@ -209,7 +209,7 @@ export default function CountryAnalyticsPage() {
             .eq('role', 'dealer')
             .gte('created_at', firstDayOfMonth)
             .then(({ count }) => count || 0),
-          
+
           // Featured listings count
           supabase
             .from('cars')
@@ -217,7 +217,7 @@ export default function CountryAnalyticsPage() {
             .eq('country_id', country.id)
             .eq('is_featured', true)
             .then(({ count }) => count || 0),
-          
+
           // Average price
           supabase
             .from('cars')
@@ -228,7 +228,7 @@ export default function CountryAnalyticsPage() {
               const prices = data.map(car => Number(car.price)).filter(price => !isNaN(price));
               return prices.length ? Math.round(prices.reduce((a, b) => a + b, 0) / prices.length) : 0;
             }),
-          
+
           // Most popular brand
           supabase
             .from('cars')
@@ -245,7 +245,7 @@ export default function CountryAnalyticsPage() {
                 .sort((a, b) => b[1] - a[1])[0];
               return { name: topBrand?.[0] || 'N/A', count: topBrand?.[1] || 0 };
             }),
-          
+
           // Top dealers
           supabase
             .from('profiles')
