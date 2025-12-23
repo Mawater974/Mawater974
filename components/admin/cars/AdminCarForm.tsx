@@ -92,7 +92,7 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
     cylinders: car?.cylinders || '',
     drive_type: car?.drive_type || '',
     doors: car?.doors ? car.doors.toString() : '4',
-    warranty: car?.warranty_months_remaining ? 'Yes' : 'No',
+    warranty: (car as any)?.warranty || '',
     warranty_months_remaining: car?.warranty_months_remaining || 0,
     city_id: car?.city_id || null,
     is_featured: car?.is_featured || false,
@@ -653,8 +653,10 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
         year: Number(formData.year),
         mileage: Number(formData.mileage),
         price: Number(formData.price),
-        doors: Number(formData.doors),
-        warranty_months_remaining: formData.warranty === 'Yes' ? Number(formData.warranty_months_remaining) : 0,
+        doors: formData.doors ? Number(formData.doors) : null,
+        warranty: formData.warranty || null,
+        warranty_months_remaining: formData.warranty === 'Yes' ? Number(formData.warranty_months_remaining) : null,
+        drive_type: formData.drive_type || null,
         country_id: currentCountry?.id,
         status: formData.status as 'pending' | 'approved' | 'rejected' | 'sold' | 'expired',
         is_featured: formData.is_featured,
@@ -1137,9 +1139,7 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
               <option value="">{t('admin.cars.selectCylinders')}</option>
               {cylinderOptions.map(cyl => (
                 <option key={cyl} value={cyl}>
-                  {cyl === 'Electric'
-                    ? t('sell.details.cylinders.electric')
-                    : t('sell.details.cylinders.count', { count: cyl })}
+                  {t(`car.cylinders.${cyl.toLowerCase()}`)}
                 </option>
               ))}
             </select>
@@ -1148,19 +1148,18 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
           {/* Drive Type */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              {t('admin.cars.driveType')} *
+              {t('admin.cars.driveType')}
             </label>
             <select
               name="drive_type"
               value={formData.drive_type}
               onChange={handleInputChange}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-
             >
               <option value="">{t('admin.cars.selectDriveType')}</option>
               {driveTypeOptions.map(type => (
                 <option key={type} value={type}>
-                  {t(`car.driveType.${type}`)}
+                  {t(`car.driveType.${type.toLowerCase()}`)}
                 </option>
               ))}
             </select>
@@ -1169,14 +1168,13 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
           {/* Doors */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              {t('admin.cars.doors')} *
+              {t('admin.cars.doors')}
             </label>
             <select
               name="doors"
               value={formData.doors}
               onChange={handleInputChange}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-              required
             >
               <option value="">{t('admin.cars.selectDoors')}</option>
               {doorOptions.map(doors => (
@@ -1203,6 +1201,7 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
               }}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
             >
+              <option value="">{t('sell.review.notSpecified')}</option>
               {warrantyOptions.map(option => (
                 <option key={option} value={option}>
                   {t(`car.warranty.${option.toLowerCase()}`)}
@@ -1281,7 +1280,7 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
           {/* Description */}
           <div className="col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Description
+              Description *
             </label>
             <textarea
               name="description"
@@ -1290,6 +1289,7 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
               onChange={handleInputChange}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
               placeholder="Enter a detailed description of the car..."
+              required
             />
           </div>
 
