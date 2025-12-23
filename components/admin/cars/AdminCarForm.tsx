@@ -73,9 +73,7 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
   const [users, setUsers] = useState<User[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
   const [models, setModels] = useState<Model[]>([]);
-  const [dealerships, setDealerships] = useState<Dealership[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string>('');
-  const [selectedDealershipId, setSelectedDealershipId] = useState<number | null>(null);
 
   // Car form data
   const [formData, setFormData] = useState({
@@ -298,11 +296,9 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
   useEffect(() => {
     fetchUsers();
     fetchBrands();
-    fetchDealerships();
 
     if (car) {
       setSelectedUserId(car.user_id || '');
-      setSelectedDealershipId(car.dealership_id || null);
       if (car.brand_id) {
         fetchModels(Number(car.brand_id));
       }
@@ -358,39 +354,7 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
     }
   };
 
-  // Fetch all dealerships for admin to auto-assign
-  const fetchDealerships = async () => {
-    try {
-      const { data, error } = await supabaseAdmin
-        .from('dealerships')
-        .select('*')
-        .order('business_name', { ascending: true });
 
-      if (error) throw error;
-      setDealerships(data || []);
-    } catch (err) {
-      console.error('Error fetching dealerships:', err);
-    }
-  };
-
-  // Auto-select dealership when user changes
-  useEffect(() => {
-    if (selectedUserId && users.length > 0 && dealerships.length > 0) {
-      const userData = users.find(u => u.id === selectedUserId);
-      if (userData?.role === 'dealer') {
-        const dealerShop = dealerships.find(d => d.user_id === selectedUserId);
-        if (dealerShop) {
-          setSelectedDealershipId(dealerShop.id);
-        } else {
-          setSelectedDealershipId(null);
-        }
-      } else {
-        setSelectedDealershipId(null);
-      }
-    } else if (!selectedUserId) {
-      setSelectedDealershipId(null);
-    }
-  }, [selectedUserId, users, dealerships]);
 
   // Handle input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -683,7 +647,6 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
       const carData = {
         ...formData,
         user_id: selectedUserId,
-        dealership_id: selectedDealershipId,
         city_id: formData.city_id ? Number(formData.city_id) : null,
         brand_id: Number(formData.brand_id),
         model_id: Number(formData.model_id),
@@ -926,21 +889,7 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
             </select>
           </div>
 
-          {/* Dealership Info (Automatically set) */}
-          {selectedUserId && users.find(u => u.id === selectedUserId)?.role === 'dealer' && (
-            <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Dealership
-              </label>
-              <div className="mt-1 p-2 bg-gray-50 border border-gray-300 rounded-md text-sm text-gray-700">
-                {selectedDealershipId ? (
-                  dealerships.find(d => d.id === selectedDealershipId)?.business_name || 'Loading dealership...'
-                ) : (
-                  <span className="text-red-500 italic">No dealership found for this dealer</span>
-                )}
-              </div>
-            </div>
-          )}
+
 
           {/* City */}
           <div className="col-span-2">
