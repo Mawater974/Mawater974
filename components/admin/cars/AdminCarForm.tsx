@@ -28,6 +28,11 @@ const bodyTypes = ['Sedan', 'SUV', 'Hatchback', 'Coupe', 'Pickup', 'Truck', 'Van
 const conditions = ['New', 'Excellent', 'Good', 'Not Working'];
 const colors = ['White', 'Black', 'Silver', 'Gray', 'Red', 'Blue', 'Green', 'Yellow', 'Orange', 'Brown', 'Purple', 'Gold', 'Beige', 'Maroon', 'Navy', 'Bronze', 'Other'];
 
+const years = Array.from(
+  { length: new Date().getFullYear() + 2 - 1900 },
+  (_, i) => (new Date().getFullYear() + 1 - i).toString()
+);
+
 interface AdminCarFormProps {
   car?: Car & { images?: CarImage[] };
   onSuccess?: () => void;
@@ -917,7 +922,7 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
           {/* Brand */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Brand *
+              {t('sell.basic.brand')} *
             </label>
             <select
               name="brand_id"
@@ -938,7 +943,7 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
               required
             >
-              <option value="">Select a brand</option>
+              <option value="">{t('sell.basic.brand.select')}</option>
               {brands.map(brand => (
                 <option key={brand.id} value={brand.id}>
                   {brand.name}
@@ -950,7 +955,7 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
           {/* Model */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Model *
+              {t('sell.basic.model')} *
             </label>
             <select
               name="model_id"
@@ -960,7 +965,7 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
               required
               disabled={!formData.brand_id}
             >
-              <option value="">Select a model</option>
+              <option value="">{formData.brand_id ? t('sell.basic.model.select') : t('sell.basic.select.brand.first')}</option>
               {models.map(model => (
                 <option key={model.id} value={model.id}>
                   {model.name}
@@ -972,24 +977,28 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
           {/* Year */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Year *
+              {t('sell.basic.year')} *
             </label>
-            <input
-              type="number"
+            <select
               name="year"
-              min="1900"
-              max={new Date().getFullYear() + 1}
               value={formData.year}
               onChange={handleInputChange}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
               required
-            />
+            >
+              <option value="">{t('sell.basic.year.select')}</option>
+              {years.map(year => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Mileage */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Mileage (km) *
+              {t('sell.basic.mileage')} (km) *
             </label>
             <input
               type="number"
@@ -1005,7 +1014,7 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
           {/* Price */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Price (QAR) *
+              {t('sell.basic.price')} ({currentCountry?.currency_code || 'QAR'}) *
             </label>
             <input
               type="number"
@@ -1230,7 +1239,7 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
           {/* Exact Model */}
           <div className="col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Exact Model (e.g., 330i, Mustang GT)
+              {t('sell.basic.exactModel')}
             </label>
             <input
               type="text"
@@ -1238,7 +1247,7 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
               value={formData.exact_model}
               onChange={handleInputChange}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-              placeholder="e.g., 330i, Mustang GT"
+              placeholder={t('sell.basic.exactModel.placeholder')}
             />
           </div>
 
