@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { supabase, supabaseAdmin } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCountry } from '@/contexts/CountryContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -82,17 +83,17 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
     brand_id: car?.brand_id || '',
     model_id: car?.model_id || '',
     year: car?.year || new Date().getFullYear(),
-    mileage: car?.mileage || 0,
-    price: car?.price || 0,
+    mileage: car?.mileage || '',
+    price: car?.price || '',
     description: car?.description || '',
-    fuel_type: car?.fuel_type || 'Petrol',
-    gearbox_type: car?.gearbox_type || 'Automatic',
-    body_type: car?.body_type || 'Sedan',
-    condition: car?.condition || 'New',
-    color: car?.color || 'Black',
+    fuel_type: car?.fuel_type || '',
+    gearbox_type: car?.gearbox_type || '',
+    body_type: car?.body_type || '',
+    condition: car?.condition || '',
+    color: car?.color || '',
     exact_model: car?.exact_model || '',
-    cylinders: car?.cylinders || '4',
-    drive_type: car?.drive_type || 'FWD',
+    cylinders: car?.cylinders || '',
+    drive_type: car?.drive_type || '',
     doors: car?.doors ? car.doors.toString() : '4',
     warranty: car?.warranty_months_remaining ? 'Yes' : 'No',
     warranty_months_remaining: car?.warranty_months_remaining || 0,
@@ -358,24 +359,39 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
     }
   };
 
-  // Fetch dealerships for the current user
+  // Fetch all dealerships for admin to auto-assign
   const fetchDealerships = async () => {
     try {
-      if (!user) return;
-
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from('dealerships')
         .select('*')
-        .eq('user_id', user.id)
         .order('business_name', { ascending: true });
 
       if (error) throw error;
       setDealerships(data || []);
     } catch (err) {
       console.error('Error fetching dealerships:', err);
-      toast.error('Failed to load dealerships');
     }
   };
+
+  // Auto-select dealership when user changes
+  useEffect(() => {
+    if (selectedUserId && users.length > 0 && dealerships.length > 0) {
+      const userData = users.find(u => u.id === selectedUserId);
+      if (userData?.role === 'dealer') {
+        const dealerShop = dealerships.find(d => d.user_id === selectedUserId);
+        if (dealerShop) {
+          setSelectedDealershipId(dealerShop.id);
+        } else {
+          setSelectedDealershipId(null);
+        }
+      } else {
+        setSelectedDealershipId(null);
+      }
+    } else if (!selectedUserId) {
+      setSelectedDealershipId(null);
+    }
+  }, [selectedUserId, users, dealerships]);
 
   // Handle input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -911,25 +927,21 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
             </select>
           </div>
 
-          {/* Dealership Selection (optional) */}
-          <div className="col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Select Dealership (Optional)
-            </label>
-            <select
-              name="dealership_id"
-              value={selectedDealershipId || ''}
-              onChange={(e) => setSelectedDealershipId(e.target.value ? Number(e.target.value) : null)}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-            >
-              <option value="">None (Private Seller)</option>
-              {dealerships.map(dealership => (
-                <option key={dealership.id} value={dealership.id}>
-                  {dealership.business_name}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Dealership Info (Automatically set) */}
+          {selectedUserId && users.find(u => u.id === selectedUserId)?.role === 'dealer' && (
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Dealership
+              </label>
+              <div className="mt-1 p-2 bg-gray-50 border border-gray-300 rounded-md text-sm text-gray-700">
+                {selectedDealershipId ? (
+                  dealerships.find(d => d.id === selectedDealershipId)?.business_name || 'Loading dealership...'
+                ) : (
+                  <span className="text-red-500 italic">No dealership found for this dealer</span>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* City */}
           <div className="col-span-2">
@@ -1195,7 +1207,7 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
               value={formData.drive_type}
               onChange={handleInputChange}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-              required
+
             >
               <option value="">{t('admin.cars.selectDriveType')}</option>
               {driveTypeOptions.map(type => (
@@ -1264,7 +1276,6 @@ export default function AdminCarForm({ car, onSuccess, onCancel }: AdminCarFormP
                 onChange={handleInputChange}
                 min="1"
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                required={formData.warranty === 'Yes'}
               />
             </div>
           )}
