@@ -10,3 +10,8 @@
 [context.production.environment]
   NODE_VERSION = "20"
   NPM_FLAGS = "--legacy-peer-deps"
+
+# Disable the Next.js plugin
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+  enabled = false
