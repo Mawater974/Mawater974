@@ -15,15 +15,12 @@
     "@supabase/supabase-js": "2.39.0",
     "lucide-react": "0.344.0",
     "path": "0.12.7",
-    "vite": "5.1.6",
-    "@vitejs/plugin-react": "4.2.1",
     "url": "^0.11.4",
-    "next": "^16.1.1",
     "libphonenumber-js": "1.10.58"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
-    "@vitejs/plugin-react": "^5.0.0",
+    "@vitejs/plugin-react": "^4.2.1",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   }
