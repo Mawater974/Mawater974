@@ -36,8 +36,8 @@ export const RegisterShowroomPage: React.FC = () => {
   const [selectedCountry, setSelectedCountry] = useState<number | ''>('');
   const [selectedCity, setSelectedCity] = useState<number | ''>('');
   
-  const [dealershipType, setDealershipType] = useState('official');
-  const [businessType, setBusinessType] = useState('showroom');
+  const [dealershipType, setDealershipType] = useState('');
+  const [businessType, setBusinessType] = useState('');
   
   // Split Phone State
   // Contact 1
@@ -85,11 +85,24 @@ export const RegisterShowroomPage: React.FC = () => {
     init();
   }, [user, countryCode, navigate]);
 
-  // Pre-fill Logic
+  // Pre-fill Logic & Default Phone Codes based on Profile
   useEffect(() => {
-    if (profile) {
+    if (profile && countries.length > 0) {
       if (profile.email && !email) setEmail(profile.email);
-      if (profile.country_id && !selectedCountry) handleCountryChange(profile.country_id);
+      if (profile.country_id) {
+          if (!selectedCountry) handleCountryChange(profile.country_id);
+          
+          // Set default codes for C2 and C3 based on user country
+          const userCountry = countries.find(c => c.id === profile.country_id);
+          if (userCountry) {
+              const code = COUNTRY_PHONE_CODES[userCountry.code.toLowerCase()] || '+974';
+              // Always set the default code for optional fields if they are empty
+              if (!c2Num) setC2Code(code);
+              if (!c3Num) setC3Code(code);
+              // Also set C1 code default if empty, though parse logic below might override
+              if (!c1Num) setC1Code(code);
+          }
+      }
       
       // Auto-fill Contact 1 from Profile Phone using libphonenumber-js
       if (profile.phone_number && !c1Num) {
@@ -101,7 +114,6 @@ export const RegisterShowroomPage: React.FC = () => {
               }
           } catch (e) {
               console.warn("Could not parse profile phone number", e);
-              // Fallback if not parseable (just put it in num field)
               setC1Num(profile.phone_number);
           }
       }
@@ -115,10 +127,11 @@ export const RegisterShowroomPage: React.FC = () => {
       setSelectedCountry(id);
       getCities(id).then(setCities);
       
-      // Auto-select phone codes if not set
+      // Auto-select phone codes if inputs are empty
       const country = countries.find(c => c.id === id);
       if (country) {
           const code = COUNTRY_PHONE_CODES[country.code.toLowerCase()] || '+974';
+          // Only override if the number is empty (prevent overwriting user input)
           if (!c1Num) setC1Code(code);
           if (!c2Num) setC2Code(code);
           if (!c3Num) setC3Code(code);
@@ -142,7 +155,7 @@ export const RegisterShowroomPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
       if (!user) return;
-      if (!businessName || !description || !selectedCountry || !selectedCity || !c1Num) {
+      if (!businessName || !description || !selectedCountry || !selectedCity || !c1Num || !dealershipType || !businessType) {
           alert("Please fill in all required fields.");
           return;
       }
@@ -163,10 +176,10 @@ export const RegisterShowroomPage: React.FC = () => {
           }
       }
 
-      // Combine code + number using libphonenumber logic or simple concat
-      const contact1 = c1Num ? `${c1Code}${c1Num}` : '';
-      const contact2 = c2Num ? `${c2Code}${c2Num}` : '';
-      const contact3 = c3Num ? `${c3Code}${c3Num}` : '';
+      // Combine code + number (Stripping non-digits from input before saving)
+      const contact1 = c1Num ? `${c1Code}${c1Num.replace(/\D/g, '')}` : '';
+      const contact2 = c2Num ? `${c2Code}${c2Num.replace(/\D/g, '')}` : '';
+      const contact3 = c3Num ? `${c3Code}${c3Num.replace(/\D/g, '')}` : '';
 
       const dealershipData: Partial<Dealership> = {
           user_id: user.id,
@@ -210,7 +223,7 @@ export const RegisterShowroomPage: React.FC = () => {
 
   const inputClass = "w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 outline-none";
 
-  // Reusable Phone Input Component Structure for this page
+  // Reusable Phone Input Component Structure
   const renderPhoneInput = (
       label: string, 
       code: string, 
@@ -220,29 +233,29 @@ export const RegisterShowroomPage: React.FC = () => {
       required: boolean = false
   ) => (
       <div>
-          <label className="block text-sm font-bold mb-1 dark:text-gray-300">{label} {required && '*'}</label>
-          <div className="flex gap-2">
+          <label className="block text-sm font-bold mb-1 dark:text-gray-300">
+              {label} {required && '*'}
+          </label>
+          <div className="flex items-center border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-primary-500 focus-within:border-transparent bg-white dark:bg-gray-700 transition-all shadow-sm">
               <select 
                   value={code} 
                   onChange={(e) => setCode(e.target.value)}
-                  className="w-28 p-3 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 outline-none text-sm"
+                  className="w-[90px] p-3 bg-gray-50 dark:bg-gray-800 border-0 border-r border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white focus:ring-0 outline-none text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 h-full text-center"
               >
-                  {/* Default/Common Codes */}
                   {Object.entries(COUNTRY_PHONE_CODES).map(([iso, c]) => (
-                      <option key={iso} value={c}>{iso.toUpperCase()} {c}</option>
+                      <option key={iso} value={c}>{c}</option>
                   ))}
-                  {/* Fallback to country list if needed, or stick to common ones */}
-                  <option value="+90">TR +90</option>
-                  <option value="+91">IN +91</option>
-                  <option value="+63">PH +63</option>
+                  <option value="+90">+90</option>
+                  <option value="+91">+91</option>
+                  <option value="+63">+63</option>
               </select>
               <input 
-                  type="tel" 
+                  type="text" 
                   required={required}
                   value={num} 
-                  onChange={(e) => setNum(e.target.value.replace(/\D/g, ''))} 
-                  className={inputClass} 
-                  placeholder="33334444" 
+                  onChange={(e) => setNum(e.target.value)} 
+                  className="flex-1 p-3 border-0 focus:ring-0 outline-none bg-transparent text-gray-900 dark:text-white min-w-0"
+                  placeholder="5006 0000" 
               />
           </div>
       </div>
@@ -286,19 +299,22 @@ export const RegisterShowroomPage: React.FC = () => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Swapped Positions: Business Focus First */}
                     <div>
-                        <label className="block text-sm font-bold mb-1 dark:text-gray-300">Dealership Type</label>
-                        <select value={dealershipType} onChange={e => setDealershipType(e.target.value)} className={inputClass}>
-                            <option value="official">Official Dealer</option>
-                            <option value="private">Private Dealer</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-bold mb-1 dark:text-gray-300">Business Focus</label>
-                        <select value={businessType} onChange={e => setBusinessType(e.target.value)} className={inputClass}>
+                        <label className="block text-sm font-bold mb-1 dark:text-gray-300">Business Focus *</label>
+                        <select required value={businessType} onChange={e => setBusinessType(e.target.value)} className={inputClass}>
+                            <option value="" disabled>Select Business Focus</option>
                             <option value="showroom">Showroom</option>
                             <option value="service_center">Service Center</option>
                             <option value="spare_parts_dealership">Spare Parts Dealership</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold mb-1 dark:text-gray-300">Dealership Type *</label>
+                        <select required value={dealershipType} onChange={e => setDealershipType(e.target.value)} className={inputClass}>
+                            <option value="" disabled>Select Dealership Type</option>
+                            <option value="official">Official Dealer</option>
+                            <option value="private">Private Dealer</option>
                         </select>
                     </div>
                 </div>
@@ -352,8 +368,8 @@ export const RegisterShowroomPage: React.FC = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {renderPhoneInput("Main Contact", c1Code, setC1Code, c1Num, setC1Num, true)}
-                    {renderPhoneInput("Contact 2", c2Code, setC2Code, c2Num, setC2Num)}
-                    {renderPhoneInput("Contact 3", c3Code, setC3Code, c3Num, setC3Num)}
+                    {renderPhoneInput("Contact 2 (Optional)", c2Code, setC2Code, c2Num, setC2Num)}
+                    {renderPhoneInput("Contact 3 (Optional)", c3Code, setC3Code, c3Num, setC3Num)}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -363,7 +379,7 @@ export const RegisterShowroomPage: React.FC = () => {
                     </div>
                     <div>
                         <label className="block text-sm font-bold mb-1 dark:text-gray-300">Website (Optional)</label>
-                        <input type="url" value={website} onChange={e => setWebsite(e.target.value)} className={inputClass} placeholder="https://showroom.com" />
+                        <input type="text" value={website} onChange={e => setWebsite(e.target.value)} className={inputClass} placeholder="www.showroom.com" />
                     </div>
                 </div>
             </section>

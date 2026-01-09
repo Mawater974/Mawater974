@@ -3,9 +3,10 @@ import React, { useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { useNavigate, Link, useParams } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
+import { getUserProfile, getCountries } from '../services/dataService';
 
 export const LoginPage: React.FC = () => {
-  const { t } = useAppContext();
+  const { t, changeCountry } = useAppContext();
   const navigate = useNavigate();
   const { countryCode } = useParams<{ countryCode: string }>();
   const [email, setEmail] = useState('');
@@ -18,15 +19,31 @@ export const LoginPage: React.FC = () => {
     setLoading(true);
     setError(null);
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
     if (error) {
       setError(error.message);
-    } else {
-      navigate(`/${countryCode}`);
+    } else if (data.user) {
+      // Fetch profile to get preferred country
+      const profile = await getUserProfile(data.user.id);
+      let targetPath = `/${countryCode}`; // Default fallback
+
+      if (profile && profile.country_id) {
+          // If user has a country set, redirect there
+          const allCountries = await getCountries();
+          const userCountry = allCountries.find(c => c.id === profile.country_id);
+          
+          if (userCountry) {
+              // Update global app state if needed
+              changeCountry(userCountry.id); 
+              targetPath = `/${userCountry.code.toLowerCase()}`;
+          }
+      }
+      
+      navigate(targetPath);
     }
     setLoading(false);
   };

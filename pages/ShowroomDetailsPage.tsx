@@ -7,6 +7,7 @@ import { Dealership, Car } from '../types';
 import { CarCard } from '../components/CarCard';
 import { MapPin, Clock, Phone, Building2, CheckCircle, ChevronLeft, ChevronRight, Globe, Share2, Mail, ExternalLink, Warehouse } from 'lucide-react';
 import { LoadingSpinner } from '../components/LoadingSpinner';
+import { parsePhoneNumber } from 'libphonenumber-js';
 
 export const ShowroomDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -44,6 +45,21 @@ export const ShowroomDetailsPage: React.FC = () => {
   const desc = language === 'ar' ? dealer.description_ar : dealer.description;
   const location = language === 'ar' ? (dealer.location_ar || dealer.location) : dealer.location;
   const hours = language === 'ar' ? (dealer.opening_hours_ar || dealer.opening_hours) : dealer.opening_hours;
+
+  // Helper to format phone numbers for display
+  const formatPhone = (num: string | undefined) => {
+      if (!num) return "";
+      try {
+          // If the number doesn't start with +, assume it might be local or just missing it, 
+          // but parsePhoneNumber handles intl format best if + is present.
+          // The inputs ensure +code is prepended usually.
+          const p = parsePhoneNumber(num);
+          if (p) return p.formatInternational();
+          return num;
+      } catch (e) {
+          return num;
+      }
+  };
 
   // Primary contact
   const mainContact = dealer.contact_number_1 || "";
@@ -133,13 +149,19 @@ export const ShowroomDetailsPage: React.FC = () => {
                              <p className="text-gray-500 mb-2 text-xs font-bold uppercase tracking-wider flex items-center gap-1"><Phone className="w-3 h-3" /> Contact Numbers</p>
                              <div className="space-y-2">
                                 {dealer.contact_number_1 && (
-                                    <a href={`tel:${dealer.contact_number_1}`} className="block text-primary-600 font-bold text-lg hover:underline" dir="ltr">{dealer.contact_number_1}</a>
+                                    <a href={`tel:${dealer.contact_number_1}`} className="block text-primary-600 font-bold text-lg hover:underline" dir="ltr">
+                                        {formatPhone(dealer.contact_number_1)}
+                                    </a>
                                 )}
                                 {dealer.contact_number_2 && (
-                                    <a href={`tel:${dealer.contact_number_2}`} className="block text-gray-700 dark:text-gray-300 font-medium hover:text-primary-600" dir="ltr">{dealer.contact_number_2}</a>
+                                    <a href={`tel:${dealer.contact_number_2}`} className="block text-gray-700 dark:text-gray-300 font-medium hover:text-primary-600" dir="ltr">
+                                        {formatPhone(dealer.contact_number_2)}
+                                    </a>
                                 )}
                                 {dealer.contact_number_3 && (
-                                    <a href={`tel:${dealer.contact_number_3}`} className="block text-gray-700 dark:text-gray-300 font-medium hover:text-primary-600" dir="ltr">{dealer.contact_number_3}</a>
+                                    <a href={`tel:${dealer.contact_number_3}`} className="block text-gray-700 dark:text-gray-300 font-medium hover:text-primary-600" dir="ltr">
+                                        {formatPhone(dealer.contact_number_3)}
+                                    </a>
                                 )}
                              </div>
                         </div>

@@ -158,6 +158,10 @@ export const DealerDashboard: React.FC = () => {
   const totalViews = cars.reduce((acc, car) => acc + (car.views_count || 0), 0);
   const activeListings = cars.filter(c => c.status === 'approved').length;
 
+  // Updated Styles for Light Theme readability
+  const labelClass = "block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1.5";
+  const inputClass = "w-full p-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 outline-none transition shadow-sm placeholder-gray-400";
+
   const renderPhoneInput = (
       label: string, 
       code: string, 
@@ -166,12 +170,12 @@ export const DealerDashboard: React.FC = () => {
       setNum: (v: string) => void
   ) => (
       <div>
-          <label className="block text-xs font-bold text-gray-500 mb-1">{label}</label>
+          <label className={labelClass}>{label}</label>
           <div className="flex gap-2">
               <select 
                   value={code} 
                   onChange={(e) => setCode(e.target.value)}
-                  className="w-24 p-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 outline-none text-xs"
+                  className="w-28 p-3 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 outline-none text-sm cursor-pointer"
               >
                   {Object.entries(COUNTRY_PHONE_CODES).map(([iso, c]) => (
                       <option key={iso} value={c}>{iso.toUpperCase()} {c}</option>
@@ -183,7 +187,7 @@ export const DealerDashboard: React.FC = () => {
                   type="tel" 
                   value={num} 
                   onChange={(e) => setNum(e.target.value.replace(/\D/g, ''))} 
-                  className="flex-1 p-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 outline-none text-sm" 
+                  className={inputClass} 
                   placeholder="33334444" 
               />
           </div>
@@ -419,8 +423,8 @@ export const DealerDashboard: React.FC = () => {
                     
                     <form onSubmit={handleSaveProfile} className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 space-y-8">
                         {/* Logo Upload */}
-                        <div className="flex items-center gap-6 p-6 bg-gray-50 dark:bg-gray-700/30 rounded-xl border border-dashed border-gray-200 dark:border-gray-600">
-                            <div className="w-48 aspect-video rounded-2xl bg-white dark:bg-gray-700 shadow-sm flex items-center justify-center overflow-hidden relative group border border-gray-200 dark:border-gray-600">
+                        <div className="flex items-center gap-6 p-6 bg-gray-50 dark:bg-gray-700/30 rounded-xl border border-dashed border-gray-300 dark:border-gray-600">
+                            <div className="w-48 aspect-video rounded-2xl bg-white dark:bg-gray-700 shadow-sm flex items-center justify-center overflow-hidden relative group border border-gray-300 dark:border-gray-600">
                                 {logoPreview || dealer.logo_url ? (
                                     <img src={logoPreview || dealer.logo_url} alt="Logo" className="w-full h-full object-cover" />
                                 ) : (
@@ -438,20 +442,20 @@ export const DealerDashboard: React.FC = () => {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Business Name (English)</label>
-                                <input type="text" value={profileForm.business_name || ''} onChange={e => setProfileForm({...profileForm, business_name: e.target.value})} className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 outline-none" />
+                                <label className={labelClass}>Business Name (English)</label>
+                                <input type="text" value={profileForm.business_name || ''} onChange={e => setProfileForm({...profileForm, business_name: e.target.value})} className={inputClass} />
                             </div>
                             <div>
-                                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Business Name (Arabic)</label>
-                                <input type="text" value={profileForm.business_name_ar || ''} onChange={e => setProfileForm({...profileForm, business_name_ar: e.target.value})} className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-right focus:ring-2 focus:ring-primary-500 outline-none" />
+                                <label className={labelClass}>Business Name (Arabic)</label>
+                                <input type="text" value={profileForm.business_name_ar || ''} onChange={e => setProfileForm({...profileForm, business_name_ar: e.target.value})} className={`${inputClass} text-right`} />
                             </div>
                             <div className="md:col-span-2">
-                                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Description</label>
-                                <textarea rows={3} value={profileForm.description || ''} onChange={e => setProfileForm({...profileForm, description: e.target.value})} className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 outline-none" />
+                                <label className={labelClass}>Description</label>
+                                <textarea rows={3} value={profileForm.description || ''} onChange={e => setProfileForm({...profileForm, description: e.target.value})} className={inputClass} />
                             </div>
                         </div>
 
-                        <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                        <div className="space-y-6 pt-6 border-t border-gray-100 dark:border-gray-700">
                             <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2"><Phone className="w-4 h-4 text-primary-600" /> Contact Details</h4>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 {renderPhoneInput("Contact #1", c1Code, setC1Code, c1Num, setC1Num)}
@@ -459,22 +463,34 @@ export const DealerDashboard: React.FC = () => {
                                 {renderPhoneInput("Contact #3", c3Code, setC3Code, c3Num, setC3Num)}
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="relative">
-                                    <Mail className="absolute left-3 top-3.5 w-4 h-4 text-gray-400" />
-                                    <input type="email" placeholder="Business Email" value={profileForm.email || ''} onChange={e => setProfileForm({...profileForm, email: e.target.value})} className="w-full pl-10 p-3 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 outline-none" />
+                                <div>
+                                    <label className={labelClass}>Business Email</label>
+                                    <div className="relative">
+                                        <Mail className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
+                                        <input type="email" placeholder="email@example.com" value={profileForm.email || ''} onChange={e => setProfileForm({...profileForm, email: e.target.value})} className={`${inputClass} pl-10`} />
+                                    </div>
                                 </div>
-                                <div className="relative">
-                                    <Globe className="absolute left-3 top-3.5 w-4 h-4 text-gray-400" />
-                                    <input type="text" placeholder="Website" value={profileForm.website || ''} onChange={e => setProfileForm({...profileForm, website: e.target.value})} className="w-full pl-10 p-3 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 outline-none" />
+                                <div>
+                                    <label className={labelClass}>Website</label>
+                                    <div className="relative">
+                                        <Globe className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
+                                        <input type="text" placeholder="https://..." value={profileForm.website || ''} onChange={e => setProfileForm({...profileForm, website: e.target.value})} className={`${inputClass} pl-10`} />
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                        <div className="space-y-6 pt-6 border-t border-gray-100 dark:border-gray-700">
                             <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2"><MapPin className="w-4 h-4 text-primary-600" /> Location & Hours</h4>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <input type="text" placeholder="Address" value={profileForm.location || ''} onChange={e => setProfileForm({...profileForm, location: e.target.value})} className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 outline-none" />
-                                <input type="text" placeholder="Opening Hours (e.g. 8am - 9pm)" value={profileForm.opening_hours || ''} onChange={e => setProfileForm({...profileForm, opening_hours: e.target.value})} className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 outline-none" />
+                                <div>
+                                    <label className={labelClass}>Address</label>
+                                    <input type="text" placeholder="Building, Street" value={profileForm.location || ''} onChange={e => setProfileForm({...profileForm, location: e.target.value})} className={inputClass} />
+                                </div>
+                                <div>
+                                    <label className={labelClass}>Opening Hours</label>
+                                    <input type="text" placeholder="e.g. 8am - 9pm" value={profileForm.opening_hours || ''} onChange={e => setProfileForm({...profileForm, opening_hours: e.target.value})} className={inputClass} />
+                                </div>
                             </div>
                         </div>
 
