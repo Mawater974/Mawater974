@@ -1,17 +1,18 @@
 [build]
   command = "npm install && npm run build"
   publish = "dist"
+  environment = { NODE_VERSION = "20", NPM_FLAGS = "--legacy-peer-deps" }
   
 [dev]
   command = "npm run dev"
   port = 3000
   publish = "dist"
 
-[context.production.environment]
-  NODE_VERSION = "20"
-  NPM_FLAGS = "--legacy-peer-deps"
+# Completely disable all default plugins
+[build.environment]
+  NETLIFY_USE_YARN = "false"
+  NEXT_TELEMETRY_DISABLED = "1"
 
-# Disable the Next.js plugin
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
-  enabled = false
+# Explicitly set the build image to one without Next.js defaults
+[build]
+  image = "node:20"
