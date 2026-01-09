@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider } from './context/AppContext';
 import { AuthProvider } from './context/AuthContext';
 import { Layout } from './components/Layout';
@@ -38,14 +38,14 @@ import { AdminBrandsPage } from './pages/admin/AdminBrandsPage';
 
 const App: React.FC = () => {
   return (
-    <HashRouter>
+    <BrowserRouter>
       <AppProvider>
         <AuthProvider>
           <PageTracker />
           <Routes>
             {/* Root Redirect Logic */}
             <Route path="/" element={<RootRedirect />} />
-            
+
             {/* Country Specific Routes */}
             <Route path="/:countryCode" element={<Layout />}>
               <Route index element={<Home />} />
@@ -57,11 +57,11 @@ const App: React.FC = () => {
               <Route path="showrooms/:id" element={<ShowroomDetailsPage />} />
               <Route path="services" element={<ServicesPage />} />
               <Route path="rental" element={<CarRentalPage />} />
-              
+
               <Route path="contact" element={<ContactPage />} />
               <Route path="register-showroom" element={<RegisterShowroomPage />} />
               <Route path="dealer-dashboard" element={<DealerDashboard />} />
-              
+
               <Route path="login" element={<LoginPage />} />
               <Route path="signup" element={<SignupPage />} />
               <Route path="favorites" element={<FavoritesPage />} />
@@ -72,23 +72,23 @@ const App: React.FC = () => {
 
             {/* Admin Routes (Global, outside country scope for simplicity or can be inside if needed) */}
             <Route path="/admin" element={<AdminLayout />}>
-               <Route index element={<AdminDashboard />} />
-               <Route path="brands" element={<AdminBrandsPage />} />
-               <Route path="cars" element={<AdminCarsPage />} />
-               <Route path="users" element={<AdminUsersPage />} />
-               <Route path="dealers" element={<AdminDealersPage />} />
-               <Route path="settings" element={<AdminSettingsPage />} />
-               <Route path="reports" element={<AdminReportsPage />} />
-               <Route path="content" element={<AdminContentPage />} />
-               <Route path="*" element={<div className="p-10 text-center text-gray-500 text-xl">Module Coming Soon</div>} />
+              <Route index element={<AdminDashboard />} />
+              <Route path="brands" element={<AdminBrandsPage />} />
+              <Route path="cars" element={<AdminCarsPage />} />
+              <Route path="users" element={<AdminUsersPage />} />
+              <Route path="dealers" element={<AdminDealersPage />} />
+              <Route path="settings" element={<AdminSettingsPage />} />
+              <Route path="reports" element={<AdminReportsPage />} />
+              <Route path="content" element={<AdminContentPage />} />
+              <Route path="*" element={<div className="p-10 text-center text-gray-500 text-xl">Module Coming Soon</div>} />
             </Route>
-            
+
             {/* Catch all redirect to root */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AuthProvider>
       </AppProvider>
-    </HashRouter>
+    </BrowserRouter>
   );
 };
 
