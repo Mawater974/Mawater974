@@ -1,13 +1,13 @@
 [build]
   command = "npm install && npm run build"
   publish = "dist"
-  environment = { 
-    NODE_VERSION = "20", 
-    NPM_FLAGS = "--legacy-peer-deps",
-    NETLIFY_USE_YARN = "false",
+  [build.environment]
+    NODE_VERSION = "20"
+    NPM_FLAGS = "--legacy-peer-deps"
+    NETLIFY_USE_YARN = "false"
     NEXT_TELEMETRY_DISABLED = "1"
-  }
-  image = "node:20"
+  [build.image]
+    node = "20"
   
 [dev]
   command = "npm run dev"
