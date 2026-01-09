@@ -1,5 +1,5 @@
 [build]
-  command = "npm run build"
+  command = "npm install && npm run build"
   publish = "dist"
   
 [dev]
@@ -10,3 +10,4 @@
 [context.production.environment]
   NODE_VERSION = "20"
   NPM_FLAGS = "--version"
+  NPM_FLAGS = "--legacy-peer-deps"
