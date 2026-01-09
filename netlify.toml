@@ -1,12 +1,12 @@
 [build]
-  command = "npm install && npm run build"
+  command = "npm run build"
   publish = "dist"
-  [build.environment]
-    NODE_VERSION = "20"
-    NPM_FLAGS = "--legacy-peer-deps"
-  [build.image]
-    node = "20"
-  
+
+[build.environment]
+  NODE_VERSION = "20"
+  NETLIFY_NEXT_PLUGIN_SKIP = "true"
+  NPM_FLAGS = "--legacy-peer-deps"
+
 [dev]
   command = "npm run dev"
   port = 3000
