@@ -1,0 +1,21 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+  
+[dev]
+  command = "npm run dev"
+  port = 3000
+  publish = "dist"
+
+[context.production.environment]
+  NODE_VERSION = "20"
+  NPM_FLAGS = "--version"
+
+[[plugins]]
+  package = "@netlify/plugin-lighthouse"
+  
+[[plugins]]
+  package = "@netlify/plugin-sitemap"
+  
+[[plugins]]
+  package = "@netlify/plugin-robots-txt"
