@@ -41,8 +41,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setSession(session);
       setUser(session?.user ?? null);
       
+      console.log("Auth Event:", event);
+
       // Handle Password Recovery Redirect
       if (event === 'PASSWORD_RECOVERY') {
+          console.log("Password recovery event detected, redirecting...");
           // Determine country code to construct correct URL
           const savedCountryId = localStorage.getItem('app_country');
           let code = 'qa';
@@ -50,7 +53,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               const c = FALLBACK_COUNTRIES.find(x => x.id === Number(savedCountryId));
               if (c) code = c.code.toLowerCase();
           }
-          navigate(`/${code}/update-password`);
+          // Force navigation to update-password page
+          setTimeout(() => navigate(`/${code}/update-password`), 100);
       }
 
       if (session?.user) {
