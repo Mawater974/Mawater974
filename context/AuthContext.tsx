@@ -1,8 +1,10 @@
+
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase } from '../supabaseClient';
 import { Session, User } from '@supabase/supabase-js';
 import { Profile } from '../types';
-import { getUserProfile } from '../services/dataService';
+import { getUserProfile, FALLBACK_COUNTRIES } from '../services/dataService';
+import { useNavigate } from 'react-router-dom';
 
 interface AuthContextProps {
   session: Session | null;
@@ -20,6 +22,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Check active session
@@ -34,9 +37,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
+      
+      // Handle Password Recovery Redirect
+      if (event === 'PASSWORD_RECOVERY') {
+          // Determine country code to construct correct URL
+          const savedCountryId = localStorage.getItem('app_country');
+          let code = 'qa';
+          if (savedCountryId) {
+              const c = FALLBACK_COUNTRIES.find(x => x.id === Number(savedCountryId));
+              if (c) code = c.code.toLowerCase();
+          }
+          navigate(`/${code}/update-password`);
+      }
+
       if (session?.user) {
         fetchProfile(session.user.id);
       } else {
@@ -46,7 +62,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [navigate]);
 
   const fetchProfile = async (userId: string) => {
     try {
