@@ -89,7 +89,7 @@ export const Layout: React.FC = () => {
               <Link to={getLink('/cars')} className="text-gray-700 dark:text-gray-300 hover:text-primary-700 dark:hover:text-primary-400 font-bold text-sm uppercase tracking-wide transition">{t('nav.cars')}</Link>
               <Link to={getLink('/parts')} className="text-gray-700 dark:text-gray-300 hover:text-primary-700 dark:hover:text-primary-400 font-bold text-sm uppercase tracking-wide transition">{t('nav.parts')}</Link>
               <Link to={getLink('/dealers')} className="text-gray-700 dark:text-gray-300 hover:text-primary-700 dark:hover:text-primary-400 font-bold text-sm uppercase tracking-wide transition">{t('nav.dealers')}</Link>
-              <Link to={getLink('/services')} className="text-gray-700 dark:text-gray-300 hover:text-primary-700 dark:hover:text-primary-400 font-bold text-sm uppercase tracking-wide transition">{t('nav.services')}</Link>
+              {/*<Link to={getLink('/services')} className="text-gray-700 dark:text-gray-300 hover:text-primary-700 dark:hover:text-primary-400 font-bold text-sm uppercase tracking-wide transition">{t('nav.services')}</Link> */}
               <Link to={getLink('/rental')} className="text-gray-700 dark:text-gray-300 hover:text-primary-700 dark:hover:text-primary-400 font-bold text-sm uppercase tracking-wide transition">{t('nav.rental')}</Link>
             </div>
 
