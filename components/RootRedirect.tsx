@@ -1,13 +1,23 @@
 
 import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { FALLBACK_COUNTRIES } from '../services/dataService';
 import { LoadingSpinner } from './LoadingSpinner';
 
 export const RootRedirect: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
+    // CRITICAL: Check for Supabase Auth Hash (e.g. password recovery, magic link)
+    // If a hash with 'access_token' or 'type=recovery' is present, 
+    // we MUST NOT redirect. We yield control to AuthContext to process the token.
+    // Once Supabase processes it, the hash is removed, and this effect will re-run to redirect to country home.
+    if (location.hash && (location.hash.includes('access_token') || location.hash.includes('type='))) {
+        console.log("Auth hash detected, waiting for AuthContext...");
+        return; 
+    }
+
     const detectAndRedirect = async () => {
       // 1. Check LocalStorage preference first for fast load
       const savedCountryId = localStorage.getItem('app_country');
@@ -64,7 +74,7 @@ export const RootRedirect: React.FC = () => {
     };
 
     detectAndRedirect();
-  }, [navigate]);
+  }, [navigate, location]);
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
