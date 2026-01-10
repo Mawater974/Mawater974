@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider } from './context/AppContext';
 import { AuthProvider } from './context/AuthContext';
 import { Layout } from './components/Layout';
@@ -24,6 +24,8 @@ import { RootRedirect } from './components/RootRedirect';
 import { ContactPage } from './pages/ContactPage';
 import { RegisterShowroomPage } from './pages/RegisterShowroomPage';
 import { DealerDashboard } from './pages/dealer/DealerDashboard';
+import { PrivacyPage } from './pages/PrivacyPage';
+import { TermsPage } from './pages/TermsPage';
 
 // Admin Imports
 import { AdminLayout } from './components/AdminLayout';
@@ -35,17 +37,23 @@ import { AdminSettingsPage } from './pages/admin/AdminSettingsPage';
 import { AdminReportsPage } from './pages/admin/AdminReportsPage';
 import { AdminContentPage } from './pages/admin/AdminContentPage';
 import { AdminBrandsPage } from './pages/admin/AdminBrandsPage';
+import { AdminDatabasePage } from './pages/admin/AdminDatabasePage';
+import { AdminSecurityPage } from './pages/admin/AdminSecurityPage';
+import { AdminSeoPage } from './pages/admin/AdminSeoPage';
+import { AdminHealthPage } from './pages/admin/AdminHealthPage';
+import { AdminFinancePage } from './pages/admin/AdminFinancePage';
+import { AdminPartsPage } from './pages/admin/AdminPartsPage';
 
 const App: React.FC = () => {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <AppProvider>
         <AuthProvider>
           <PageTracker />
           <Routes>
             {/* Root Redirect Logic */}
             <Route path="/" element={<RootRedirect />} />
-
+            
             {/* Country Specific Routes */}
             <Route path="/:countryCode" element={<Layout />}>
               <Route index element={<Home />} />
@@ -57,11 +65,14 @@ const App: React.FC = () => {
               <Route path="showrooms/:id" element={<ShowroomDetailsPage />} />
               <Route path="services" element={<ServicesPage />} />
               <Route path="rental" element={<CarRentalPage />} />
-
+              
               <Route path="contact" element={<ContactPage />} />
+              <Route path="privacy" element={<PrivacyPage />} />
+              <Route path="terms" element={<TermsPage />} />
+              
               <Route path="register-showroom" element={<RegisterShowroomPage />} />
               <Route path="dealer-dashboard" element={<DealerDashboard />} />
-
+              
               <Route path="login" element={<LoginPage />} />
               <Route path="signup" element={<SignupPage />} />
               <Route path="favorites" element={<FavoritesPage />} />
@@ -70,25 +81,34 @@ const App: React.FC = () => {
               <Route path="sell" element={<SellCarPage />} />
             </Route>
 
-            {/* Admin Routes (Global, outside country scope for simplicity or can be inside if needed) */}
+            {/* Admin Routes */}
             <Route path="/admin" element={<AdminLayout />}>
-              <Route index element={<AdminDashboard />} />
-              <Route path="brands" element={<AdminBrandsPage />} />
-              <Route path="cars" element={<AdminCarsPage />} />
-              <Route path="users" element={<AdminUsersPage />} />
-              <Route path="dealers" element={<AdminDealersPage />} />
-              <Route path="settings" element={<AdminSettingsPage />} />
-              <Route path="reports" element={<AdminReportsPage />} />
-              <Route path="content" element={<AdminContentPage />} />
-              <Route path="*" element={<div className="p-10 text-center text-gray-500 text-xl">Module Coming Soon</div>} />
+               <Route index element={<AdminDashboard />} />
+               <Route path="brands" element={<AdminBrandsPage />} />
+               <Route path="cars" element={<AdminCarsPage />} />
+               <Route path="parts" element={<AdminPartsPage />} />
+               <Route path="users" element={<AdminUsersPage />} />
+               <Route path="dealers" element={<AdminDealersPage />} />
+               <Route path="settings" element={<AdminSettingsPage />} />
+               <Route path="reports" element={<AdminReportsPage />} />
+               <Route path="content" element={<AdminContentPage />} />
+               
+               {/* New Pages */}
+               <Route path="database" element={<AdminDatabasePage />} />
+               <Route path="security" element={<AdminSecurityPage />} />
+               <Route path="seo" element={<AdminSeoPage />} />
+               <Route path="health" element={<AdminHealthPage />} />
+               <Route path="finance" element={<AdminFinancePage />} />
+               
+               <Route path="*" element={<div className="p-10 text-center text-gray-500 text-xl">Page Not Found</div>} />
             </Route>
-
+            
             {/* Catch all redirect to root */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AuthProvider>
       </AppProvider>
-    </BrowserRouter>
+    </HashRouter>
   );
 };
 

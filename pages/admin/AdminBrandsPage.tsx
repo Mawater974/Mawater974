@@ -1,9 +1,9 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { getBrands, getModels, createBrand, deleteBrand, createModel, deleteModel } from '../../services/dataService';
 import { Brand, Model } from '../../types';
 import { AdminHeader } from '../../components/admin/AdminHeader';
-import { Trash2, CheckCircle, Search, Layers, Tag, PlusCircle, X } from 'lucide-react';
+import { Trash2, CheckCircle, Search, Layers, Tag, PlusCircle, X, Loader2 } from 'lucide-react';
 
 export const AdminBrandsPage: React.FC = () => {
   const [brands, setBrands] = useState<Brand[]>([]);
@@ -13,6 +13,7 @@ export const AdminBrandsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
+  const [processingImport, setProcessingImport] = useState(false);
 
   // Form States
   const [showAddBrand, setShowAddBrand] = useState(false);
@@ -23,6 +24,8 @@ export const AdminBrandsPage: React.FC = () => {
   const [showAddModel, setShowAddModel] = useState(false);
   const [newModelName, setNewModelName] = useState('');
   const [newModelNameAr, setNewModelNameAr] = useState('');
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchBrands = async () => {
     setLoading(true);
@@ -104,6 +107,105 @@ export const AdminBrandsPage: React.FC = () => {
       }
   };
 
+  // --- Import / Export Logic ---
+
+  const handleExport = async () => {
+      // 1. Fetch all models for all brands to create a complete dataset
+      const exportData = [];
+      for (const brand of brands) {
+          const brandModels = await getModels(brand.id);
+          exportData.push({
+              ...brand,
+              models: brandModels
+          });
+      }
+
+      const jsonString = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `brands_models_backup_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+  };
+
+  const handleImportClick = () => {
+      fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (!e.target.files || e.target.files.length === 0) return;
+      
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      
+      setProcessingImport(true);
+
+      reader.onload = async (event) => {
+          try {
+              const json = event.target?.result as string;
+              const data = JSON.parse(json);
+              
+              if (!Array.isArray(data)) throw new Error("Invalid format: Expected array of brands");
+
+              let importedBrands = 0;
+              let importedModels = 0;
+
+              // Process brands sequentially
+              for (const item of data) {
+                  // Check if brand exists by name to avoid duplicates
+                  const existingBrand = brands.find(b => b.name.toLowerCase() === item.name.toLowerCase());
+                  
+                  let brandId = existingBrand?.id;
+
+                  if (!existingBrand) {
+                      const newBrand = await createBrand({
+                          name: item.name,
+                          name_ar: item.name_ar,
+                          logo_url: item.logo_url
+                      });
+                      if (newBrand) {
+                          brandId = newBrand.id;
+                          importedBrands++;
+                      }
+                  }
+
+                  // Process Models
+                  if (brandId && item.models && Array.isArray(item.models)) {
+                      // Fetch current models for this brand to check dups
+                      const currentModels = await getModels(brandId);
+                      
+                      for (const model of item.models) {
+                          const existingModel = currentModels.find(m => m.name.toLowerCase() === model.name.toLowerCase());
+                          if (!existingModel) {
+                              await createModel({
+                                  brand_id: brandId,
+                                  name: model.name,
+                                  name_ar: model.name_ar
+                              });
+                              importedModels++;
+                          }
+                      }
+                  }
+              }
+
+              alert(`Import Complete!\nAdded ${importedBrands} new brands and ${importedModels} new models.`);
+              fetchBrands(); // Refresh list
+
+          } catch (err) {
+              console.error("Import failed", err);
+              alert("Failed to import: Invalid JSON file or structure.");
+          } finally {
+              setProcessingImport(false);
+              // Reset input
+              if (fileInputRef.current) fileInputRef.current.value = '';
+          }
+      };
+      
+      reader.readAsText(file);
+  };
+
   const filteredBrands = brands.filter(b => 
       b.name.toLowerCase().includes(search.toLowerCase()) || 
       (b.name_ar && b.name_ar.includes(search))
@@ -118,25 +220,45 @@ export const AdminBrandsPage: React.FC = () => {
         refreshing={refreshing}
         onAdd={() => setShowAddBrand(true)}
         addLabel="Add Brand"
+        onExport={handleExport}
+        onImport={handleImportClick}
       />
+
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        onChange={handleFileChange} 
+        className="hidden" 
+        accept=".json" 
+      />
+
+      {processingImport && (
+          <div className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center backdrop-blur-sm">
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-xl flex flex-col items-center shadow-2xl">
+                  <Loader2 className="w-10 h-10 text-primary-600 animate-spin mb-3" />
+                  <p className="font-bold dark:text-white">Importing Data...</p>
+                  <p className="text-sm text-gray-500">Please wait, do not close the window.</p>
+              </div>
+          </div>
+      )}
 
       {/* Add Brand Modal */}
       {showAddBrand && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-              <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl w-full max-w-md shadow-2xl">
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl w-full max-w-md shadow-2xl animate-fade-in-up">
                   <h3 className="text-xl font-bold mb-4 dark:text-white">Add New Brand</h3>
                   <form onSubmit={handleCreateBrand} className="space-y-4">
                       <div>
                           <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Brand Name (English)</label>
-                          <input type="text" required value={newBrandName} onChange={e => setNewBrandName(e.target.value)} className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                          <input type="text" required value={newBrandName} onChange={e => setNewBrandName(e.target.value)} className="w-full p-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-primary-500 outline-none" />
                       </div>
                       <div>
                           <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Brand Name (Arabic)</label>
-                          <input type="text" value={newBrandNameAr} onChange={e => setNewBrandNameAr(e.target.value)} className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white text-right" placeholder="اختياري" />
+                          <input type="text" value={newBrandNameAr} onChange={e => setNewBrandNameAr(e.target.value)} className="w-full p-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-primary-500 outline-none text-right" placeholder="اختياري" />
                       </div>
                       <div>
                           <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Logo URL</label>
-                          <input type="text" value={newBrandLogo} onChange={e => setNewBrandLogo(e.target.value)} className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="https://..." />
+                          <input type="text" value={newBrandLogo} onChange={e => setNewBrandLogo(e.target.value)} className="w-full p-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-primary-500 outline-none" placeholder="https://..." />
                       </div>
                       <div className="flex gap-2 pt-4">
                           <button type="button" onClick={() => setShowAddBrand(false)} className="flex-1 py-2 text-gray-600 dark:text-gray-300 font-bold hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">Cancel</button>
@@ -233,7 +355,7 @@ export const AdminBrandsPage: React.FC = () => {
                                         required 
                                         value={newModelName} 
                                         onChange={e => setNewModelName(e.target.value)} 
-                                        className="w-full p-2 rounded border border-green-200 focus:ring-2 focus:ring-green-500 outline-none text-sm"
+                                        className="w-full p-2 rounded border border-green-200 focus:ring-2 focus:ring-green-500 outline-none text-sm dark:bg-gray-800 dark:border-green-900 dark:text-white"
                                         placeholder="e.g. Corolla" 
                                       />
                                   </div>
@@ -243,13 +365,13 @@ export const AdminBrandsPage: React.FC = () => {
                                         type="text" 
                                         value={newModelNameAr} 
                                         onChange={e => setNewModelNameAr(e.target.value)} 
-                                        className="w-full p-2 rounded border border-green-200 focus:ring-2 focus:ring-green-500 outline-none text-sm text-right"
+                                        className="w-full p-2 rounded border border-green-200 focus:ring-2 focus:ring-green-500 outline-none text-sm text-right dark:bg-gray-800 dark:border-green-900 dark:text-white"
                                         placeholder="مثال: كورولا" 
                                       />
                                   </div>
                                   <div className="flex gap-2">
                                       <button type="submit" className="px-4 py-2 bg-green-600 text-white rounded-lg font-bold text-sm hover:bg-green-700">Save</button>
-                                      <button type="button" onClick={() => setShowAddModel(false)} className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-600 text-sm hover:bg-gray-50">Cancel</button>
+                                      <button type="button" onClick={() => setShowAddModel(false)} className="px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-200 text-sm hover:bg-gray-50 dark:hover:bg-gray-600">Cancel</button>
                                   </div>
                               </form>
                           </div>

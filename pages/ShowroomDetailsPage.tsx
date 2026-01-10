@@ -39,7 +39,7 @@ export const ShowroomDetailsPage: React.FC = () => {
     </div>
   );
 
-  if (!dealer) return <div className="text-center py-20 text-gray-500">Showroom not found.</div>;
+  if (!dealer) return <div className="text-center py-20 text-gray-500">{t('dealers.no_results')}</div>;
 
   const name = language === 'ar' ? dealer.business_name_ar : dealer.business_name;
   const desc = language === 'ar' ? dealer.description_ar : dealer.description;
@@ -116,11 +116,11 @@ export const ShowroomDetailsPage: React.FC = () => {
                 </div>
                 <div className="flex gap-3">
                    <button className="bg-white/10 hover:bg-white/20 backdrop-blur text-white px-5 py-3 rounded-xl font-bold flex items-center gap-2 transition">
-                      <Share2 className="w-5 h-5" /> Share
+                      <Share2 className="w-5 h-5" /> {t('common.share')}
                    </button>
                    {mainContact && (
                        <a href={`tel:${mainContact}`} className="bg-primary-600 hover:bg-primary-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg transition flex items-center gap-2">
-                          <Phone className="w-5 h-5" /> Contact Us
+                          <Phone className="w-5 h-5" /> {t('contact.title')}
                        </a>
                    )}
                 </div>
@@ -131,22 +131,22 @@ export const ShowroomDetailsPage: React.FC = () => {
             {/* Sidebar Info */}
             <div className="lg:col-span-1 space-y-6">
                 <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 sticky top-24">
-                    <h3 className="font-bold text-lg mb-4 dark:text-white border-b border-gray-100 dark:border-gray-700 pb-2">Showroom Info</h3>
+                    <h3 className="font-bold text-lg mb-4 dark:text-white border-b border-gray-100 dark:border-gray-700 pb-2">{t('showroom.info')}</h3>
                     <div className="space-y-5 text-sm">
                         <div>
-                            <p className="text-gray-500 mb-1 text-xs font-bold uppercase tracking-wider">About</p>
+                            <p className="text-gray-500 mb-1 text-xs font-bold uppercase tracking-wider">{t('showroom.about')}</p>
                             <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{desc || "Welcome to our showroom. We offer a wide range of premium vehicles."}</p>
                         </div>
                         {hours && (
                             <div>
-                                <p className="text-gray-500 mb-1 text-xs font-bold uppercase tracking-wider flex items-center gap-1"><Clock className="w-3 h-3" /> Hours</p>
+                                <p className="text-gray-500 mb-1 text-xs font-bold uppercase tracking-wider flex items-center gap-1"><Clock className="w-3 h-3" /> {t('showroom.hours')}</p>
                                 <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{hours}</p>
                             </div>
                         )}
                         
                         {/* Contacts */}
                         <div>
-                             <p className="text-gray-500 mb-2 text-xs font-bold uppercase tracking-wider flex items-center gap-1"><Phone className="w-3 h-3" /> Contact Numbers</p>
+                             <p className="text-gray-500 mb-2 text-xs font-bold uppercase tracking-wider flex items-center gap-1"><Phone className="w-3 h-3" /> {t('showroom.contact_numbers')}</p>
                              <div className="space-y-2">
                                 {dealer.contact_number_1 && (
                                     <a href={`tel:${dealer.contact_number_1}`} className="block text-primary-600 font-bold text-lg hover:underline" dir="ltr">
@@ -170,15 +170,15 @@ export const ShowroomDetailsPage: React.FC = () => {
                             <div className="space-y-3 pt-2">
                                 {dealer.email && (
                                     <div>
-                                        <p className="text-gray-500 mb-1 text-xs font-bold uppercase tracking-wider flex items-center gap-1"><Mail className="w-3 h-3" /> Email</p>
+                                        <p className="text-gray-500 mb-1 text-xs font-bold uppercase tracking-wider flex items-center gap-1"><Mail className="w-3 h-3" /> {t('showroom.email')}</p>
                                         <a href={`mailto:${dealer.email}`} className="text-blue-500 hover:underline font-medium break-all">{dealer.email}</a>
                                     </div>
                                 )}
                                 {dealer.website && (
                                     <div>
-                                        <p className="text-gray-500 mb-1 text-xs font-bold uppercase tracking-wider flex items-center gap-1"><Globe className="w-3 h-3" /> Website</p>
+                                        <p className="text-gray-500 mb-1 text-xs font-bold uppercase tracking-wider flex items-center gap-1"><Globe className="w-3 h-3" /> {t('showroom.website')}</p>
                                         <a href={dealer.website} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline font-medium flex items-center gap-1">
-                                            Visit Website <ExternalLink className="w-3 h-3" />
+                                            {t('showroom.visit_website')} <ExternalLink className="w-3 h-3" />
                                         </a>
                                     </div>
                                 )}
@@ -191,14 +191,14 @@ export const ShowroomDetailsPage: React.FC = () => {
             {/* Inventory */}
             <div className="lg:col-span-3">
                 <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-bold dark:text-white">Current Inventory <span className="text-gray-400 text-lg font-normal">({cars.length})</span></h2>
+                    <h2 className="text-2xl font-bold dark:text-white">{t('showroom.inventory')} <span className="text-gray-400 text-lg font-normal">({cars.length})</span></h2>
                     
                     {/* Simple Filter (Visual only for now) */}
                     <div className="flex gap-2">
                         <select className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm dark:text-white outline-none focus:ring-2 focus:ring-primary-500">
-                            <option>Sort by: Newest</option>
-                            <option>Sort by: Price (Low)</option>
-                            <option>Sort by: Price (High)</option>
+                            <option>{t('sort.label')}: {t('sort.newest')}</option>
+                            <option>{t('sort.label')}: {t('sort.price_asc')}</option>
+                            <option>{t('sort.label')}: {t('sort.price_desc')}</option>
                         </select>
                     </div>
                 </div>
@@ -214,8 +214,8 @@ export const ShowroomDetailsPage: React.FC = () => {
                         <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400">
                             <Building2 className="w-8 h-8" />
                         </div>
-                        <h3 className="text-lg font-bold text-gray-900 dark:text-white">No Vehicles Listed</h3>
-                        <p className="text-gray-500 mt-1">This showroom currently has no inventory online.</p>
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white">{t('showroom.no_vehicles')}</h3>
+                        <p className="text-gray-500 mt-1">{t('showroom.no_vehicles_desc')}</p>
                     </div>
                 )}
             </div>

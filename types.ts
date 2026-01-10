@@ -171,7 +171,8 @@ export interface Profile {
   id: string;
   full_name: string;
   avatar_url?: string;
-  role?: 'user' | 'admin' | 'dealer' | 'normal_user'; // Matched DB enum
+  // Strictly matched DB enum: 'normal_user' instead of 'user'
+  role?: 'normal_user' | 'admin' | 'dealer'; 
   country_id?: number; 
   created_at?: string;
   email?: string; 

@@ -57,7 +57,7 @@ export const CarsPage: React.FC = () => {
   const [selectedGearbox, setSelectedGearbox] = useState('');
   const [selectedCondition, setSelectedCondition] = useState('');
 
-  // Constants
+  // Constants - matching DB values (English)
   const fuelTypes = ['Petrol', 'Diesel', 'Hybrid', 'Electric'];
   const gearboxTypes = ['Manual', 'Automatic'];
   const bodyTypes = ['Sedan', 'SUV', 'Hatchback', 'Coupe', 'Pickup', 'Truck', 'Van', 'Wagon', 'Convertible', 'Other'];
@@ -211,10 +211,9 @@ export const CarsPage: React.FC = () => {
 
   const ChevronPrev = dir === 'rtl' ? ChevronRight : ChevronLeft;
   const ChevronNext = dir === 'rtl' ? ChevronLeft : ChevronRight;
-  const ChevronBack = dir === 'rtl' ? ChevronRight : ChevronLeft;
 
   return (
-  <div className="space-y-6 -my-6 mb-6"> {/* Changed from space-y-8 to space-y-12 for better spacing */}
+  <div className="space-y-6 -my-6 mb-6"> 
     {/* Hero Section */}
     <div className="relative h-auto min-h-[300px] md:h-[450px] -mx-[calc(50vw-50%)] w-[100vw] overflow-hidden dark:shadow-none shadow-[0_25px_50px_rgba(0,0,0,0.15)]">
   {/* Background Image & Overlay */}
@@ -332,14 +331,14 @@ export const CarsPage: React.FC = () => {
 
                     {/* Model (Dependent) */}
                     <div>
-                    <label className={filterLabelClass}>Model</label>
+                    <label className={filterLabelClass}>{t('filter.model')}</label>
                     <select 
                         className={filterInputClass}
                         value={selectedModel}
                         onChange={(e) => setSelectedModel(e.target.value ? Number(e.target.value) : '')}
                         disabled={!selectedBrand}
                     >
-                        <option value="">All Models</option>
+                        <option value="">{t('filter.all_models')}</option>
                         {models.map(model => (
                         <option key={model.id} value={model.id}>
                             {language === 'ar' ? (model.name_ar || model.name) : model.name}
@@ -390,7 +389,7 @@ export const CarsPage: React.FC = () => {
                     </div>
                     </div>
 
-                    {/* New Filters */}
+                    {/* New Filters with Translations */}
                     <div>
                     <label className={filterLabelClass}>{t('car.body_type')}</label>
                     <select 
@@ -398,8 +397,10 @@ export const CarsPage: React.FC = () => {
                         value={selectedBodyType}
                         onChange={(e) => setSelectedBodyType(e.target.value)}
                     >
-                        <option value="">Any Body Type</option>
-                        {bodyTypes.map(t => <option key={t} value={t}>{t}</option>)}
+                        <option value="">{t('filter.any')}</option>
+                        {bodyTypes.map(b => (
+                            <option key={b} value={b}>{t(`body.${b.toLowerCase()}`)}</option>
+                        ))}
                     </select>
                     </div>
 
@@ -410,8 +411,10 @@ export const CarsPage: React.FC = () => {
                         value={selectedFuelType}
                         onChange={(e) => setSelectedFuelType(e.target.value)}
                     >
-                        <option value="">Any Fuel</option>
-                        {fuelTypes.map(f => <option key={f} value={f}>{f}</option>)}
+                        <option value="">{t('filter.any')}</option>
+                        {fuelTypes.map(f => (
+                            <option key={f} value={f}>{t(`fuel.${f.toLowerCase()}`)}</option>
+                        ))}
                     </select>
                     </div>
 
@@ -422,8 +425,10 @@ export const CarsPage: React.FC = () => {
                         value={selectedGearbox}
                         onChange={(e) => setSelectedGearbox(e.target.value)}
                     >
-                        <option value="">Any Gearbox</option>
-                        {gearboxTypes.map(g => <option key={g} value={g}>{g}</option>)}
+                        <option value="">{t('filter.any')}</option>
+                        {gearboxTypes.map(g => (
+                            <option key={g} value={g}>{t(`gearbox.${g.toLowerCase()}`)}</option>
+                        ))}
                     </select>
                     </div>
 
@@ -434,8 +439,10 @@ export const CarsPage: React.FC = () => {
                         value={selectedCondition}
                         onChange={(e) => setSelectedCondition(e.target.value)}
                     >
-                        <option value="">Any Condition</option>
-                        {conditions.map(c => <option key={c} value={c}>{c}</option>)}
+                        <option value="">{t('filter.any')}</option>
+                        {conditions.map(c => (
+                            <option key={c} value={c}>{t(`condition.${c.toLowerCase().replace(' ', '_')}`)}</option>
+                        ))}
                     </select>
                     </div>
 

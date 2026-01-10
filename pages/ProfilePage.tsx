@@ -3,7 +3,15 @@ import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import { updateUserProfile } from '../services/dataService';
-import { User } from 'lucide-react';
+import { User, Phone } from 'lucide-react';
+import { parsePhoneNumber } from 'libphonenumber-js';
+
+// Common country phone codes
+const COUNTRY_PHONE_CODES: Record<string, string> = {
+  'qa': '+974', 'sa': '+966', 'ae': '+971', 'kw': '+965', 
+  'bh': '+973', 'om': '+968', 'us': '+1', 'gb': '+44', 
+  'eg': '+20', 'sy': '+963', 'jo': '+962', 'lb': '+961'
+};
 
 export const ProfilePage: React.FC = () => {
   const { t } = useAppContext();
@@ -11,6 +19,11 @@ export const ProfilePage: React.FC = () => {
   
   const [fullName, setFullName] = useState('');
   const [role, setRole] = useState('');
+  
+  // Phone State
+  const [phoneCode, setPhoneCode] = useState('+974');
+  const [phoneNum, setPhoneNum] = useState('');
+
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
 
@@ -18,6 +31,22 @@ export const ProfilePage: React.FC = () => {
     if (profile) {
       setFullName(profile.full_name || '');
       setRole(profile.role || 'User');
+      
+      // Parse Phone Number
+      if (profile.phone_number) {
+          try {
+              const parsed = parsePhoneNumber(profile.phone_number);
+              if (parsed) {
+                  setPhoneCode(`+${parsed.countryCallingCode}`);
+                  setPhoneNum(parsed.nationalNumber);
+              } else {
+                  setPhoneNum(profile.phone_number);
+              }
+          } catch (e) {
+              // Fallback if parsing fails, just set number, user can fix code manually
+              setPhoneNum(profile.phone_number);
+          }
+      }
     }
   }, [profile]);
 
@@ -28,8 +57,12 @@ export const ProfilePage: React.FC = () => {
     setLoading(true);
     setMessage(null);
     
+    // Combine phone number
+    const finalPhone = phoneNum ? `${phoneCode}${phoneNum.replace(/\D/g, '')}` : undefined;
+
     const success = await updateUserProfile(user.id, {
         full_name: fullName,
+        phone_number: finalPhone
     });
 
     if (success) {
@@ -60,7 +93,7 @@ export const ProfilePage: React.FC = () => {
          
          <form onSubmit={handleUpdate} className="space-y-6">
             <div>
-               <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Email</label>
+               <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">{t('profile.email_label')}</label>
                <input 
                  type="email" 
                  disabled 
@@ -70,13 +103,42 @@ export const ProfilePage: React.FC = () => {
             </div>
             
             <div>
-               <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Full Name</label>
+               <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">{t('profile.name_label')}</label>
                <input 
                  type="text" 
                  value={fullName}
                  onChange={(e) => setFullName(e.target.value)}
                  className={inputClass}
                />
+            </div>
+
+            {/* Phone Number Input */}
+            <div>
+                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
+                    <Phone className="w-3 h-3" /> {t('profile.phone_label')}
+                </label>
+                <div className="flex gap-2">
+                    <select 
+                        value={phoneCode} 
+                        onChange={(e) => setPhoneCode(e.target.value)}
+                        className="w-28 p-3 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 outline-none text-sm cursor-pointer"
+                    >
+                        {Object.entries(COUNTRY_PHONE_CODES).map(([iso, c]) => (
+                            <option key={iso} value={c}>{c}</option>
+                        ))}
+                        <option value="+90">+90</option>
+                        <option value="+91">+91</option>
+                        <option value="+63">+63</option>
+                    </select>
+                    <input 
+                        type="tel" 
+                        value={phoneNum} 
+                        onChange={(e) => setPhoneNum(e.target.value.replace(/\D/g, ''))} 
+                        className={inputClass}
+                        placeholder="33334444" 
+                    />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">{t('profile.phone_hint')}</p>
             </div>
 
             <button 

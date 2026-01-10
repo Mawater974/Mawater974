@@ -55,10 +55,13 @@ export const Home: React.FC = () => {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
+    // Use selectedCountryCode from context to ensure valid path even if URL param is missing
+    const targetCode = selectedCountryCode || 'qa';
+    
     if (searchTab === 'cars') {
-      navigate(`/${countryCode}/cars?search=${searchQuery}`);
+      navigate(`/${targetCode}/cars?search=${searchQuery}`);
     } else {
-      navigate(`/${countryCode}/parts?search=${searchQuery}`);
+      navigate(`/${targetCode}/parts?search=${searchQuery}`);
     }
   };
 
@@ -101,7 +104,7 @@ export const Home: React.FC = () => {
         <div className="relative container mx-auto px-4 h-full flex flex-col justify-center items-center text-center z-10 space-y-8">
           <div className="max-w-3xl space-y-4 animate-fade-in-up">
             <h1 className="text-5xl lg:text-7xl font-bold mb-6 flex flex-col items-center leading-tight">
-              <span className="font-cursive text-3xl lg:text-5xl text-white mb-3 drop-shadow-md">Ride in Style.</span>
+              <span className="font-cursive text-3xl lg:text-5xl text-white mb-3 drop-shadow-md">{t('hero.badge')}</span>
               <span className="text-white drop-shadow-lg">{t('hero.title1')}</span>
               <span className="text-primary-600 mt-2 drop-shadow-lg">
                 {t('hero.title2', { country: countryName })}
@@ -152,7 +155,7 @@ export const Home: React.FC = () => {
                 <Search className="absolute left-4 top-3.5 w-5 h-5 text-gray-400 group-focus-within:text-white transition-colors" />
                 <input 
                   type="text" 
-                  placeholder={searchTab === 'cars' ? t('search.placeholder') : "Search for parts..."} 
+                  placeholder={searchTab === 'cars' ? t('search.placeholder') : t('home.search_parts_placeholder')} 
                   className="w-full h-12 pl-12 pr-4 rounded-xl border border-white/10 bg-black/20 text-white placeholder-gray-400 focus:bg-black/40 focus:border-white/30 focus:ring-1 focus:ring-white/30 outline-none transition-all backdrop-blur-sm"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -169,8 +172,8 @@ export const Home: React.FC = () => {
       {/* Brand Logos Strip (Optional common feature) */}
       <section className="container mx-auto px-4">
          <div className="flex items-center justify-between mb-4">
-             <h3 className="text-xl font-bold dark:text-white">Browse by Brand</h3>
-             <Link to={`/${countryCode}/cars`} className="text-sm text-primary-600 font-semibold hover:underline">View All</Link>
+             <h3 className="text-xl font-bold dark:text-white">{t('home.browse_brand')}</h3>
+             <Link to={`/${countryCode}/cars`} className="text-sm text-primary-600 font-semibold hover:underline">{t('home.view_all')}</Link>
          </div>
          <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
             {brands.map(brand => (
@@ -183,7 +186,9 @@ export const Home: React.FC = () => {
                   <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center text-xl font-bold text-gray-400 group-hover:text-primary-600 transition-colors">
                      {brand.name[0]}
                   </div>
-                  <span className="mt-2 text-xs font-medium text-gray-600 dark:text-gray-300 group-hover:text-primary-700">{brand.name}</span>
+                  <span className="mt-2 text-xs font-medium text-gray-600 dark:text-gray-300 group-hover:text-primary-700">
+                    {language === 'ar' ? (brand.name_ar || brand.name) : brand.name}
+                  </span>
                </Link>
             ))}
          </div>
@@ -194,7 +199,7 @@ export const Home: React.FC = () => {
         <div className="flex justify-between items-center mb-8 border-b border-gray-100 dark:border-gray-700 pb-4">
           <div>
             <h2 className="text-3xl font-bold text-gray-900 dark:text-white">{t('featured.cars')}</h2>
-            <p className="text-gray-500 text-sm mt-1">Check out the latest premium listings</p>
+            <p className="text-gray-500 text-sm mt-1">{t('home.latest_listings')}</p>
           </div>
           <Link to={`/${countryCode}/cars`} className="group flex items-center gap-1 text-primary-700 font-bold hover:text-primary-800 transition bg-primary-50 dark:bg-primary-900/20 px-4 py-2 rounded-full">
             {t('common.view_details')} 
@@ -230,16 +235,16 @@ export const Home: React.FC = () => {
           <div className="absolute bottom-0 right-0 w-96 h-96 bg-white opacity-5 rounded-full translate-x-1/3 translate-y-1/3"></div>
           
           <div className="relative z-10 max-w-2xl mx-auto space-y-6">
-            <h2 className="text-3xl md:text-4xl font-bold">Have a car to sell?</h2>
+            <h2 className="text-3xl md:text-4xl font-bold">{t('home.cta.title')}</h2>
             <p className="text-primary-100 text-lg">
-              Join thousands of sellers on Mawater974. List your vehicle today and reach serious buyers instantly.
+              {t('home.cta.desc')}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
               <Link to={`/${countryCode}/my-ads`} className="bg-white text-primary-700 hover:bg-gray-50 font-bold py-3.5 px-8 rounded-xl shadow-lg transition transform hover:-translate-y-1">
-                Post an Ad Now
+                {t('home.cta.post_ad')}
               </Link>
               <Link to={`/${countryCode}/dealers`} className="bg-primary-700/50 hover:bg-primary-700/70 text-white font-bold py-3.5 px-8 rounded-xl backdrop-blur-sm border border-white/20 transition">
-                Find a Dealer
+                {t('home.cta.find_dealer')}
               </Link>
             </div>
           </div>
@@ -251,7 +256,7 @@ export const Home: React.FC = () => {
         <div className="flex justify-between items-center mb-8 border-b border-gray-100 dark:border-gray-700 pb-4">
           <div>
              <h2 className="text-3xl font-bold text-gray-900 dark:text-white">{t('featured.parts')}</h2>
-             <p className="text-gray-500 text-sm mt-1">Original and aftermarket parts</p>
+             <p className="text-gray-500 text-sm mt-1">{t('home.parts_subtitle')}</p>
           </div>
           <Link to={`/${countryCode}/parts`} className="group flex items-center gap-1 text-primary-700 font-bold hover:text-primary-800 transition bg-primary-50 dark:bg-primary-900/20 px-4 py-2 rounded-full">
             {t('common.view_details')} <ChevronIcon className="w-4 h-4 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1" />

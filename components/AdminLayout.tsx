@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { 
   LayoutDashboard, Car, Users, Building2, FileText, Settings, 
   BarChart, Key, Bell, Database, Shield, Link as LinkIcon, 
-  Palette, Globe, Activity, Menu, X, LogOut, ChevronDown, Tag
+  Palette, Globe, Activity, Menu, X, LogOut, ChevronDown, Tag, DollarSign, ShoppingBag
 } from 'lucide-react';
 
 export const AdminLayout: React.FC = () => {
@@ -18,8 +18,10 @@ export const AdminLayout: React.FC = () => {
     { title: 'Dashboard', icon: LayoutDashboard, path: '/admin' },
     { title: 'Brands & Models', icon: Tag, path: '/admin/brands' },
     { title: 'Car Management', icon: Car, path: '/admin/cars' },
+    { title: 'Spare Parts', icon: ShoppingBag, path: '/admin/parts' },
     { title: 'Dealer Management', icon: Building2, path: '/admin/dealers' },
     { title: 'User Management', icon: Users, path: '/admin/users' },
+    { title: 'Finance & Payments', icon: DollarSign, path: '/admin/finance' },
     { title: 'Content CMS', icon: FileText, path: '/admin/content' },
     { title: 'Analytics & Reports', icon: BarChart, path: '/admin/reports' },
     { title: 'System Settings', icon: Settings, path: '/admin/settings' },

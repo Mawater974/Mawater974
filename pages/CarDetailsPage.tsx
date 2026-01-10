@@ -10,6 +10,7 @@ import { CommentSection } from '../components/CommentSection';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { ImageViewer } from '../components/ImageViewer';
 import { SimilarAdsCarousel } from '../components/SimilarAdsCarousel';
+import { parsePhoneNumber } from 'libphonenumber-js';
 
 export const CarDetailsPage: React.FC = () => {
   const { id, countryCode } = useParams<{ id: string, countryCode: string }>();
@@ -36,6 +37,17 @@ export const CarDetailsPage: React.FC = () => {
     fetchCar();
   }, [id]);
 
+  const formatPhone = (num: string | undefined) => {
+      if (!num) return "";
+      try {
+          const p = parsePhoneNumber(num);
+          if (p) return p.formatInternational();
+          return num;
+      } catch (e) {
+          return num;
+      }
+  };
+
   if (loading) return (
     <div className="flex justify-center items-center py-40">
         <LoadingSpinner className="w-16 h-16" />
@@ -51,7 +63,16 @@ export const CarDetailsPage: React.FC = () => {
   const imageUrls = car.car_images?.map(img => img.image_url) || [];
 
   return (
-    <div className="pb-12">
+    <div className="pb-12 relative">
+      {/* Status Watermark */}
+         {car.status && car.status !== 'approved' && (
+            <div className="absolute inset-0 z-40 pointer-events-none flex items-center justify-center overflow-hidden h-[60vh] mt-20">
+               <div className="transform -rotate-12 border-4 border-dashed border-red-500/50 text-red-500/50 text-4xl sm:text-4xl md:text-8xl font-black uppercase px-12 py-4 tracking-widest bg-white/30 backdrop-blur-sm rounded-xl">
+                  {car.status}
+               </div>
+            </div>
+         )}
+
       {/* ImageViewer Modal */}
       {isViewerOpen && (
           <ImageViewer 
@@ -90,7 +111,7 @@ export const CarDetailsPage: React.FC = () => {
 
              {/* Condition Badge */}
              <div className="absolute top-4 right-4 bg-white/90 dark:bg-gray-900/90 backdrop-blur px-3 py-1.5 rounded-lg text-sm font-bold shadow-sm z-20 pointer-events-none">
-               {car.condition.toUpperCase()}
+               {car.condition ? t(`condition.${car.condition.toLowerCase().replace(' ', '_')}`) : car.condition}
              </div>
           </div>
           
@@ -158,10 +179,9 @@ export const CarDetailsPage: React.FC = () => {
                     )}
 
                     {car.profiles?.phone_number && (
-                        <p className="text-sm font-bold text-gray-900 dark:text-gray-200 flex items-center gap-1">
-                            <Phone className="w-3 h-3 text-gray-400" />
-                            <span dir="ltr">{car.profiles.phone_number}</span>
-                        </p>
+                        <a href={`tel:${car.profiles.phone_number}`} className="block text-primary-600 font-bold text-lg hover:underline" dir="ltr">
+                            {formatPhone(car.profiles.phone_number)}
+                        </a>
                     )}
                  </div>
               </div>
@@ -184,23 +204,29 @@ export const CarDetailsPage: React.FC = () => {
                 </div>
                 <div className="flex flex-col gap-1">
                    <span className="text-gray-500 text-sm flex items-center gap-1"><Fuel className="w-4 h-4" /> {t('car.fuel')}</span>
-                   <span className="font-semibold dark:text-gray-200 capitalize">{car.fuel_type}</span>
+                   <span className="font-semibold dark:text-gray-200 capitalize">{car.fuel_type ? t(`fuel.${car.fuel_type.toLowerCase()}`) : '-'}</span>
                 </div>
                 <div className="flex flex-col gap-1">
                    <span className="text-gray-500 text-sm flex items-center gap-1"><Settings className="w-4 h-4" /> {t('car.gearbox')}</span>
-                   <span className="font-semibold dark:text-gray-200 capitalize">{car.gearbox_type}</span>
+                   <span className="font-semibold dark:text-gray-200 capitalize">{car.gearbox_type ? t(`gearbox.${car.gearbox_type.toLowerCase()}`) : '-'}</span>
                 </div>
                 <div className="flex flex-col gap-1">
                    <span className="text-gray-500 text-sm flex items-center gap-1"><Layers className="w-4 h-4" /> {t('car.body_type')}</span>
-                   <span className="font-semibold dark:text-gray-200 capitalize">{car.body_type}</span>
+                   <span className="font-semibold dark:text-gray-200 capitalize">{car.body_type ? t(`body.${car.body_type.toLowerCase()}`) : '-'}</span>
                 </div>
                 <div className="flex flex-col gap-1">
                    <span className="text-gray-500 text-sm">{t('car.color')}</span>
                    <span className="font-semibold dark:text-gray-200 flex items-center gap-2">
                       <span className="w-4 h-4 rounded-full border border-gray-300" style={{ backgroundColor: car.color }}></span>
-                      {car.color}
+                      {car.color ? t(`color.${car.color.toLowerCase()}`) : '-'}
                    </span>
                 </div>
+                {car.drive_type && (
+                  <div className="flex flex-col gap-1">
+                      <span className="text-gray-500 text-sm flex items-center gap-1"><Settings className="w-4 h-4" /> {t('car.drive_type')}</span>
+                      <span className="font-semibold dark:text-gray-200 capitalize">{t(`drive.${car.drive_type.toLowerCase()}`) || car.drive_type}</span>
+                  </div>
+                )}
                 {car.exact_model && (
                   <div className="flex flex-col gap-1">
                       <span className="text-gray-500 text-sm flex items-center gap-1"><Tag className="w-4 h-4" /> Exact Model</span>

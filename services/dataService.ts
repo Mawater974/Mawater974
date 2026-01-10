@@ -159,6 +159,7 @@ export interface CarFilters {
   fuelType?: string;
   gearboxType?: string;
   condition?: string;
+  ignoreFeatured?: boolean; // New Flag to disable featured sorting priority
 }
 
 export const getCars = async (
@@ -233,7 +234,10 @@ export const getCars = async (
   if (filters.gearboxType) query = query.eq('gearbox_type', filters.gearboxType);
   if (filters.condition) query = query.eq('condition', filters.condition);
 
-  query = query.order('is_featured', { ascending: false });
+  // Apply default featured ordering unless disabled
+  if (!filters.ignoreFeatured) {
+      query = query.order('is_featured', { ascending: false });
+  }
 
   switch (sortBy) {
     case 'price_asc':
@@ -311,6 +315,7 @@ export const getUserSpareParts = async (userId: string): Promise<SparePart[]> =>
   return data as any[];
 };
 
+// ... Rest of the file unchanged
 export const getBrands = async (): Promise<Brand[]> => {
   const { data, error } = await supabase.from('brands').select('*').order('name', { ascending: true });
   if (error) return [];
@@ -489,14 +494,18 @@ export type DealerSortOption = 'featured' | 'newest' | 'name_asc';
 export const getDealerships = async (
   type: string = 'showroom', 
   countryId?: number | null,
-  sortBy: DealerSortOption = 'featured'
+  sortBy: DealerSortOption = 'featured',
+  status: string = 'approved' // Default to approved, but allows 'all'
 ): Promise<Dealership[]> => {
   let query = supabase.from('dealerships').select(`
     *,
     cities (name, name_ar),
-    countries (name, name_ar)
-  `)
-  .eq('status', 'approved'); 
+    countries (name, name_ar, code)
+  `);
+
+  if (status !== 'all') {
+      query = query.eq('status', status);
+  }
 
   if (countryId) {
       query = query.eq('country_id', countryId);
@@ -504,8 +513,6 @@ export const getDealerships = async (
 
   // Filter by type if not 'all'
   if (type !== 'all') {
-      // Assuming 'dealership_type' is the column name for 'showroom', 'independent', etc.
-      // Adjust column name if your DB schema uses 'business_type' or something else for this.
       query = query.eq('dealership_type', type);
   }
 
@@ -522,7 +529,8 @@ export const getDealerships = async (
           break;
   }
 
-  const { data, error } = await query.limit(50);
+  // Increased limit to prevent pending dealers from being hidden if there are many entries
+  const { data, error } = await query.limit(200);
   if (error) {
     console.error('Error fetching dealerships:', error);
     return [];
@@ -580,6 +588,67 @@ export const updateDealership = async (id: number, updates: Partial<Dealership>)
         console.error("Error updating dealership", error);
         return false;
     }
+    return true;
+};
+
+export const updateDealerStatus = async (dealerId: number, status: 'approved' | 'pending' | 'rejected') => {
+    // 1. Update Dealership Status
+    const { data: dealer, error } = await supabase
+        .from('dealerships')
+        .update({ status })
+        .eq('id', dealerId)
+        .select()
+        .single();
+        
+    if (error || !dealer) {
+        console.error("Error updating dealer status", error);
+        return false;
+    }
+
+    // 2. Sync User Role
+    if (dealer.user_id) {
+        // Fetch current profile to avoid overwriting Admin role
+        const { data: currentProfile, error: fetchError } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', dealer.user_id)
+            .single();
+        
+        if (fetchError) {
+             console.error("Error fetching user profile for role sync", fetchError);
+             return true; // Return true because dealership status was updated successfully at least
+        }
+
+        // If user is Admin, do not change their role regardless of dealership status
+        if (currentProfile?.role === 'admin') {
+            return true;
+        }
+
+        // Determine new role based on dealership status
+        // Use 'normal_user' as the base role based on DB schema default
+        let newRole = 'normal_user'; 
+        
+        if (status === 'approved') {
+            newRole = 'dealer';
+        }
+
+        // Only perform update if the role is actually changing
+        if (currentProfile?.role !== newRole) {
+            const { error: profileError } = await supabase
+                .from('profiles')
+                .update({ role: newRole })
+                .eq('id', dealer.user_id);
+                
+            if (profileError) {
+                console.error("Error syncing user role:", profileError);
+                // Alert visible to the admin triggering this action
+                alert(`Dealership status updated to '${status}', but failed to update User Role to '${newRole}'. \n\nPossible reasons:\n1. 'normal_user' or 'dealer' is not in the 'user_role' ENUM.\n2. RLS Policies prevent you from updating other users.\n3. Check console for details.`);
+            } else {
+                console.log(`User ${dealer.user_id} role updated to ${newRole}`);
+            }
+        }
+    }
+    
     return true;
 };
 
@@ -1363,11 +1432,6 @@ export const getAllUsers = async () => {
     const { data, error } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
     if(error) return [];
     return data as Profile[];
-};
-
-export const updateDealerStatus = async (dealerId: number, status: 'approved' | 'pending' | 'rejected') => {
-    const { error } = await supabase.from('dealerships').update({ status }).eq('id', dealerId);
-    return !error;
 };
 
 export const sendContactMessage = async (messageData: Partial<ContactMessage>): Promise<boolean> => {

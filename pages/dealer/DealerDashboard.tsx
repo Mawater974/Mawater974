@@ -2,197 +2,99 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useAppContext } from '../../context/AppContext';
-import { getDealershipByUserId, getDealershipCars, updateCarStatus, deleteCar, updateDealership, uploadShowroomLogo, getOptimizedImageUrl } from '../../services/dataService';
-import { Dealership, Car } from '../../types';
-import { CarForm } from '../../components/CarForm';
-import { LoadingSpinner } from '../../components/LoadingSpinner';
-import { compressImage } from '../../utils/imageOptimizer';
-import { parsePhoneNumber } from 'libphonenumber-js';
 import { 
-    LayoutDashboard, Car as CarIcon, Settings, BarChart, 
+    getDealershipByUserId, getDealershipCars, updateCarStatus, deleteCar, 
+    getUserSpareParts, deleteSparePart, getOptimizedImageUrl 
+} from '../../services/dataService';
+import { Dealership, Car, SparePart } from '../../types';
+import { CarForm } from '../../components/CarForm';
+import { SparePartForm } from '../../components/SparePartForm';
+import { ShowroomForm } from '../../components/ShowroomForm';
+import { LoadingSpinner } from '../../components/LoadingSpinner';
+import { useNavigate } from 'react-router-dom';
+import { 
+    LayoutDashboard, Car as CarIcon, Settings, 
     PlusCircle, Edit, Trash2, Eye, TrendingUp, CheckCircle, 
-    AlertCircle, Upload, MapPin, Globe, Phone, Mail, Building2, Warehouse
+    Building2, Warehouse, ShoppingBag, Archive, XCircle, ExternalLink, DollarSign
 } from 'lucide-react';
-
-const COUNTRY_PHONE_CODES: Record<string, string> = {
-  'qa': '+974', 'sa': '+966', 'ae': '+971', 'kw': '+965', 
-  'bh': '+973', 'om': '+968', 'us': '+1', 'gb': '+44', 
-  'eg': '+20', 'sy': '+963', 'jo': '+962', 'lb': '+961'
-};
 
 export const DealerDashboard: React.FC = () => {
   const { user, profile } = useAuth();
-  const { t } = useAppContext();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'inventory' | 'profile'>('dashboard');
+  const { t, selectedCountryCode } = useAppContext();
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'inventory' | 'parts' | 'profile'>('dashboard');
   const [dealer, setDealer] = useState<Dealership | null>(null);
   const [cars, setCars] = useState<Car[]>([]);
+  const [parts, setParts] = useState<SparePart[]>([]);
   const [loading, setLoading] = useState(true);
   
   // Edit State
   const [editingCar, setEditingCar] = useState<Car | null>(null);
   const [isCarModalOpen, setIsCarModalOpen] = useState(false);
-
-  // Profile Form State
-  const [profileForm, setProfileForm] = useState<Partial<Dealership>>({});
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const [savingProfile, setSavingProfile] = useState(false);
-
-  // Split Phone States for Editing
-  const [c1Code, setC1Code] = useState('+974');
-  const [c1Num, setC1Num] = useState('');
-  const [c2Code, setC2Code] = useState('+974');
-  const [c2Num, setC2Num] = useState('');
-  const [c3Code, setC3Code] = useState('+974');
-  const [c3Num, setC3Num] = useState('');
+  const [editingPart, setEditingPart] = useState<SparePart | null>(null);
+  const [isPartModalOpen, setIsPartModalOpen] = useState(false);
 
   const fetchData = async () => {
     if (!user) return;
     setLoading(true);
+    
     const dealerData = await getDealershipByUserId(user.id);
     if (dealerData) {
         setDealer(dealerData);
-        setProfileForm(dealerData);
         
-        // Parse existing phone numbers to split into code + number
-        if(dealerData.contact_number_1) {
-            try {
-                const p = parsePhoneNumber(dealerData.contact_number_1);
-                if(p) { setC1Code(`+${p.countryCallingCode}`); setC1Num(p.nationalNumber); }
-                else setC1Num(dealerData.contact_number_1);
-            } catch(e) { setC1Num(dealerData.contact_number_1); }
-        }
-        if(dealerData.contact_number_2) {
-            try {
-                const p = parsePhoneNumber(dealerData.contact_number_2);
-                if(p) { setC2Code(`+${p.countryCallingCode}`); setC2Num(p.nationalNumber); }
-                else setC2Num(dealerData.contact_number_2);
-            } catch(e) { setC2Num(dealerData.contact_number_2); }
-        }
-        if(dealerData.contact_number_3) {
-            try {
-                const p = parsePhoneNumber(dealerData.contact_number_3);
-                if(p) { setC3Code(`+${p.countryCallingCode}`); setC3Num(p.nationalNumber); }
-                else setC3Num(dealerData.contact_number_3);
-            } catch(e) { setC3Num(dealerData.contact_number_3); }
-        }
-
-        const dealerCars = await getDealershipCars(user.id);
+        const [dealerCars, dealerParts] = await Promise.all([
+            getDealershipCars(user.id),
+            getUserSpareParts(user.id)
+        ]);
         setCars(dealerCars);
+        setParts(dealerParts);
     }
     setLoading(false);
   };
 
   useEffect(() => {
     fetchData();
-  }, [user]);
+  }, [!user]);
 
-  // Actions
-  const handleDeleteCar = async (id: number) => {
-      if (confirm("Are you sure you want to archive this listing?")) {
+  // Car Actions
+  const handleDeleteCar = async (id: number, e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (confirm(t('dealer.confirm_archive'))) {
           await deleteCar(id);
           fetchData();
       }
   };
 
-  const handleStatusToggle = async (car: Car) => {
+  const handleStatusToggle = async (car: Car, e: React.MouseEvent) => {
+      e.stopPropagation();
       const newStatus = car.status === 'sold' ? 'approved' : 'sold';
-      if (confirm(`Mark this car as ${newStatus}?`)) {
+      if (confirm(t('dealer.confirm_status', { status: newStatus }))) {
           await updateCarStatus(car.id, newStatus);
           fetchData();
       }
   };
 
-  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (e.target.files && e.target.files[0]) {
-          const file = e.target.files[0];
-          try {
-              // Enforce 100KB limit for profile updates too
-              const compressed = await compressImage(file, false, true, 100);
-              setLogoFile(compressed);
-              setLogoPreview(URL.createObjectURL(compressed));
-          } catch(err) {
-              console.error(err);
-              alert("Failed to process image. It might be too large.");
-          }
+  // Part Actions
+  const handleDeletePart = async (id: string, e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (confirm(t('dealer.confirm_archive'))) {
+          await deleteSparePart(id);
+          fetchData();
       }
   };
 
-  const handleSaveProfile = async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!dealer) return;
-      setSavingProfile(true);
-
-      let logoUrl = dealer.logo_url;
-      if (logoFile) {
-          const uploaded = await uploadShowroomLogo(logoFile);
-          if (uploaded) logoUrl = uploaded;
-      }
-
-      // Reconstruct Phone Numbers
-      const finalC1 = c1Num ? `${c1Code}${c1Num}` : '';
-      const finalC2 = c2Num ? `${c2Code}${c2Num}` : '';
-      const finalC3 = c3Num ? `${c3Code}${c3Num}` : '';
-
-      const success = await updateDealership(dealer.id, {
-          ...profileForm,
-          logo_url: logoUrl,
-          contact_number_1: finalC1,
-          contact_number_2: finalC2,
-          contact_number_3: finalC3,
-      });
-
-      if (success) {
-          alert("Profile updated successfully!");
-          fetchData();
-      } else {
-          alert("Failed to update profile.");
-      }
-      setSavingProfile(false);
+  const handleAdClick = (path: string) => {
+      window.open(path, '_blank');
   };
 
   if (loading) return <div className="h-screen flex items-center justify-center"><LoadingSpinner /></div>;
-  if (!dealer) return <div className="p-8 text-center">No dealership account found. Please register first.</div>;
+  if (!dealer) return <div className="p-8 text-center">{t('dealer.no_account')}</div>;
 
   // Stats Calculation
   const totalViews = cars.reduce((acc, car) => acc + (car.views_count || 0), 0);
   const activeListings = cars.filter(c => c.status === 'approved').length;
-
-  // Updated Styles for Light Theme readability
-  const labelClass = "block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1.5";
-  const inputClass = "w-full p-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 outline-none transition shadow-sm placeholder-gray-400";
-
-  const renderPhoneInput = (
-      label: string, 
-      code: string, 
-      setCode: (v: string) => void, 
-      num: string, 
-      setNum: (v: string) => void
-  ) => (
-      <div>
-          <label className={labelClass}>{label}</label>
-          <div className="flex gap-2">
-              <select 
-                  value={code} 
-                  onChange={(e) => setCode(e.target.value)}
-                  className="w-28 p-3 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 outline-none text-sm cursor-pointer"
-              >
-                  {Object.entries(COUNTRY_PHONE_CODES).map(([iso, c]) => (
-                      <option key={iso} value={c}>{iso.toUpperCase()} {c}</option>
-                  ))}
-                  <option value="+90">TR +90</option>
-                  <option value="+91">IN +91</option>
-              </select>
-              <input 
-                  type="tel" 
-                  value={num} 
-                  onChange={(e) => setNum(e.target.value.replace(/\D/g, ''))} 
-                  className={inputClass} 
-                  placeholder="33334444" 
-              />
-          </div>
-      </div>
-  );
+  const soldListings = cars.filter(c => c.status === 'sold').length;
+  const expiredListings = cars.filter(c => c.status === 'archived' || c.status === 'rejected').length + parts.filter(p => p.status === 'archived' || p.status === 'rejected').length;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 font-sans pb-12">
@@ -211,7 +113,7 @@ export const DealerDashboard: React.FC = () => {
                     <div>
                         <h1 className="text-2xl font-black text-gray-900 dark:text-white line-clamp-1">{dealer.business_name}</h1>
                         <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 font-medium">
-                            <span>Dealer Portal</span>
+                            <span>{t('dealer.portal')}</span>
                             <span className="w-1 h-1 rounded-full bg-gray-300"></span>
                             <span className={`flex items-center gap-1 ${dealer.status === 'approved' ? 'text-green-600' : 'text-yellow-600'}`}>
                                 {dealer.status === 'approved' && <CheckCircle className="w-3 h-3" />}
@@ -244,6 +146,16 @@ export const DealerDashboard: React.FC = () => {
                         <CarIcon className="w-5 h-5" /> {t('dealer.inventory')}
                     </button>
                     <button 
+                        onClick={() => setActiveTab('parts')}
+                        className={`pb-4 px-2 flex items-center gap-2 font-bold text-sm transition-all border-b-2 whitespace-nowrap ${
+                            activeTab === 'parts' 
+                            ? 'border-primary-600 text-primary-600' 
+                            : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                        }`}
+                    >
+                        <ShoppingBag className="w-5 h-5" /> {t('dealer.spare_parts')}
+                    </button>
+                    <button 
                         onClick={() => setActiveTab('profile')}
                         className={`pb-4 px-2 flex items-center gap-2 font-bold text-sm transition-all border-b-2 whitespace-nowrap ${
                             activeTab === 'profile' 
@@ -266,22 +178,33 @@ export const DealerDashboard: React.FC = () => {
                         <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition">
                             <div className="flex justify-between items-start">
                                 <div>
-                                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{t('dealer.total_cars')}</p>
-                                    <h3 className="text-3xl font-black text-gray-900 dark:text-white">{cars.length}</h3>
+                                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{t('dealer.active_listings')}</p>
+                                    <h3 className="text-3xl font-black text-gray-900 dark:text-white">{activeListings}</h3>
                                 </div>
                                 <div className="w-10 h-10 bg-blue-50 dark:bg-blue-900/20 rounded-xl flex items-center justify-center text-blue-600">
-                                    <CarIcon className="w-5 h-5" />
+                                    <CheckCircle className="w-5 h-5" />
                                 </div>
                             </div>
                         </div>
                         <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition">
                             <div className="flex justify-between items-start">
                                 <div>
-                                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{t('dealer.active_listings')}</p>
-                                    <h3 className="text-3xl font-black text-gray-900 dark:text-white">{activeListings}</h3>
+                                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{t('dealer.sold_listings')}</p>
+                                    <h3 className="text-3xl font-black text-gray-900 dark:text-white">{soldListings}</h3>
                                 </div>
                                 <div className="w-10 h-10 bg-green-50 dark:bg-green-900/20 rounded-xl flex items-center justify-center text-green-600">
-                                    <CheckCircle className="w-5 h-5" />
+                                    <DollarSign className="w-5 h-5" />
+                                </div>
+                            </div>
+                        </div>
+                        <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition">
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{t('dealer.archived_listings')}</p>
+                                    <h3 className="text-3xl font-black text-gray-900 dark:text-white">{expiredListings}</h3>
+                                </div>
+                                <div className="w-10 h-10 bg-orange-50 dark:bg-orange-900/20 rounded-xl flex items-center justify-center text-orange-600">
+                                    <Archive className="w-5 h-5" />
                                 </div>
                             </div>
                         </div>
@@ -296,20 +219,6 @@ export const DealerDashboard: React.FC = () => {
                                 </div>
                             </div>
                         </div>
-                        <div className="bg-gradient-to-br from-gray-900 to-gray-800 p-6 rounded-2xl shadow-lg text-white">
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Plan Status</p>
-                                    <h3 className="text-2xl font-bold text-white">Standard</h3>
-                                </div>
-                                <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-white backdrop-blur-sm">
-                                    <BarChart className="w-5 h-5" />
-                                </div>
-                            </div>
-                            <button className="mt-4 text-xs bg-white text-gray-900 px-3 py-1.5 rounded-lg font-bold hover:bg-gray-100 transition">
-                                Upgrade Plan
-                            </button>
-                        </div>
                     </div>
 
                     {/* Chart Mock */}
@@ -317,8 +226,8 @@ export const DealerDashboard: React.FC = () => {
                         <div className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-full mb-4">
                             <TrendingUp className="w-8 h-8 text-gray-400" />
                         </div>
-                        <h3 className="text-lg font-bold text-gray-900 dark:text-white">Performance Analytics</h3>
-                        <p className="text-gray-500 text-sm mt-1">Detailed traffic analysis and lead reports coming soon.</p>
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white">{t('dealer.analytics')}</h3>
+                        <p className="text-gray-500 text-sm mt-1">{t('dealer.analytics_desc')}</p>
                     </div>
                 </div>
             )}
@@ -351,7 +260,11 @@ export const DealerDashboard: React.FC = () => {
                                     {cars.length === 0 ? (
                                         <tr><td colSpan={5} className="text-center py-12 text-gray-500">{t('dealer.no_cars')}</td></tr>
                                     ) : cars.map(car => (
-                                        <tr key={car.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition group">
+                                        <tr 
+                                            key={car.id} 
+                                            className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition group cursor-pointer"
+                                            onClick={() => handleAdClick(`/#/${selectedCountryCode}/cars/${car.id}`)}
+                                        >
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-4">
                                                     <div className="w-16 h-12 rounded-lg bg-gray-100 dark:bg-gray-700 overflow-hidden flex-shrink-0 border border-gray-200 dark:border-gray-600 flex items-center justify-center">
@@ -384,27 +297,131 @@ export const DealerDashboard: React.FC = () => {
                                                 {car.views_count || 0}
                                             </td>
                                             <td className="px-6 py-4 text-right">
-                                                <div className="flex justify-end gap-2">
+                                                <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                                                     <button 
-                                                        onClick={() => handleStatusToggle(car)}
+                                                        onClick={(e) => handleStatusToggle(car, e)}
                                                         className={`p-2 rounded-lg transition ${car.status === 'sold' ? 'text-green-600 hover:bg-green-50' : 'text-orange-500 hover:bg-orange-50'}`}
-                                                        title={car.status === 'sold' ? "Mark Available" : "Mark Sold"}
+                                                        title={car.status === 'sold' ? t('dealer.mark_available') : t('dealer.mark_sold')}
                                                     >
                                                         <CheckCircle className="w-4 h-4" />
                                                     </button>
                                                     <button 
                                                         onClick={() => { setEditingCar(car); setIsCarModalOpen(true); }}
                                                         className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                                                        title="Edit"
+                                                        title={t('common.edit')}
                                                     >
                                                         <Edit className="w-4 h-4" />
                                                     </button>
                                                     <button 
-                                                        onClick={() => handleDeleteCar(car.id)}
+                                                        onClick={(e) => handleDeleteCar(car.id, e)}
                                                         className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition"
-                                                        title="Archive"
+                                                        title={t('dealer.archive_listing')}
                                                     >
                                                         <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => handleAdClick(`/#/${selectedCountryCode}/cars/${car.id}`)}
+                                                        className="p-2 text-gray-400 hover:text-gray-600 rounded-lg transition"
+                                                        title={t('dealer.view_ad')}
+                                                    >
+                                                        <ExternalLink className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {activeTab === 'parts' && (
+                <div className="space-y-6">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <h2 className="text-2xl font-bold dark:text-white">{t('dealer.spare_parts')}</h2>
+                        <button 
+                            onClick={() => { setEditingPart(null); setIsPartModalOpen(true); }}
+                            className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-primary-900/20 transition transform hover:-translate-y-0.5"
+                        >
+                            <PlusCircle className="w-5 h-5" /> {t('dealer.add_part')}
+                        </button>
+                    </div>
+
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-sm">
+                                <thead className="bg-gray-50 dark:bg-gray-900/50 text-gray-500 uppercase font-bold text-xs border-b border-gray-100 dark:border-gray-700">
+                                    <tr>
+                                        <th className="px-6 py-4">{t('dealer.item_details')}</th>
+                                        <th className="px-6 py-4">{t('common.price')}</th>
+                                        <th className="px-6 py-4">{t('dealer.condition')}</th>
+                                        <th className="px-6 py-4">{t('dealer.table.status')}</th>
+                                        <th className="px-6 py-4 text-right">{t('dealer.table.actions')}</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                    {parts.length === 0 ? (
+                                        <tr><td colSpan={5} className="text-center py-12 text-gray-500">{t('my_ads.no_parts')}</td></tr>
+                                    ) : parts.map(part => (
+                                        <tr 
+                                            key={part.id} 
+                                            className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition group cursor-pointer"
+                                            onClick={() => handleAdClick(`/#/${selectedCountryCode}/parts/${part.id}`)}
+                                        >
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-16 h-12 rounded-lg bg-gray-100 dark:bg-gray-700 overflow-hidden flex-shrink-0 border border-gray-200 dark:border-gray-600 flex items-center justify-center">
+                                                        {part.spare_part_images?.[0] ? (
+                                                            <img src={part.spare_part_images[0].url} className="w-full h-full object-cover" alt="" />
+                                                        ) : (
+                                                            <ShoppingBag className="w-6 h-6 text-gray-400" />
+                                                        )}
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-bold text-gray-900 dark:text-white line-clamp-1">{part.title}</p>
+                                                        <p className="text-xs text-gray-500">{part.part_type} • {part.brands?.name || 'Universal'}</p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 font-bold text-gray-900 dark:text-gray-200">
+                                                {part.price.toLocaleString()} QAR
+                                            </td>
+                                            <td className="px-6 py-4 capitalize text-gray-600 dark:text-gray-400">
+                                                {t(`condition.${part.condition}`)}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+                                                    part.status === 'approved' ? 'bg-green-100 text-green-700' :
+                                                    part.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                                                    'bg-yellow-100 text-yellow-700'
+                                                }`}>
+                                                    {part.status}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                                                    <button 
+                                                        onClick={() => { setEditingPart(part); setIsPartModalOpen(true); }}
+                                                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                                                        title={t('common.edit')}
+                                                    >
+                                                        <Edit className="w-4 h-4" />
+                                                    </button>
+                                                    <button 
+                                                        onClick={(e) => handleDeletePart(part.id, e)}
+                                                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition"
+                                                        title={t('dealer.archive_part')}
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => handleAdClick(`/#/${selectedCountryCode}/parts/${part.id}`)}
+                                                        className="p-2 text-gray-400 hover:text-gray-600 rounded-lg transition"
+                                                        title={t('dealer.view_ad')}
+                                                    >
+                                                        <ExternalLink className="w-4 h-4" />
                                                     </button>
                                                 </div>
                                             </td>
@@ -420,108 +437,65 @@ export const DealerDashboard: React.FC = () => {
             {activeTab === 'profile' && (
                 <div className="max-w-4xl space-y-6">
                     <h2 className="text-2xl font-bold dark:text-white mb-6">{t('dealer.profile')}</h2>
-                    
-                    <form onSubmit={handleSaveProfile} className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 space-y-8">
-                        {/* Logo Upload */}
-                        <div className="flex items-center gap-6 p-6 bg-gray-50 dark:bg-gray-700/30 rounded-xl border border-dashed border-gray-300 dark:border-gray-600">
-                            <div className="w-48 aspect-video rounded-2xl bg-white dark:bg-gray-700 shadow-sm flex items-center justify-center overflow-hidden relative group border border-gray-300 dark:border-gray-600">
-                                {logoPreview || dealer.logo_url ? (
-                                    <img src={logoPreview || dealer.logo_url} alt="Logo" className="w-full h-full object-cover" />
-                                ) : (
-                                    <Upload className="w-8 h-8 text-gray-400" />
-                                )}
-                                <label className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition cursor-pointer text-white text-xs font-bold">
-                                    Change
-                                    <input type="file" accept="image/*" onChange={handleLogoChange} className="hidden" />
-                                </label>
-                            </div>
-                            <div>
-                                <h3 className="font-bold text-gray-900 dark:text-white">Showroom Logo</h3>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <label className={labelClass}>Business Name (English)</label>
-                                <input type="text" value={profileForm.business_name || ''} onChange={e => setProfileForm({...profileForm, business_name: e.target.value})} className={inputClass} />
-                            </div>
-                            <div>
-                                <label className={labelClass}>Business Name (Arabic)</label>
-                                <input type="text" value={profileForm.business_name_ar || ''} onChange={e => setProfileForm({...profileForm, business_name_ar: e.target.value})} className={`${inputClass} text-right`} />
-                            </div>
-                            <div className="md:col-span-2">
-                                <label className={labelClass}>Description</label>
-                                <textarea rows={3} value={profileForm.description || ''} onChange={e => setProfileForm({...profileForm, description: e.target.value})} className={inputClass} />
-                            </div>
-                        </div>
-
-                        <div className="space-y-6 pt-6 border-t border-gray-100 dark:border-gray-700">
-                            <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2"><Phone className="w-4 h-4 text-primary-600" /> Contact Details</h4>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                {renderPhoneInput("Contact #1", c1Code, setC1Code, c1Num, setC1Num)}
-                                {renderPhoneInput("Contact #2", c2Code, setC2Code, c2Num, setC2Num)}
-                                {renderPhoneInput("Contact #3", c3Code, setC3Code, c3Num, setC3Num)}
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <label className={labelClass}>Business Email</label>
-                                    <div className="relative">
-                                        <Mail className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
-                                        <input type="email" placeholder="email@example.com" value={profileForm.email || ''} onChange={e => setProfileForm({...profileForm, email: e.target.value})} className={`${inputClass} pl-10`} />
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className={labelClass}>Website</label>
-                                    <div className="relative">
-                                        <Globe className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
-                                        <input type="text" placeholder="https://..." value={profileForm.website || ''} onChange={e => setProfileForm({...profileForm, website: e.target.value})} className={`${inputClass} pl-10`} />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="space-y-6 pt-6 border-t border-gray-100 dark:border-gray-700">
-                            <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2"><MapPin className="w-4 h-4 text-primary-600" /> Location & Hours</h4>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <label className={labelClass}>Address</label>
-                                    <input type="text" placeholder="Building, Street" value={profileForm.location || ''} onChange={e => setProfileForm({...profileForm, location: e.target.value})} className={inputClass} />
-                                </div>
-                                <div>
-                                    <label className={labelClass}>Opening Hours</label>
-                                    <input type="text" placeholder="e.g. 8am - 9pm" value={profileForm.opening_hours || ''} onChange={e => setProfileForm({...profileForm, opening_hours: e.target.value})} className={inputClass} />
-                                </div>
-                            </div>
-                        </div>
-
-                        <button 
-                            type="submit" 
-                            disabled={savingProfile}
-                            className="w-full bg-primary-600 hover:bg-primary-700 text-white font-bold py-4 rounded-xl shadow-lg transition disabled:opacity-50 flex items-center justify-center gap-2 transform hover:-translate-y-0.5"
-                        >
-                            {savingProfile ? <LoadingSpinner className="w-5 h-5 text-white" /> : "Save Changes"}
-                        </button>
-                    </form>
+                    <ShowroomForm 
+                        initialData={dealer}
+                        onSuccess={() => {
+                            alert(t('profile.update_success'));
+                            fetchData();
+                        }}
+                    />
                 </div>
             )}
         </main>
 
-        {/* Modal for adding/editing cars */}
-        {isCarModalOpen && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
-                <div className="bg-white dark:bg-gray-900 w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden my-auto relative max-h-[90vh] flex flex-col">
-                    <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center sticky top-0 bg-white dark:bg-gray-900 z-10">
-                        <h2 className="text-xl font-bold dark:text-white">{editingCar ? 'Edit Listing' : t('dealer.add_car')}</h2>
-                        <button onClick={() => setIsCarModalOpen(false)} className="text-gray-500 hover:text-gray-700 dark:hover:text-white">Close</button>
+        {/* Modals */}
+        {isCarModalOpen && editingCar && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                <div className="bg-white dark:bg-gray-900 w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+                    <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
+                        <h2 className="text-xl font-bold dark:text-white">{t('my_ads.edit_listing')}</h2>
+                        <button onClick={() => setIsCarModalOpen(false)}><XCircle className="w-6 h-6 text-gray-500" /></button>
                     </div>
                     <div className="p-6 overflow-y-auto">
                         <CarForm 
                             currentUser={profile}
-                            initialData={editingCar || undefined}
-                            onSuccess={() => {
-                                setIsCarModalOpen(false);
-                                fetchData();
-                            }}
+                            initialData={editingCar}
+                            onSuccess={() => { setIsCarModalOpen(false); fetchData(); }}
+                        />
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {isCarModalOpen && !editingCar && (
+             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                <div className="bg-white dark:bg-gray-900 w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+                    <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
+                        <h2 className="text-xl font-bold dark:text-white">{t('dealer.add_car')}</h2>
+                        <button onClick={() => setIsCarModalOpen(false)}><XCircle className="w-6 h-6 text-gray-500" /></button>
+                    </div>
+                    <div className="p-6 overflow-y-auto">
+                        <CarForm 
+                            currentUser={profile}
+                            onSuccess={() => { setIsCarModalOpen(false); fetchData(); }}
+                        />
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {isPartModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                <div className="bg-white dark:bg-gray-900 w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+                    <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
+                        <h2 className="text-xl font-bold dark:text-white">{editingPart ? t('my_ads.edit_part') : t('dealer.add_part')}</h2>
+                        <button onClick={() => setIsPartModalOpen(false)}><XCircle className="w-6 h-6 text-gray-500" /></button>
+                    </div>
+                    <div className="p-6 overflow-y-auto">
+                        <SparePartForm 
+                            currentUser={profile}
+                            initialData={editingPart || undefined}
+                            onSuccess={() => { setIsPartModalOpen(false); fetchData(); }}
                         />
                     </div>
                 </div>

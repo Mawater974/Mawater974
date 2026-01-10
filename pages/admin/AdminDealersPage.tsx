@@ -2,8 +2,9 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { getDealerships, updateDealerStatus, exportToCSV, getOptimizedImageUrl } from '../../services/dataService';
 import { Dealership } from '../../types';
-import { Building2, CheckCircle, XCircle, MapPin, RefreshCw, Filter, Phone, Mail, Globe, Warehouse } from 'lucide-react';
+import { Building2, CheckCircle, XCircle, MapPin, RefreshCw, Filter, Phone, Mail, Globe, Warehouse, ExternalLink, Edit } from 'lucide-react';
 import { AdminHeader } from '../../components/admin/AdminHeader';
+import { ShowroomForm } from '../../components/ShowroomForm';
 
 export const AdminDealersPage: React.FC = () => {
   const [dealers, setDealers] = useState<Dealership[]>([]);
@@ -12,10 +13,15 @@ export const AdminDealersPage: React.FC = () => {
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Edit State
+  const [editingDealer, setEditingDealer] = useState<Dealership | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   const fetchDealers = async () => {
     setLoading(true);
     setRefreshing(true);
-    const data = await getDealerships('all'); 
+    // Pass 'all' as status to fetch pending/rejected too
+    const data = await getDealerships('all', null, 'newest', 'all'); 
     setDealers(data);
     setLoading(false);
     setRefreshing(false);
@@ -25,7 +31,8 @@ export const AdminDealersPage: React.FC = () => {
     fetchDealers();
   }, []);
 
-  const handleStatusChange = async (id: number, status: 'approved' | 'rejected' | 'pending') => {
+  const handleStatusChange = async (id: number, status: 'approved' | 'rejected' | 'pending', e: React.MouseEvent) => {
+      e.stopPropagation(); // Prevent row click
       if(confirm(`Are you sure you want to set this dealer to ${status}?`)) {
           await updateDealerStatus(id, status);
           fetchDealers();
@@ -44,6 +51,25 @@ export const AdminDealersPage: React.FC = () => {
       if(e.target.files?.length) {
           alert("Import feature coming soon! File selected: " + e.target.files[0].name);
       }
+  };
+
+  const handleView = (dealer: Dealership, e?: React.MouseEvent) => {
+      if(e) e.stopPropagation();
+      // Construct URL based on country code if available, default to 'qa'
+      // The dealer object now has country code from the updated fetch query
+      const code = (dealer.countries as any)?.code?.toLowerCase() || 'qa';
+      window.open(`/#/${code}/showrooms/${dealer.id}`, '_blank');
+  };
+
+  const handleEdit = (dealer: Dealership, e: React.MouseEvent) => {
+      e.stopPropagation();
+      setEditingDealer(dealer);
+      setIsModalOpen(true);
+  };
+
+  const handleModalClose = () => {
+      setIsModalOpen(false);
+      setEditingDealer(null);
   };
 
   const filteredDealers = dealers.filter(d => {
@@ -112,7 +138,11 @@ export const AdminDealersPage: React.FC = () => {
                 ) : filteredDealers.length === 0 ? (
                     <tr><td colSpan={6} className="p-6 text-center text-gray-500">No dealers found matching this filter.</td></tr>
                 ) : filteredDealers.map(dealer => (
-                    <tr key={dealer.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                    <tr 
+                        key={dealer.id} 
+                        className="hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer group"
+                        onClick={() => handleView(dealer)}
+                    >
                         <td className="px-6 py-4">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded bg-gray-100 dark:bg-gray-700 flex-shrink-0 flex items-center justify-center overflow-hidden border border-gray-200 dark:border-gray-600">
@@ -123,7 +153,10 @@ export const AdminDealersPage: React.FC = () => {
                                     )}
                                 </div>
                                 <div>
-                                    <p className="font-bold text-gray-900 dark:text-white">{dealer.business_name}</p>
+                                    <div className="flex items-center gap-1">
+                                        <p className="font-bold text-gray-900 dark:text-white group-hover:text-primary-600 transition-colors">{dealer.business_name}</p>
+                                        <ExternalLink className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    </div>
                                     <p className="text-xs text-gray-500 truncate max-w-[200px]">{dealer.description}</p>
                                 </div>
                             </div>
@@ -170,27 +203,37 @@ export const AdminDealersPage: React.FC = () => {
                             </span>
                         </td>
                         <td className="px-6 py-4 text-right">
-                            <div className="flex justify-end gap-2">
+                            <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                                {dealer.status !== 'approved' && (
+                                    <button 
+                                        onClick={(e) => handleStatusChange(dealer.id, 'approved', e)}
+                                        className="p-2 text-green-600 hover:bg-green-50 rounded-lg" title="Approve"
+                                    >
+                                        <CheckCircle className="w-4 h-4" />
+                                    </button>
+                                )}
+                                {dealer.status !== 'rejected' && (
+                                    <button 
+                                        onClick={(e) => handleStatusChange(dealer.id, 'rejected', e)}
+                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg" title="Reject"
+                                    >
+                                        <XCircle className="w-4 h-4" />
+                                    </button>
+                                )}
                                 <button 
-                                    onClick={() => handleStatusChange(dealer.id, 'approved')}
-                                    className="p-2 text-green-600 hover:bg-green-50 rounded-lg" title="Approve"
-                                    disabled={dealer.status === 'approved'}
+                                    onClick={(e) => handleEdit(dealer, e)}
+                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                                    title="Edit Details"
                                 >
-                                    <CheckCircle className={`w-4 h-4 ${dealer.status === 'approved' ? 'opacity-30' : ''}`} />
+                                    <Edit className="w-4 h-4" />
                                 </button>
+                                {/* External Link Button with Hover Effect */}
                                 <button 
-                                    onClick={() => handleStatusChange(dealer.id, 'rejected')}
-                                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg" title="Reject"
-                                    disabled={dealer.status === 'rejected'}
+                                    onClick={(e) => handleView(dealer, e)}
+                                    className="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition group/link relative"
+                                    title="View Public Page"
                                 >
-                                    <XCircle className={`w-4 h-4 ${dealer.status === 'rejected' ? 'opacity-30' : ''}`} />
-                                </button>
-                                <button 
-                                    onClick={() => handleStatusChange(dealer.id, 'pending')}
-                                    className="p-2 text-yellow-600 hover:bg-yellow-50 rounded-lg" title="Set Pending"
-                                    disabled={!dealer.status || dealer.status === 'pending'}
-                                >
-                                    <RefreshCw className={`w-4 h-4 ${(!dealer.status || dealer.status === 'pending') ? 'opacity-30' : ''}`} />
+                                    <ExternalLink className="w-4 h-4" />
                                 </button>
                             </div>
                         </td>
@@ -199,6 +242,26 @@ export const AdminDealersPage: React.FC = () => {
             </tbody>
         </table>
       </div>
+
+      {/* Edit Modal */}
+      {isModalOpen && editingDealer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl animate-fade-in-up">
+                <div className="flex justify-between items-center p-6 border-b border-gray-100 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">
+                    <h2 className="text-xl font-bold dark:text-white">Edit Dealership Info</h2>
+                    <button onClick={handleModalClose} className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                        <XCircle className="w-6 h-6" />
+                    </button>
+                </div>
+                <div className="p-6">
+                    <ShowroomForm 
+                        initialData={editingDealer}
+                        onSuccess={() => { handleModalClose(); fetchDealers(); }} 
+                    />
+                </div>
+            </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -62,12 +62,12 @@ export const SignupPage: React.FC = () => {
 
     // Validation
     if (!selectedCountry) {
-        setError("Please select your country.");
+        setError(t('signup.error.select_country'));
         return;
     }
 
     if (!phoneCode) {
-        setError("Invalid country code.");
+        setError(t('signup.error.invalid_code'));
         return;
     }
 
@@ -78,7 +78,7 @@ export const SignupPage: React.FC = () => {
     // Count actual digits (excluding +) to ensure it meets DB constraint (10-15 digits)
     const digitCount = fullPhoneNumber.replace(/\D/g, '').length;
     if (digitCount < 10 || digitCount > 15) {
-        setError(`Phone number must be between 10 and 15 digits including country code. Currently: ${digitCount}`);
+        setError(t('signup.error.phone_length'));
         return;
     }
 
@@ -125,9 +125,14 @@ export const SignupPage: React.FC = () => {
       });
 
       if (success) {
-        navigate(`/${countryCode}`);
+        // Find the country object to redirect to the correct path
+        const targetCountry = countries.find(c => c.id === Number(selectedCountry));
+        // Redirect to the selected country's home page
+        const targetPath = targetCountry ? `/${targetCountry.code.toLowerCase()}` : `/${countryCode}`;
+        
+        navigate(targetPath);
       } else {
-        setError("Account created but failed to save profile details.");
+        setError(t('signup.error.profile_save'));
       }
     }
     setLoading(false);
@@ -137,7 +142,7 @@ export const SignupPage: React.FC = () => {
 
   return (
     <div className="max-w-md mx-auto mt-12 bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700">
-      <h2 className="text-2xl font-bold mb-6 text-center dark:text-white">Create Account</h2>
+      <h2 className="text-2xl font-bold mb-6 text-center dark:text-white">{t('signup.title')}</h2>
       
       {error && (
         <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm mb-4 border border-red-100">
@@ -147,7 +152,7 @@ export const SignupPage: React.FC = () => {
 
       <form onSubmit={handleSignup} className="space-y-5">
         <div>
-          <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
+          <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">{t('signup.fullname')}</label>
           <input
             type="text"
             value={fullName}
@@ -159,7 +164,7 @@ export const SignupPage: React.FC = () => {
         </div>
         
         <div>
-          <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Email</label>
+          <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">{t('login.email')}</label>
           <input
             type="email"
             value={email}
@@ -173,7 +178,7 @@ export const SignupPage: React.FC = () => {
         {/* Country Selection */}
         <div>
           <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-1">
-             <Globe className="w-3 h-3" /> Select Country
+             <Globe className="w-3 h-3" /> {t('signup.select_country')}
           </label>
           <select 
             value={selectedCountry}
@@ -181,7 +186,7 @@ export const SignupPage: React.FC = () => {
             required
             className={inputClass}
           >
-            <option value="" disabled>Select your country</option>
+            <option value="" disabled>{t('signup.select_country')}</option>
             {countries.map(c => (
               <option key={c.id} value={c.id}>
                 {language === 'ar' ? c.name_ar : c.name}
@@ -193,7 +198,7 @@ export const SignupPage: React.FC = () => {
         {/* Phone Number with Auto Code */}
         <div>
           <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-1">
-             <Phone className="w-3 h-3" /> Phone Number
+             <Phone className="w-3 h-3" /> {t('signup.phone')}
           </label>
           <div className="flex gap-2">
              <div className="w-24 flex-shrink-0">
@@ -215,18 +220,18 @@ export const SignupPage: React.FC = () => {
                 placeholder="12345678"
              />
           </div>
-          <p className="text-xs text-gray-500 mt-1">Format: {phoneCode || '+974'} XXXXXXXX</p>
+          <p className="text-xs text-gray-500 mt-1">{t('signup.phone_format')}: {phoneCode || '+974'} XXXXXXXX</p>
         </div>
 
         <div>
-          <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Password</label>
+          <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">{t('login.password')}</label>
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
             className={inputClass}
-            placeholder="Min 6 characters"
+            placeholder={t('signup.password_hint')}
           />
         </div>
 
@@ -235,14 +240,14 @@ export const SignupPage: React.FC = () => {
           disabled={loading}
           className="w-full bg-primary-600 hover:bg-primary-700 text-white font-bold py-3 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
         >
-          {loading ? t('common.loading') : 'Sign Up'}
+          {loading ? t('common.loading') : t('signup.submit')}
         </button>
       </form>
 
       <div className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
-        Already have an account?{' '}
+        {t('signup.has_account')}{' '}
         <Link to={`/${countryCode}/login`} className="text-primary-600 hover:text-primary-700 font-semibold">
-          Login
+          {t('signup.login_link')}
         </Link>
       </div>
     </div>

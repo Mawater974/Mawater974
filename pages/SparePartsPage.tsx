@@ -46,7 +46,7 @@ export const SparePartsPage: React.FC = () => {
                   <Settings className="w-8 h-8 text-primary-600" />
                   <h1 className="text-3xl font-bold dark:text-white">{t('nav.parts')}</h1>
               </div>
-              <p className="text-gray-500 text-sm">Find original and aftermarket parts for your vehicle.</p>
+              <p className="text-gray-500 text-sm">{t('parts.subtitle')}</p>
           </div>
 
           <form onSubmit={handleSearchSubmit} className="relative w-full md:w-auto md:min-w-[300px]">
@@ -54,7 +54,7 @@ export const SparePartsPage: React.FC = () => {
                   type="text" 
                   value={localSearch}
                   onChange={(e) => setLocalSearch(e.target.value)}
-                  placeholder="Search spare parts..." 
+                  placeholder={t('home.search_parts_placeholder')} 
                   className="w-full pl-10 pr-12 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition"
               />
               <Search className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
@@ -69,7 +69,7 @@ export const SparePartsPage: React.FC = () => {
       
       {searchQuery && (
           <p className="mb-6 text-gray-500">
-              Showing results for: <span className="font-bold text-gray-900 dark:text-white">"{searchQuery}"</span>
+              {t('parts.showing_results_for')} <span className="font-bold text-gray-900 dark:text-white">"{searchQuery}"</span>
           </p>
       )}
 
@@ -88,13 +88,13 @@ export const SparePartsPage: React.FC = () => {
             <div className="col-span-full text-center py-20 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
                 <Search className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold dark:text-white">{t('common.no_results')}</h3>
-                <p className="text-gray-500 mt-1">Try adjusting your search terms or checking category filters.</p>
+                <p className="text-gray-500 mt-1">{t('parts.try_adjusting')}</p>
                 {searchQuery && (
                     <button 
                         onClick={() => { setSearchParams({}); setLocalSearch(''); }}
                         className="mt-4 text-primary-600 font-bold hover:underline"
                     >
-                        Clear Search
+                        {t('parts.clear_search')}
                     </button>
                 )}
             </div>

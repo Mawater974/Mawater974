@@ -70,8 +70,8 @@ export const ContactPage: React.FC = () => {
                         <Phone className="w-6 h-6" />
                     </div>
                     <div>
-                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Call Us</h3>
-                        <p className="text-gray-500 text-sm mb-2">Mon-Sat from 8am to 5pm</p>
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">{t('contact.call_us')}</h3>
+                        <p className="text-gray-500 text-sm mb-2">{t('contact.hours')}</p>
                         <a href="tel:+97412345678" className="text-xl font-bold text-primary-600 hover:underline" dir="ltr">+974 1234 5678</a>
                     </div>
                 </div>
@@ -81,8 +81,8 @@ export const ContactPage: React.FC = () => {
                         <Mail className="w-6 h-6" />
                     </div>
                     <div>
-                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Email Us</h3>
-                        <p className="text-gray-500 text-sm mb-2">For general inquiries and support</p>
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">{t('contact.email_us')}</h3>
+                        <p className="text-gray-500 text-sm mb-2">{t('contact.email_desc')}</p>
                         <a href="mailto:support@mawater974.com" className="text-lg font-bold text-gray-700 dark:text-gray-200 hover:text-primary-600 transition">support@mawater974.com</a>
                     </div>
                 </div>
@@ -92,9 +92,9 @@ export const ContactPage: React.FC = () => {
                         <MapPin className="w-6 h-6" />
                     </div>
                     <div>
-                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Visit Us</h3>
-                        <p className="text-gray-500 text-sm mb-2">Main Office</p>
-                        <p className="text-gray-700 dark:text-gray-200">West Bay, Doha, Qatar<br/>PO Box 12345</p>
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">{t('contact.visit_us')}</h3>
+                        <p className="text-gray-500 text-sm mb-2">{t('contact.office_type')}</p>
+                        <p className="text-gray-700 dark:text-gray-200">{t('footer.address')}<br/>{t('footer.pobox')}</p>
                     </div>
                 </div>
             </div>
@@ -112,18 +112,18 @@ export const ContactPage: React.FC = () => {
 
         {/* Contact Form */}
         <div className="bg-gray-50 dark:bg-gray-800/50 p-8 md:p-12 rounded-3xl border border-gray-200 dark:border-gray-700">
-            <h2 className="text-2xl font-bold mb-6 dark:text-white">Send a Message</h2>
+            <h2 className="text-2xl font-bold mb-6 dark:text-white">{t('contact.form_title')}</h2>
             
             {status === 'success' ? (
                 <div className="bg-green-100 text-green-800 p-6 rounded-2xl text-center animate-fade-in-up">
                     <CheckCircle className="w-12 h-12 mx-auto mb-3" />
-                    <h3 className="font-bold text-lg mb-1">Thank You!</h3>
+                    <h3 className="font-bold text-lg mb-1">{t('contact.thank_you')}</h3>
                     <p>{t('contact.success')}</p>
                     <button 
                         onClick={() => setStatus('idle')} 
                         className="mt-4 text-green-700 font-bold hover:underline"
                     >
-                        Send another message
+                        {t('contact.send_another')}
                     </button>
                 </div>
             ) : (

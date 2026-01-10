@@ -51,7 +51,16 @@ export const SparePartDetailsPage: React.FC = () => {
   const displayCurrency = part.countries?.currency_code || currency;
 
   return (
-    <div className="pb-12">
+    <div className="pb-12 relative">
+      {/* Status Watermark */}
+         {part.status && part.status !== 'approved' && (
+            <div className="absolute inset-0 z-40 pointer-events-none flex items-center justify-center overflow-hidden h-[60vh] mt-20">
+               <div className="transform -rotate-12 border-4 border-dashed border-red-500/50 text-red-500/50 text-4xl sm:text-4xl md:text-8xl font-black uppercase px-12 py-4 tracking-widest bg-white/30 backdrop-blur-sm rounded-xl">
+                  {part.status}
+               </div>
+            </div>
+         )}
+
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-gray-500 mb-6">
         <Link to={`/${countryCode}`} className="hover:text-primary-600">{t('nav.home')}</Link>
@@ -81,10 +90,10 @@ export const SparePartDetailsPage: React.FC = () => {
           <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
              <div className="flex flex-wrap gap-2 mb-6">
                  <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${part.part_type === 'original' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
-                    {part.part_type}
+                    {part.part_type === 'original' ? t('part.original') : t('part.aftermarket')}
                  </span>
                  <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${part.condition === 'new' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
-                    {part.condition}
+                    {t(`condition.${part.condition}`)}
                  </span>
                  {categoryName && (
                      <span className="px-3 py-1 rounded-full text-xs font-bold bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
@@ -98,24 +107,24 @@ export const SparePartDetailsPage: React.FC = () => {
              <div className="grid grid-cols-2 md:grid-cols-3 gap-6 mb-8">
                 {brandName && (
                     <div className="flex flex-col gap-1">
-                        <span className="text-gray-500 text-sm font-bold">Brand</span>
+                        <span className="text-gray-500 text-sm font-bold">{t('form.brand')}</span>
                         <span className="font-medium dark:text-gray-200">{brandName}</span>
                     </div>
                 )}
                 {modelName && (
                     <div className="flex flex-col gap-1">
-                        <span className="text-gray-500 text-sm font-bold">Compatible Model</span>
+                        <span className="text-gray-500 text-sm font-bold">{t('parts.compatible_model')}</span>
                         <span className="font-medium dark:text-gray-200">{modelName}</span>
                     </div>
                 )}
                 <div className="flex flex-col gap-1">
-                   <span className="text-gray-500 text-sm font-bold">Location</span>
+                   <span className="text-gray-500 text-sm font-bold">{t('parts.location')}</span>
                    <span className="font-medium dark:text-gray-200 flex items-center gap-1">
                        <MapPin className="w-4 h-4 text-gray-400" /> {cityName || 'N/A'}, {countryName}
                    </span>
                 </div>
                 <div className="flex flex-col gap-1">
-                   <span className="text-gray-500 text-sm font-bold">Listed Date</span>
+                   <span className="text-gray-500 text-sm font-bold">{t('parts.listed_date')}</span>
                    <span className="font-medium dark:text-gray-200">{new Date(part.created_at).toLocaleDateString()}</span>
                 </div>
              </div>
@@ -143,7 +152,7 @@ export const SparePartDetailsPage: React.FC = () => {
                     <span className="text-lg font-bold text-gray-500">{displayCurrency}</span>
                  </div>
                  {part.is_negotiable && (
-                     <span className="inline-block mt-2 text-xs font-bold text-green-600 bg-green-100 px-2 py-1 rounded">Negotiable</span>
+                     <span className="inline-block mt-2 text-xs font-bold text-green-600 bg-green-100 px-2 py-1 rounded">{t('parts.negotiable_badge')}</span>
                  )}
               </div>
 
@@ -158,16 +167,16 @@ export const SparePartDetailsPage: React.FC = () => {
                         </div>
                     )}
                     <div>
-                        <p className="font-bold text-gray-900 dark:text-white">{part.profiles?.full_name || 'Seller'}</p>
+                        <p className="font-bold text-gray-900 dark:text-white">{part.profiles?.full_name || t('car.seller_info')}</p>
                         
                         {/* Verified Dealer Badge */}
                         {part.profiles?.role === 'dealer' && (
                             <p className="text-xs text-blue-600 dark:text-blue-400 font-bold flex items-center gap-1 mb-0.5">
-                                <CheckCircle className="w-3 h-3" /> Verified Dealer
+                                <CheckCircle className="w-3 h-3" /> {t('car.verified_seller')}
                             </p>
                         )}
 
-                        <p className="text-xs text-gray-500">Member since {new Date(part.profiles?.created_at || Date.now()).getFullYear()}</p>
+                        <p className="text-xs text-gray-500">{t('parts.member_since')} {new Date(part.profiles?.created_at || Date.now()).getFullYear()}</p>
                     </div>
                  </div>
               </div>
@@ -179,7 +188,7 @@ export const SparePartDetailsPage: React.FC = () => {
                             href={`tel:${part.profiles.phone_number}`}
                             className="w-full bg-primary-600 hover:bg-primary-700 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition"
                         >
-                            <Phone className="w-5 h-5" /> Call Seller
+                            <Phone className="w-5 h-5" /> {t('parts.call_seller')}
                         </a>
                         <a 
                             href={`https://wa.me/${part.profiles.phone_number.replace(/\D/g,'')}`}
@@ -187,13 +196,13 @@ export const SparePartDetailsPage: React.FC = () => {
                             rel="noopener noreferrer"
                             className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition"
                         >
-                            <MessageCircle className="w-5 h-5" /> WhatsApp
+                            <MessageCircle className="w-5 h-5" /> {t('parts.whatsapp')}
                         </a>
                      </>
                  ) : (
                      <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200 rounded-lg text-sm flex items-center gap-2">
                          <AlertCircle className="w-5 h-5" />
-                         No phone number available for this seller.
+                         {t('parts.no_phone')}
                      </div>
                  )}
               </div>
@@ -202,7 +211,7 @@ export const SparePartDetailsPage: React.FC = () => {
       </div>
 
       {/* Similar Ads Section */}
-      <SimilarAdsCarousel items={similarParts} type="part" title="Similar Parts" />
+      <SimilarAdsCarousel items={similarParts} type="part" title={t('parts.similar')} />
     </div>
   );
 };
