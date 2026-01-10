@@ -9,12 +9,16 @@ export const RootRedirect: React.FC = () => {
   const location = useLocation();
 
   useEffect(() => {
-    // CRITICAL: Check for Supabase Auth Hash (e.g. password recovery, magic link)
-    // If a hash with 'access_token' or 'type=recovery' is present, 
-    // we MUST NOT redirect. We yield control to AuthContext to process the token.
-    // Once Supabase processes it, the hash is removed, and this effect will re-run to redirect to country home.
-    if (location.hash && (location.hash.includes('access_token') || location.hash.includes('type='))) {
-        console.log("Auth hash detected, waiting for AuthContext...");
+    // CRITICAL: Check for Supabase Auth tokens.
+    // In HashRouter, 'access_token=...' might be interpreted as the pathname (e.g. /access_token=...)
+    // We must check both hash and pathname to prevent premature redirection.
+    const isAuthUrl = 
+        (location.hash && (location.hash.includes('access_token') || location.hash.includes('type=recovery'))) ||
+        (location.pathname && (location.pathname.includes('access_token') || location.pathname.includes('type=recovery')));
+
+    if (isAuthUrl) {
+        console.log("Auth hash detected, waiting for AuthContext processing...");
+        // Do not redirect. Wait for AuthContext to handle the Supabase event.
         return; 
     }
 
@@ -81,6 +85,7 @@ export const RootRedirect: React.FC = () => {
        <div className="text-center flex flex-col items-center">
           <img src="/logo.png" alt="Mawater974" className="h-32 md:h-40 w-auto mb-8 animate-pulse drop-shadow-xl" />
           <LoadingSpinner className="w-12 h-12" />
+          <p className="mt-4 text-gray-400 text-sm font-medium animate-pulse">Loading...</p>
        </div>
     </div>
   );
