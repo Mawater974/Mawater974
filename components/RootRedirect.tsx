@@ -9,16 +9,11 @@ export const RootRedirect: React.FC = () => {
   const location = useLocation();
 
   useEffect(() => {
-    // CRITICAL: Check for Supabase Auth tokens.
-    // In HashRouter, 'access_token=...' might be interpreted as the pathname (e.g. /access_token=...)
-    // We must check both hash and pathname to prevent premature redirection.
-    const isAuthUrl = 
-        (location.hash && (location.hash.includes('access_token') || location.hash.includes('type=recovery'))) ||
-        (location.pathname && (location.pathname.includes('access_token') || location.pathname.includes('type=recovery')));
-
-    if (isAuthUrl) {
-        console.log("Auth hash detected, waiting for AuthContext processing...");
-        // Do not redirect. Wait for AuthContext to handle the Supabase event.
+    // CRITICAL: Check for Supabase Auth tokens in the hash.
+    // When using BrowserRouter, the hash is strictly in location.hash.
+    // We must pause redirection if an auth token is present to allow Supabase SDK to consume it.
+    if (location.hash && (location.hash.includes('access_token') || location.hash.includes('type=recovery'))) {
+        console.log("Auth hash detected in RootRedirect, yielding to AuthContext...");
         return; 
     }
 
