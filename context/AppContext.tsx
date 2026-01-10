@@ -41,12 +41,12 @@ const translations: Record<string, Record<Language, string>> = {
   'hero.badge': { en: 'Ride in Style', ar: 'قُد بأسلوب' },
   'hero.title1': { en: 'Exclusive Cars', ar: 'سيارات حصرية' },
   'hero.title2': { en: 'in {country}', ar: 'في {country}' },
-  'hero.description': { 
-    en: 'Discover the finest vehicles in {country}. From supercars to economic sedans, Find your perfect choice with Mawater974.', 
-    ar: 'اكتشف أرقى السيارات في {country}. من السيارات الخارقة إلى سيارات السيدان الاقتصادية، اعثر على خيارك الأمثل مع مواتر 974.' 
+  'hero.description': {
+    en: 'Discover the finest vehicles in {country}. From supercars to economic sedans, Find your perfect choice with Mawater974.',
+    ar: 'اكتشف أرقى السيارات في {country}. من السيارات الخارقة إلى سيارات السيدان الاقتصادية، اعثر على خيارك الأمثل مع مواتر 974.'
   },
   'hero.search': { en: 'Search...', ar: 'بحث...' },
-  
+
   'home.browse_brand': { en: 'Browse by Brand', ar: 'تصفح حسب الماركة' },
   'home.view_all': { en: 'View All', ar: 'عرض الكل' },
   'home.latest_listings': { en: 'Check out the latest premium listings', ar: 'تفقّد أحدث الإعلانات المميزة' },
@@ -60,7 +60,7 @@ const translations: Record<string, Record<Language, string>> = {
   'featured.cars': { en: 'Featured Cars', ar: 'سيارات مميزة' },
   'featured.parts': { en: 'Featured Spare Parts', ar: 'قطع غيار مميزة' },
   'featured.dealers': { en: 'Top Showrooms', ar: 'أفضل المعارض' },
-  
+
   'common.price': { en: 'Price', ar: 'السعر' },
   'common.year': { en: 'Year', ar: 'السنة' },
   'common.mileage': { en: 'Mileage', ar: 'الممشى' },
@@ -93,14 +93,17 @@ const translations: Record<string, Record<Language, string>> = {
   'filter.hide': { en: 'Hide Filters', ar: 'إخفاء الفلاتر' },
   'filter.any': { en: 'Any', ar: 'الكل' },
   'search.placeholder': { en: 'Search by description...', ar: 'ابحث في الوصف...' },
-  
+
   'login.title': { en: 'Login', ar: 'تسجيل الدخول' },
   'login.email': { en: 'Email Address', ar: 'البريد الإلكتروني' },
   'login.password': { en: 'Password', ar: 'كلمة المرور' },
   'login.submit': { en: 'Login', ar: 'دخول' },
   'login.no_account': { en: "Don't have an account?", ar: 'ليس لديك حساب؟' },
   'login.signup_link': { en: 'Sign Up', ar: 'سجل الآن' },
-  
+  'login.google': { en: 'Continue with Google', ar: 'الاستمرار باستخدام جوجل' },
+  'login.remember_me': { en: 'Remember me', ar: 'تذكرني' },
+  'login.forgot_password': { en: 'Forgot Password?', ar: 'نسيت كلمة المرور؟' },
+
   'signup.title': { en: 'Create Account', ar: 'إنشاء حساب جديد' },
   'signup.fullname': { en: 'Full Name', ar: 'الاسم الكامل' },
   'signup.select_country': { en: 'Select Country', ar: 'اختر الدولة' },
@@ -114,6 +117,18 @@ const translations: Record<string, Record<Language, string>> = {
   'signup.error.invalid_code': { en: 'Invalid country code.', ar: 'رمز الدولة غير صحيح.' },
   'signup.error.phone_length': { en: 'Phone number must be between 10 and 15 digits.', ar: 'يجب أن يكون رقم الهاتف بين ١٠ و ١٥ خانة.' },
   'signup.error.profile_save': { en: 'Account created but failed to save details.', ar: 'تم إنشاء الحساب ولكن فشل حفظ التفاصيل.' },
+
+  'auth.forgot_title': { en: 'Forgot Password', ar: 'نسيت كلمة المرور' },
+  'auth.forgot_desc': { en: 'Enter your email address and we will send you a link to reset your password.', ar: 'أدخل بريدك الإلكتروني وسنرسل لك رابطاً لإعادة تعيين كلمة المرور.' },
+  'auth.send_reset': { en: 'Send Reset Link', ar: 'إرسال رابط إعادة التعيين' },
+  'auth.back_to_login': { en: 'Back to Login', ar: 'العودة لتسجيل الدخول' },
+  'auth.reset_email_sent': { en: 'If an account exists, a password reset link has been sent.', ar: 'إذا كان الحساب موجوداً، فقد تم إرسال رابط إعادة التعيين.' },
+  'auth.update_password_title': { en: 'Update Password', ar: 'تحديث كلمة المرور' },
+  'auth.new_password': { en: 'New Password', ar: 'كلمة المرور الجديدة' },
+  'auth.confirm_password': { en: 'Confirm Password', ar: 'تأكيد كلمة المرور' },
+  'auth.update_submit': { en: 'Update Password', ar: 'تحديث كلمة المرور' },
+  'auth.password_mismatch': { en: 'Passwords do not match.', ar: 'كلمات المرور غير متطابقة.' },
+  'auth.password_updated': { en: 'Password updated successfully.', ar: 'تم تحديث كلمة المرور بنجاح.' },
 
   'profile.title': { en: 'My Profile', ar: 'الملف الشخصي' },
   'profile.update_success': { en: 'Profile updated successfully', ar: 'تم تحديث الملف بنجاح' },
@@ -145,7 +160,7 @@ const translations: Record<string, Record<Language, string>> = {
   'cars.compare_now': { en: 'Compare Now', ar: 'قارن الآن' },
   'cars.hero.title': { en: 'Find Your Perfect Car', ar: 'اعثر على سيارتك المثالية' },
   'cars.hero.subtitle': { en: 'Browse thousands of cars in {country}. Verified sellers, trusted dealers.', ar: 'تصفح آلاف السيارات في {country}. بائعون موثوقون ومعارض معتمدة.' },
-  
+
   'sort.label': { en: 'Sort by', ar: 'ترتيب حسب' },
   'sort.newest': { en: 'Newest Listed', ar: 'الأحدث' },
   'sort.price_asc': { en: 'Price: Low to High', ar: 'السعر: من الأقل للأعلى' },
@@ -154,10 +169,10 @@ const translations: Record<string, Record<Language, string>> = {
   'sort.year_desc': { en: 'Newest Model Year', ar: 'أحدث موديل' },
   'sort.name_asc': { en: 'Name (A-Z)', ar: 'الاسم (أ-ي)' },
   'sort.featured': { en: 'Featured First', ar: 'المميزة أولاً' },
-  
+
   'dealers.subtitle': { en: 'Discover premium showrooms and verified dealers.', ar: 'اكتشف أرقى المعارض والتجار الموثوقين.' },
   'dealers.no_results': { en: 'No showrooms found.', ar: 'لا توجد معارض.' },
-  
+
   'footer.slogan': { en: "Qatar's #1 Marketplace for Cars, Parts & Services. We connect buyers and sellers with trust and ease.", ar: "أفضل سوق للسيارات وقطع الغيار والخدمات في قطر. نربط البائعين والمشترين بثقة وسهولة." },
   'footer.marketplace': { en: "Marketplace", ar: "السوق" },
   'footer.company': { en: "Company", ar: "الشركة" },
@@ -172,7 +187,7 @@ const translations: Record<string, Record<Language, string>> = {
   'footer.address': { en: "West Bay, Doha, Qatar", ar: "الخليج الغربي، الدوحة، قطر" },
   'footer.pobox': { en: "PO Box 12345", ar: "ص.ب 12345" },
   'footer.operational': { en: "Systems Operational", ar: "الأنظمة تعمل بكفاءة" },
-  
+
   'contact.title': { en: 'Contact Us', ar: 'اتصل بنا' },
   'contact.subtitle': { en: 'We are here to help you. Send us your query.', ar: 'نحن هنا لمساعدتك. أرسل لنا استفسارك.' },
   'contact.name': { en: 'Full Name', ar: 'الاسم الكامل' },
@@ -244,10 +259,10 @@ const translations: Record<string, Record<Language, string>> = {
   'fuel.diesel': { en: 'Diesel', ar: 'ديزل' },
   'fuel.hybrid': { en: 'Hybrid', ar: 'هجين' },
   'fuel.electric': { en: 'Electric', ar: 'كهرباء' },
-  
+
   'gearbox.manual': { en: 'Manual', ar: 'عادي' },
   'gearbox.automatic': { en: 'Automatic', ar: 'أوتوماتيك' },
-  
+
   'body.sedan': { en: 'Sedan', ar: 'سيدان' },
   'body.suv': { en: 'SUV', ar: 'دفع رباعي' },
   'body.hatchback': { en: 'Hatchback', ar: 'هاتشباك' },
@@ -327,47 +342,47 @@ const translations: Record<string, Record<Language, string>> = {
   // Privacy Policy Keys
   'privacy.title': { en: 'Privacy Policy', ar: 'سياسة الخصوصية' },
   'privacy.last_updated': { en: 'Last Updated', ar: 'آخر تحديث' },
-  'privacy.intro': { 
-    en: 'Your privacy is important to us. This policy explains how we collect, use, and protect your personal information.', 
-    ar: 'خصوصيتك مهمة بالنسبة لنا. تشرح هذه السياسة كيفية جمع معلوماتك الشخصية واستخدامها وحمايتها.' 
+  'privacy.intro': {
+    en: 'Your privacy is important to us. This policy explains how we collect, use, and protect your personal information.',
+    ar: 'خصوصيتك مهمة بالنسبة لنا. تشرح هذه السياسة كيفية جمع معلوماتك الشخصية واستخدامها وحمايتها.'
   },
   'privacy.collect.title': { en: 'Information We Collect', ar: 'المعلومات التي نجمعها' },
-  'privacy.collect.desc': { 
-    en: 'We collect information you provide directly to us, such as when you create an account, post an ad, or contact us. This may include your name, email address, phone number, and location.', 
-    ar: 'نجمع المعلومات التي تقدمها لنا مباشرة، مثل عند إنشاء حساب، أو نشر إعلان، أو التواصل معنا. قد يشمل ذلك اسمك، عنوان بريدك الإلكتروني، رقم هاتفك، وموقعك.' 
+  'privacy.collect.desc': {
+    en: 'We collect information you provide directly to us, such as when you create an account, post an ad, or contact us. This may include your name, email address, phone number, and location.',
+    ar: 'نجمع المعلومات التي تقدمها لنا مباشرة، مثل عند إنشاء حساب، أو نشر إعلان، أو التواصل معنا. قد يشمل ذلك اسمك، عنوان بريدك الإلكتروني، رقم هاتفك، وموقعك.'
   },
   'privacy.use.title': { en: 'How We Use Your Information', ar: 'كيف نستخدم معلوماتك' },
-  'privacy.use.desc': { 
-    en: 'We use the information we collect to operate and improve our services, communicate with you, and personalize your experience. We may also use it to prevent fraud and ensure security.', 
-    ar: 'نستخدم المعلومات التي نجمعها لتشغيل وتحسين خدماتنا، والتواصل معك، وتخصيص تجربتك. قد نستخدمها أيضاً لمنع الاحتيال وضمان الأمان.' 
+  'privacy.use.desc': {
+    en: 'We use the information we collect to operate and improve our services, communicate with you, and personalize your experience. We may also use it to prevent fraud and ensure security.',
+    ar: 'نستخدم المعلومات التي نجمعها لتشغيل وتحسين خدماتنا، والتواصل معك، وتخصيص تجربتك. قد نستخدمها أيضاً لمنع الاحتيال وضمان الأمان.'
   },
   'privacy.sharing.title': { en: 'Sharing of Information', ar: 'مشاركة المعلومات' },
-  'privacy.sharing.desc': { 
-    en: 'We do not share your personal information with third parties except as described in this policy, such as with your consent or for legal reasons.', 
-    ar: 'لا نشارك معلوماتك الشخصية مع أطراف ثالثة إلا كما هو موضح في هذه السياسة، مثل بموافقتك أو لأسباب قانونية.' 
+  'privacy.sharing.desc': {
+    en: 'We do not share your personal information with third parties except as described in this policy, such as with your consent or for legal reasons.',
+    ar: 'لا نشارك معلوماتك الشخصية مع أطراف ثالثة إلا كما هو موضح في هذه السياسة، مثل بموافقتك أو لأسباب قانونية.'
   },
 
   // Terms & Conditions Keys
   'terms.title': { en: 'Terms & Conditions', ar: 'الشروط والأحكام' },
   'terms.last_updated': { en: 'Last Updated', ar: 'آخر تحديث' },
-  'terms.intro': { 
-    en: 'Welcome to Mawater974. By using our website, you agree to comply with and be bound by the following terms and conditions.', 
-    ar: 'مرحبًا بكم في مواتر ٩٧٤. باستخدامك لموقعنا، فإنك توافق على الالتزام بالشروط والأحكام التالية.' 
+  'terms.intro': {
+    en: 'Welcome to Mawater974. By using our website, you agree to comply with and be bound by the following terms and conditions.',
+    ar: 'مرحبًا بكم في مواتر ٩٧٤. باستخدامك لموقعنا، فإنك توافق على الالتزام بالشروط والأحكام التالية.'
   },
   'terms.usage.title': { en: 'Acceptable Use', ar: 'الاستخدام المقبول' },
-  'terms.usage.desc': { 
-    en: 'You agree to use our website only for lawful purposes. You must not post any content that is illegal, offensive, or violates the rights of others.', 
-    ar: 'توافق على استخدام موقعنا لأغراض قانونية فقط. يجب ألا تنشر أي محتوى غير قانوني أو مسيء أو ينتهك حقوق الآخرين.' 
+  'terms.usage.desc': {
+    en: 'You agree to use our website only for lawful purposes. You must not post any content that is illegal, offensive, or violates the rights of others.',
+    ar: 'توافق على استخدام موقعنا لأغراض قانونية فقط. يجب ألا تنشر أي محتوى غير قانوني أو مسيء أو ينتهك حقوق الآخرين.'
   },
   'terms.account.title': { en: 'Account Responsibility', ar: 'مسؤولية الحساب' },
-  'terms.account.desc': { 
-    en: 'You are responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account.', 
-    ar: 'أنت مسؤول عن الحفاظ على سرية بيانات اعتماد حسابك وعن جميع الأنشطة التي تحدث تحت حسابك.' 
+  'terms.account.desc': {
+    en: 'You are responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account.',
+    ar: 'أنت مسؤول عن الحفاظ على سرية بيانات اعتماد حسابك وعن جميع الأنشطة التي تحدث تحت حسابك.'
   },
   'terms.termination.title': { en: 'Termination', ar: 'الإنهاء' },
-  'terms.termination.desc': { 
-    en: 'We reserve the right to terminate or suspend your account at any time, without notice, for conduct that we believe violates these terms or is harmful to other users.', 
-    ar: 'نحتفظ بالحق في إنهاء أو تعليق حسابك في أي وقت، دون إشعار، بسبب سلوك نعتقد أنه ينتهك هذه الشروط أو يضر بالمستخدمين الآخرين.' 
+  'terms.termination.desc': {
+    en: 'We reserve the right to terminate or suspend your account at any time, without notice, for conduct that we believe violates these terms or is harmful to other users.',
+    ar: 'نحتفظ بالحق في إنهاء أو تعليق حسابك في أي وقت، دون إشعار، بسبب سلوك نعتقد أنه ينتهك هذه الشروط أو يضر بالمستخدمين الآخرين.'
   },
 
   // Additional Keys
@@ -428,15 +443,15 @@ const AppContext = createContext<AppContextProps | undefined>(undefined);
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   const [language, setLanguage] = useState<Language>('en');
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
   const [countries, setCountries] = useState<Country[]>(FALLBACK_COUNTRIES);
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const pathParts = location.pathname.split('/');
-  const urlCountryCode = pathParts[1]; 
-  
+  const urlCountryCode = pathParts[1];
+
   const [selectedCountryId, setSelectedCountryId] = useState<number | null>(null);
 
   useEffect(() => {
@@ -451,22 +466,22 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     const initCountries = async () => {
       if (urlCountryCode && urlCountryCode.length === 2 && !selectedCountryId) {
-          const matched = FALLBACK_COUNTRIES.find(c => c.code.toLowerCase() === urlCountryCode.toLowerCase());
-          if (matched) {
-              setSelectedCountryId(matched.id);
-          }
+        const matched = FALLBACK_COUNTRIES.find(c => c.code.toLowerCase() === urlCountryCode.toLowerCase());
+        if (matched) {
+          setSelectedCountryId(matched.id);
+        }
       }
 
       const fetchedCountries = await getCountries();
       setCountries(fetchedCountries);
-      
+
       if (urlCountryCode && urlCountryCode.length === 2) {
-          const matched = fetchedCountries.find(c => c.code.toLowerCase() === urlCountryCode.toLowerCase());
-          if (matched) {
-              setSelectedCountryId(matched.id);
-              localStorage.setItem('app_country', String(matched.id));
-          }
-      } 
+        const matched = fetchedCountries.find(c => c.code.toLowerCase() === urlCountryCode.toLowerCase());
+        if (matched) {
+          setSelectedCountryId(matched.id);
+          localStorage.setItem('app_country', String(matched.id));
+        }
+      }
     };
     initCountries();
   }, [urlCountryCode]);
@@ -479,15 +494,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const changeCountry = (id: number) => {
     const country = countries.find(c => c.id === id);
     if (country) {
-        setIsLoading(true);
-        setSelectedCountryId(id);
-        localStorage.setItem('app_country', String(id));
-        
-        navigate(`/${country.code.toLowerCase()}`);
+      setIsLoading(true);
+      setSelectedCountryId(id);
+      localStorage.setItem('app_country', String(id));
 
-        setTimeout(() => {
-            setIsLoading(false);
-        }, 800);
+      navigate(`/${country.code.toLowerCase()}`);
+
+      setTimeout(() => {
+        setIsLoading(false);
+      }, 800);
     }
   };
 
@@ -507,26 +522,26 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const t = (key: string, params?: Record<string, string | number>) => {
     let text = translations[key]?.[language] || key;
     if (params) {
-        Object.entries(params).forEach(([paramKey, paramValue]) => {
-            text = text.replace(`{${paramKey}}`, String(paramValue));
-        });
+      Object.entries(params).forEach(([paramKey, paramValue]) => {
+        text = text.replace(`{${paramKey}}`, String(paramValue));
+      });
     }
     return text;
   };
 
   const dir = language === 'ar' ? 'rtl' : 'ltr';
-  
+
   const selectedCountry = countries.find(c => c.id === selectedCountryId);
   const currency = selectedCountry?.currency_code || 'QAR';
   const selectedCountryCode = selectedCountry?.code?.toLowerCase() || 'qa';
 
   return (
-    <AppContext.Provider value={{ 
-      language, 
-      setLanguage: handleSetLanguage, 
-      isDarkMode, 
-      toggleTheme, 
-      t, 
+    <AppContext.Provider value={{
+      language,
+      setLanguage: handleSetLanguage,
+      isDarkMode,
+      toggleTheme,
+      t,
       dir,
       countries,
       selectedCountryId,

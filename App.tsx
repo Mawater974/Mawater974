@@ -26,6 +26,8 @@ import { RegisterShowroomPage } from './pages/RegisterShowroomPage';
 import { DealerDashboard } from './pages/dealer/DealerDashboard';
 import { PrivacyPage } from './pages/PrivacyPage';
 import { TermsPage } from './pages/TermsPage';
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
+import { UpdatePasswordPage } from './pages/ResetPasswordPage';
 
 // Admin Imports
 import { AdminLayout } from './components/AdminLayout';
@@ -53,7 +55,7 @@ const App: React.FC = () => {
           <Routes>
             {/* Root Redirect Logic */}
             <Route path="/" element={<RootRedirect />} />
-            
+
             {/* Country Specific Routes */}
             <Route path="/:countryCode" element={<Layout />}>
               <Route index element={<Home />} />
@@ -65,16 +67,19 @@ const App: React.FC = () => {
               <Route path="showrooms/:id" element={<ShowroomDetailsPage />} />
               <Route path="services" element={<ServicesPage />} />
               <Route path="rental" element={<CarRentalPage />} />
-              
+
               <Route path="contact" element={<ContactPage />} />
               <Route path="privacy" element={<PrivacyPage />} />
               <Route path="terms" element={<TermsPage />} />
-              
+
               <Route path="register-showroom" element={<RegisterShowroomPage />} />
               <Route path="dealer-dashboard" element={<DealerDashboard />} />
-              
+
               <Route path="login" element={<LoginPage />} />
               <Route path="signup" element={<SignupPage />} />
+              <Route path="forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="update-password" element={<UpdatePasswordPage />} />
+
               <Route path="favorites" element={<FavoritesPage />} />
               <Route path="my-ads" element={<MyAdsPage />} />
               <Route path="profile" element={<ProfilePage />} />
@@ -83,26 +88,26 @@ const App: React.FC = () => {
 
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminLayout />}>
-               <Route index element={<AdminDashboard />} />
-               <Route path="brands" element={<AdminBrandsPage />} />
-               <Route path="cars" element={<AdminCarsPage />} />
-               <Route path="parts" element={<AdminPartsPage />} />
-               <Route path="users" element={<AdminUsersPage />} />
-               <Route path="dealers" element={<AdminDealersPage />} />
-               <Route path="settings" element={<AdminSettingsPage />} />
-               <Route path="reports" element={<AdminReportsPage />} />
-               <Route path="content" element={<AdminContentPage />} />
-               
-               {/* New Pages */}
-               <Route path="database" element={<AdminDatabasePage />} />
-               <Route path="security" element={<AdminSecurityPage />} />
-               <Route path="seo" element={<AdminSeoPage />} />
-               <Route path="health" element={<AdminHealthPage />} />
-               <Route path="finance" element={<AdminFinancePage />} />
-               
-               <Route path="*" element={<div className="p-10 text-center text-gray-500 text-xl">Page Not Found</div>} />
+              <Route index element={<AdminDashboard />} />
+              <Route path="brands" element={<AdminBrandsPage />} />
+              <Route path="cars" element={<AdminCarsPage />} />
+              <Route path="parts" element={<AdminPartsPage />} />
+              <Route path="users" element={<AdminUsersPage />} />
+              <Route path="dealers" element={<AdminDealersPage />} />
+              <Route path="settings" element={<AdminSettingsPage />} />
+              <Route path="reports" element={<AdminReportsPage />} />
+              <Route path="content" element={<AdminContentPage />} />
+
+              {/* New Pages */}
+              <Route path="database" element={<AdminDatabasePage />} />
+              <Route path="security" element={<AdminSecurityPage />} />
+              <Route path="seo" element={<AdminSeoPage />} />
+              <Route path="health" element={<AdminHealthPage />} />
+              <Route path="finance" element={<AdminFinancePage />} />
+
+              <Route path="*" element={<div className="p-10 text-center text-gray-500 text-xl">Page Not Found</div>} />
             </Route>
-            
+
             {/* Catch all redirect to root */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
