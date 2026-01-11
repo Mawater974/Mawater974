@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
-import { 
-    createDealership, updateDealership, uploadShowroomLogo, 
-    getCountries, getCities, getOptimizedImageUrl 
+import {
+    createDealership, updateDealership, uploadShowroomLogo,
+    getCountries, getCities, getOptimizedImageUrl
 } from '../services/dataService';
 import { Country, City, Dealership, Profile } from '../types';
 import { compressImage } from '../utils/imageOptimizer';
@@ -12,9 +12,9 @@ import { parsePhoneNumber } from 'libphonenumber-js';
 
 // Fallback codes
 const COUNTRY_PHONE_CODES: Record<string, string> = {
-  'qa': '+974', 'sa': '+966', 'ae': '+971', 'kw': '+965', 
-  'bh': '+973', 'om': '+968', 'us': '+1', 'gb': '+44', 
-  'eg': '+20', 'sy': '+963', 'jo': '+962', 'lb': '+961'
+    'qa': '+974', 'sa': '+966', 'ae': '+971', 'kw': '+965',
+    'bh': '+973', 'om': '+968', 'us': '+1', 'gb': '+44',
+    'eg': '+20', 'sy': '+963', 'jo': '+962', 'lb': '+961'
 };
 
 interface ShowroomFormProps {
@@ -24,11 +24,11 @@ interface ShowroomFormProps {
     onSuccess: () => void;
 }
 
-export const ShowroomForm: React.FC<ShowroomFormProps> = ({ 
-    initialData, 
-    userId, 
+export const ShowroomForm: React.FC<ShowroomFormProps> = ({
+    initialData,
+    userId,
     userProfile,
-    onSuccess 
+    onSuccess
 }) => {
     const { t } = useAppContext();
     const [submitting, setSubmitting] = useState(false);
@@ -90,7 +90,7 @@ export const ShowroomForm: React.FC<ShowroomFormProps> = ({
                 setWebsite(initialData.website || '');
                 setOpeningHours(initialData.opening_hours || '');
                 setOpeningHoursAr(initialData.opening_hours_ar || '');
-                
+
                 if (initialData.country_id) {
                     setSelectedCountry(initialData.country_id);
                     await getCities(initialData.country_id).then(setCities);
@@ -105,12 +105,12 @@ export const ShowroomForm: React.FC<ShowroomFormProps> = ({
             } else if (userProfile) {
                 // --- CREATE MODE (Auto-fill) ---
                 if (userProfile.email) setEmail(userProfile.email);
-                
+
                 // Pre-select country
                 if (userProfile.country_id && countries.length > 0) {
                     setSelectedCountry(userProfile.country_id);
                     getCities(userProfile.country_id).then(setCities);
-                    
+
                     // Set default codes based on user country
                     const userCountry = countries.find(c => c.id === userProfile.country_id);
                     if (userCountry) {
@@ -149,7 +149,7 @@ export const ShowroomForm: React.FC<ShowroomFormProps> = ({
         setSelectedCountry(id);
         setSelectedCity('');
         getCities(id).then(setCities);
-        
+
         // Auto-update C1 code if empty in create mode
         if (!initialData && !c1Num) {
             const country = countries.find(c => c.id === id);
@@ -176,15 +176,15 @@ export const ShowroomForm: React.FC<ShowroomFormProps> = ({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         // Basic validation
         if (!businessName || !description || !selectedCountry || !selectedCity || !dealershipType || !businessType) {
             alert("Please fill in all required fields.");
             return;
         }
         if (!initialData && !c1Num) {
-             alert("Primary contact number is required.");
-             return;
+            alert("Primary contact number is required.");
+            return;
         }
 
         setSubmitting(true);
@@ -257,10 +257,10 @@ export const ShowroomForm: React.FC<ShowroomFormProps> = ({
     const inputClass = "w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 outline-none transition shadow-sm placeholder-gray-400";
 
     const renderPhoneInput = (
-        label: string, 
-        code: string, 
-        setCode: (v: string) => void, 
-        num: string, 
+        label: string,
+        code: string,
+        setCode: (v: string) => void,
+        num: string,
         setNum: (v: string) => void,
         required: boolean = false
     ) => (
@@ -270,8 +270,8 @@ export const ShowroomForm: React.FC<ShowroomFormProps> = ({
             </label>
             <div className="flex items-stretch border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-primary-500 focus-within:border-primary-500 bg-white dark:bg-gray-700 transition-all shadow-sm">
                 <div className="bg-gray-100 dark:bg-gray-800 px-1 flex items-center min-w-[90px]">
-                    <select 
-                        value={code} 
+                    <select
+                        value={code}
                         onChange={(e) => setCode(e.target.value)}
                         className="w-full bg-transparent border-none text-gray-700 dark:text-gray-200 font-bold focus:ring-0 outline-none text-sm cursor-pointer py-3 text-center hover:text-primary-600"
                         style={{ textAlignLast: 'center' }}
@@ -284,13 +284,13 @@ export const ShowroomForm: React.FC<ShowroomFormProps> = ({
                         <option value="+63">+63</option>
                     </select>
                 </div>
-                <input 
-                    type="text" 
+                <input
+                    type="text"
                     required={required}
-                    value={num} 
-                    onChange={(e) => setNum(e.target.value)} 
+                    value={num}
+                    onChange={(e) => setNum(e.target.value)}
                     className="flex-1 p-3 border-0 focus:ring-0 outline-none bg-transparent text-gray-900 dark:text-white min-w-0 font-medium placeholder-gray-400"
-                    placeholder="33334444" 
+                    placeholder="33334444"
                 />
             </div>
         </div>
@@ -298,13 +298,13 @@ export const ShowroomForm: React.FC<ShowroomFormProps> = ({
 
     return (
         <form onSubmit={handleSubmit} className="space-y-8 bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
-            
+
             {/* Basic Info */}
             <section className="space-y-6">
                 <h3 className="text-xl font-bold dark:text-white border-b pb-2 border-gray-100 dark:border-gray-700 flex items-center gap-2">
                     <Building2 className="w-5 h-5 text-primary-600" /> {t('register_showroom.business_details')}
                 </h3>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label className="block text-sm font-bold mb-1 dark:text-gray-300">Business Name (English) *</label>
@@ -354,21 +354,12 @@ export const ShowroomForm: React.FC<ShowroomFormProps> = ({
                     <MapPin className="w-5 h-5 text-primary-600" /> Location
                 </h3>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label className="block text-sm font-bold mb-1 dark:text-gray-300">Country *</label>
-                        <select required value={selectedCountry} onChange={e => handleCountryChange(e.target.value)} className={inputClass}>
-                            <option value="">Select Country</option>
-                            {countries.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-bold mb-1 dark:text-gray-300">City *</label>
-                        <select required value={selectedCity} onChange={e => setSelectedCity(Number(e.target.value))} className={inputClass} disabled={!selectedCountry}>
-                            <option value="">Select City</option>
-                            {cities.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                        </select>
-                    </div>
+                <div>
+                    <label className="block text-sm font-bold mb-1 dark:text-gray-300">City *</label>
+                    <select required value={selectedCity} onChange={e => setSelectedCity(Number(e.target.value))} className={inputClass} disabled={!selectedCountry}>
+                        <option value="">Select City</option>
+                        {cities.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -388,7 +379,7 @@ export const ShowroomForm: React.FC<ShowroomFormProps> = ({
                 <h3 className="text-xl font-bold dark:text-white border-b pb-2 border-gray-100 dark:border-gray-700 flex items-center gap-2">
                     <Phone className="w-5 h-5 text-primary-600" /> {t('register_showroom.contact_info')}
                 </h3>
-                
+
                 <div className="bg-primary-50 dark:bg-primary-900/20 p-4 rounded-lg flex gap-3 text-sm text-primary-800 dark:text-primary-200 border border-primary-100 dark:border-primary-800">
                     <Info className="w-5 h-5 flex-shrink-0 text-primary-600" />
                     <p>Keep your contact information up to date so customers can reach you.</p>
@@ -441,18 +432,18 @@ export const ShowroomForm: React.FC<ShowroomFormProps> = ({
                                     <span className="text-xs text-gray-500 group-hover:text-primary-600 font-bold">Upload</span>
                                 </>
                             )}
-                            
+
                             {/* Hover Overlay */}
                             <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 backdrop-blur-[1px]">
                                 <Camera className="w-8 h-8 text-white mb-1" />
                                 <span className="text-white text-xs font-bold uppercase tracking-wide">Change Photo</span>
                             </div>
 
-                            <input 
-                                type="file" 
-                                accept="image/*" 
-                                onChange={handleLogoSelect} 
-                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
+                            <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleLogoSelect}
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                             />
                         </div>
                         <div className="text-sm text-gray-500">
@@ -465,8 +456,8 @@ export const ShowroomForm: React.FC<ShowroomFormProps> = ({
             </section>
 
             <div className="pt-4 border-t border-gray-100 dark:border-gray-700">
-                <button 
-                    type="submit" 
+                <button
+                    type="submit"
                     disabled={submitting}
                     className="w-full bg-primary-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-primary-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
                 >

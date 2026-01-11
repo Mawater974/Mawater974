@@ -40,9 +40,8 @@ export const SparePartForm: React.FC<SparePartFormProps> = ({ isAdmin = false, o
     const [selectedCountry, setSelectedCountry] = useState<number | ''>('');
     const [selectedCity, setSelectedCity] = useState<number | ''>('');
 
-    const [condition, setCondition] = useState<string>('new');
-    const [partType, setPartType] = useState<string>('original');
-    const [isNegotiable, setIsNegotiable] = useState(false);
+    const [condition, setCondition] = useState<string>('');
+    const [partType, setPartType] = useState<string>('');
 
     const [isFeatured, setIsFeatured] = useState(false);
     const [termsAccepted, setTermsAccepted] = useState(false);
@@ -82,7 +81,7 @@ export const SparePartForm: React.FC<SparePartFormProps> = ({ isAdmin = false, o
 
             setCondition(initialData.condition);
             setPartType(initialData.part_type);
-            setIsNegotiable(initialData.is_negotiable);
+
             setIsFeatured(initialData.is_featured);
             setTermsAccepted(true);
 
@@ -183,6 +182,10 @@ export const SparePartForm: React.FC<SparePartFormProps> = ({ isAdmin = false, o
         e.preventDefault();
         if (!currentUser) return alert('User is required');
         if (!title || !price || !selectedCategory) return alert('Required fields missing');
+        if (!selectedCity) return alert('City is required');
+        if (!condition) return alert('Condition is required');
+        if (!partType) return alert('Part Type is required');
+        if (!description) return alert('Description is required');
         if (!termsAccepted) return alert('Please accept terms.');
         if (visualImages.length === 0) return alert('Please upload at least one image.');
 
@@ -202,7 +205,7 @@ export const SparePartForm: React.FC<SparePartFormProps> = ({ isAdmin = false, o
             city_id: Number(selectedCity) || undefined,
             condition: condition as any,
             part_type: partType as any,
-            is_negotiable: isNegotiable,
+            is_negotiable: false,
             is_featured: isAdmin ? isFeatured : false,
             status: isAdmin ? 'approved' : 'pending'
         };
@@ -249,12 +252,12 @@ export const SparePartForm: React.FC<SparePartFormProps> = ({ isAdmin = false, o
             {/* Main Info */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="md:col-span-2">
-                    <label className="block text-sm font-bold mb-1 dark:text-gray-300">{t('part.title')}</label>
+                    <label className="block text-sm font-bold mb-1 dark:text-gray-300">{t('part.title')} <span className="text-red-500">*</span></label>
                     <input type="text" required value={title} onChange={e => setTitle(e.target.value)} className={inputClass} placeholder={t('part.title_placeholder')} />
                 </div>
 
                 <div>
-                    <label className="block text-sm font-bold mb-1 dark:text-gray-300">{t('part.category')}</label>
+                    <label className="block text-sm font-bold mb-1 dark:text-gray-300">{t('part.category')} <span className="text-red-500">*</span></label>
                     <select required value={selectedCategory} onChange={e => setSelectedCategory(Number(e.target.value))} className={inputClass}>
                         <option value="">{t('form.select')} {t('part.category')}</option>
                         {categories.map(c => <option key={c.id} value={c.id}>{language === 'ar' ? c.name_ar : c.name_en}</option>)}
@@ -262,7 +265,7 @@ export const SparePartForm: React.FC<SparePartFormProps> = ({ isAdmin = false, o
                 </div>
 
                 <div>
-                    <label className="block text-sm font-bold mb-1 dark:text-gray-300">{t('common.price')}</label>
+                    <label className="block text-sm font-bold mb-1 dark:text-gray-300">{t('common.price')} <span className="text-red-500">*</span></label>
                     <input type="number" required value={price} onChange={e => setPrice(Number(e.target.value))} className={inputClass} placeholder="0.00" />
                 </div>
 
@@ -289,75 +292,54 @@ export const SparePartForm: React.FC<SparePartFormProps> = ({ isAdmin = false, o
                         ))}
                     </select>
                 </div>
-            </div>
-
-            {/* Specs */}
-            <div className="bg-gray-50 dark:bg-gray-800/50 p-6 rounded-xl border border-gray-100 dark:border-gray-700 grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
-                    <label className="block text-xs font-bold text-gray-500 mb-1">{t('car.condition')}</label>
-                    <select value={condition} onChange={e => setCondition(e.target.value)} className={inputClass}>
+                    <label className="block text-sm font-bold mb-1 dark:text-gray-300">{t('car.condition')} <span className="text-red-500">*</span></label>
+                    <select required value={condition} onChange={e => setCondition(e.target.value)} className={inputClass}>
+                        <option value="">{t('form.select')} {t('car.condition')}</option>
                         <option value="new">{t('condition.new')}</option>
                         <option value="used">{t('condition.used')}</option>
                         <option value="refurbished">{t('condition.refurbished')}</option>
                     </select>
                 </div>
                 <div>
-                    <label className="block text-xs font-bold text-gray-500 mb-1">{t('part.type')}</label>
-                    <div className="flex gap-4 pt-2">
-                        <label className="flex items-center gap-2 cursor-pointer">
-                            <input type="radio" name="partType" value="original" checked={partType === 'original'} onChange={() => setPartType('original')} className="text-primary-600 focus:ring-primary-500" />
-                            <span className="text-sm dark:text-gray-300">{t('part.original')}</span>
-                        </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
-                            <input type="radio" name="partType" value="aftermarket" checked={partType === 'aftermarket'} onChange={() => setPartType('aftermarket')} className="text-primary-600 focus:ring-primary-500" />
-                            <span className="text-sm dark:text-gray-300">{t('part.aftermarket')}</span>
-                        </label>
-                    </div>
-                </div>
-                <div className="flex items-center pt-6">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" checked={isNegotiable} onChange={e => setIsNegotiable(e.target.checked)} className="w-5 h-5 text-primary-600 rounded" />
-                        <span className="text-sm font-bold dark:text-gray-300">{t('part.negotiable')}</span>
-                    </label>
+                    <label className="block text-sm font-bold mb-1 dark:text-gray-300">{t('part.type')} <span className="text-red-500">*</span></label>
+                    <select required value={partType} onChange={e => setPartType(e.target.value)} className={inputClass}>
+                        <option value="">{t('form.select')} {t('part.type')}</option>
+                        <option value="original">{t('part.original')}</option>
+                        <option value="aftermarket">{t('part.aftermarket')}</option>
+                    </select>
                 </div>
             </div>
 
+
+
             {/* Location & Contact */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label className="block text-sm font-bold mb-1 dark:text-gray-300">{t('form.country')}</label>
-                    <select required value={selectedCountry} onChange={e => setSelectedCountry(Number(e.target.value))} className={inputClass}>
-                        <option value="">{t('form.select')} {t('form.country')}</option>
-                        {countries.map(c => <option key={c.id} value={c.id}>{language === 'ar' ? c.name_ar : c.name}</option>)}
-                    </select>
-                </div>
-                <div>
-                    <label className="block text-sm font-bold mb-1 dark:text-gray-300">{t('form.city')}</label>
-                    <select value={selectedCity} onChange={e => setSelectedCity(Number(e.target.value))} className={inputClass} disabled={!selectedCountry}>
-                        <option value="">{selectedCountry ? `${t('form.select')} ${t('form.city')}` : 'Select Country First'}</option>
-                        {cities.map(c => <option key={c.id} value={c.id}>{language === 'ar' ? c.name_ar : c.name}</option>)}
-                    </select>
-                </div>
+            <div>
+                <label className="block text-sm font-bold mb-1 dark:text-gray-300">{t('form.city')} <span className="text-red-500">*</span></label>
+                <select required value={selectedCity} onChange={e => setSelectedCity(Number(e.target.value))} className={inputClass} disabled={!selectedCountry}>
+                    <option value="">{selectedCountry ? `${t('form.select')} ${t('form.city')}` : 'Select Country First'}</option>
+                    {cities.map(c => <option key={c.id} value={c.id}>{language === 'ar' ? c.name_ar : c.name}</option>)}
+                </select>
             </div>
 
             {/* Contact Info Notice */}
-            <div className="bg-primary-50 dark:bg-primary-900/20 p-4 rounded-lg flex items-center gap-3 border border-primary-100 dark:border-primary-800">
+            {/* <div className="bg-primary-50 dark:bg-primary-900/20 p-4 rounded-lg flex items-center gap-3 border border-primary-100 dark:border-primary-800">
                 <Info className="w-5 h-5 text-primary-600 dark:text-primary-400 flex-shrink-0" />
                 <p className="text-sm text-primary-800 dark:text-primary-300">
                     {t('part.contact_notice')}
                 </p>
-            </div>
+            </div> */}
 
             <div>
-                <label className="block text-sm font-bold mb-1 dark:text-gray-300">{t('form.description')}</label>
-                <textarea rows={4} value={description} onChange={e => setDescription(e.target.value)} className={inputClass} placeholder={t('part.desc_placeholder')} />
+                <label className="block text-sm font-bold mb-1 dark:text-gray-300">{t('form.description')} <span className="text-red-500">*</span></label>
+                <textarea required rows={4} value={description} onChange={e => setDescription(e.target.value)} className={inputClass} placeholder={t('part.desc_placeholder')} />
             </div>
 
             {/* Image Upload */}
             <div className="space-y-3 pt-4 border-t border-gray-100 dark:border-gray-700">
                 <label className="block text-base font-bold dark:text-gray-300 flex items-center gap-2">
                     <ImageIcon className="w-5 h-5 text-primary-600" />
-                    {t('form.upload_photos')} ({visualImages.length}/{maxImages})
+                    {t('form.upload_photos')}<span className="text-red-500">*</span>({visualImages.length}/{maxImages})
                 </label>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {visualImages.map((img, idx) => (
@@ -443,8 +425,8 @@ export const SparePartForm: React.FC<SparePartFormProps> = ({ isAdmin = false, o
             </div>
 
             {/* Terms */}
-            <div className="flex items-start gap-3">
-                <input type="checkbox" checked={termsAccepted} onChange={e => setTermsAccepted(e.target.checked)} className="mt-1 w-5 h-5 text-primary-600 rounded" />
+            <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 flex items-start gap-3">
+                <input type="checkbox" checked={termsAccepted} onChange={e => setTermsAccepted(e.target.checked)} className="w-5 h-5 text-primary-600 rounded" />
                 <label className="text-sm text-gray-600 dark:text-gray-300">
                     {t('form.terms_agree')} <a href="#" className="text-primary-600 font-bold hover:underline">{t('footer.terms')}</a> & <a href="#" className="text-primary-600 font-bold hover:underline">{t('footer.privacy')}</a>.
                 </label>

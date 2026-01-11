@@ -5,56 +5,56 @@ import { compressImage } from '../utils/imageOptimizer';
 
 // Helper for Image Optimization
 export const getOptimizedImageUrl = (url: string, width: number = 500, quality: number = 80): string => {
-  if (!url) return '';
-  if (url.includes('supabase.co')) {
-     const separator = url.includes('?') ? '&' : '?';
-     return `${url}${separator}width=${width}&quality=${quality}&format=webp`;
-  }
-  return url;
+    if (!url) return '';
+    if (url.includes('supabase.co')) {
+        const separator = url.includes('?') ? '&' : '?';
+        return `${url}${separator}width=${width}&quality=${quality}&format=webp`;
+    }
+    return url;
 };
 
 // UUID Generator Polyfill
 const generateUUID = () => {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-    return crypto.randomUUID();
-  }
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = Math.random() * 16 | 0;
-    const v = c === 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
+    if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+        return crypto.randomUUID();
+    }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
 };
 
 // Fallback countries with new data
 export const FALLBACK_COUNTRIES: Country[] = [
-  { id: 1, name: 'Qatar', name_ar: 'قطر', code: 'qa', currency_code: 'QAR', phone_code: '+974' },
-  { id: 2, name: 'Saudi Arabia', name_ar: 'السعودية', code: 'sa', currency_code: 'SAR', phone_code: '+966' },
-  { id: 3, name: 'UAE', name_ar: 'الإمارات', code: 'ae', currency_code: 'AED', phone_code: '+971' },
-  { id: 4, name: 'Kuwait', name_ar: 'الكويت', code: 'kw', currency_code: 'KWD', phone_code: '+965' },
-  { id: 5, name: 'Syria', name_ar: 'سوريا', code: 'sy', currency_code: 'SYP', phone_code: '+963' },
-  { id: 7, name: 'Egypt', name_ar: 'مصر', code: 'eg', currency_code: 'EGP', phone_code: '+20' },
-  { id: 8, name: 'Oman', name_ar: 'عمان', code: 'om', currency_code: 'OMR', phone_code: '+968' },
-  { id: 9, name: 'Bahrain', name_ar: 'بحرين', code: 'bh', currency_code: 'BHD', phone_code: '+973' },
+    { id: 1, name: 'Qatar', name_ar: 'قطر', code: 'qa', currency_code: 'QAR', phone_code: '+974' },
+    { id: 2, name: 'Saudi Arabia', name_ar: 'السعودية', code: 'sa', currency_code: 'SAR', phone_code: '+966' },
+    { id: 3, name: 'UAE', name_ar: 'الإمارات', code: 'ae', currency_code: 'AED', phone_code: '+971' },
+    { id: 4, name: 'Kuwait', name_ar: 'الكويت', code: 'kw', currency_code: 'KWD', phone_code: '+965' },
+    { id: 5, name: 'Syria', name_ar: 'سوريا', code: 'sy', currency_code: 'SYP', phone_code: '+963' },
+    { id: 7, name: 'Egypt', name_ar: 'مصر', code: 'eg', currency_code: 'EGP', phone_code: '+20' },
+    { id: 8, name: 'Oman', name_ar: 'عمان', code: 'om', currency_code: 'OMR', phone_code: '+968' },
+    { id: 9, name: 'Bahrain', name_ar: 'بحرين', code: 'bh', currency_code: 'BHD', phone_code: '+973' },
 ];
 
 export const getCountries = async (): Promise<Country[]> => {
-  const { data, error } = await supabase.from('countries').select('*');
-  if (error || !data || data.length === 0) {
-    console.warn('Using fallback countries data due to error or empty result:', error);
-    return FALLBACK_COUNTRIES;
-  }
-  
-  // Normalize country codes to lowercase to ensure URL consistency
-  return data.map((c: any) => ({
-      ...c,
-      code: c.code ? c.code.toLowerCase() : ''
-  })) as Country[];
+    const { data, error } = await supabase.from('countries').select('*');
+    if (error || !data || data.length === 0) {
+        console.warn('Using fallback countries data due to error or empty result:', error);
+        return FALLBACK_COUNTRIES;
+    }
+
+    // Normalize country codes to lowercase to ensure URL consistency
+    return data.map((c: any) => ({
+        ...c,
+        code: c.code ? c.code.toLowerCase() : ''
+    })) as Country[];
 };
 
 export const getCarById = async (id: string): Promise<Car | null> => {
-  const { data, error } = await supabase
-    .from('cars')
-    .select(`
+    const { data, error } = await supabase
+        .from('cars')
+        .select(`
       *,
       brands (name, name_ar),
       models (name, name_ar),
@@ -63,16 +63,16 @@ export const getCarById = async (id: string): Promise<Car | null> => {
       car_images (id, image_url, thumbnail_url, is_main),
       profiles (*)
     `)
-    .eq('id', id)
-    .order('id', { foreignTable: 'car_images', ascending: true })
-    .single();
-  
-  if (error) {
-    console.error('Error fetching car details:', error);
-    return null;
-  }
-  
-  return data as any;
+        .eq('id', id)
+        .order('id', { foreignTable: 'car_images', ascending: true })
+        .single();
+
+    if (error) {
+        console.error('Error fetching car details:', error);
+        return null;
+    }
+
+    return data as any;
 };
 
 export const getSimilarCars = async (currentId: number, brandId: number, countryId?: number): Promise<Car[]> => {
@@ -109,9 +109,9 @@ export const getSimilarCars = async (currentId: number, brandId: number, country
 };
 
 export const getFeaturedCars = async (countryId?: number | null): Promise<Car[]> => {
-  let query = supabase
-    .from('cars')
-    .select(`
+    let query = supabase
+        .from('cars')
+        .select(`
       *,
       brands (name, name_ar),
       models (name, name_ar),
@@ -119,58 +119,58 @@ export const getFeaturedCars = async (countryId?: number | null): Promise<Car[]>
       countries (name, name_ar, currency_code),
       car_images (image_url, thumbnail_url, is_main)
     `)
-    .eq('is_featured', true)
-    .eq('status', 'approved');
+        .eq('is_featured', true)
+        .eq('status', 'approved');
 
-  if (countryId) {
-    query = query.eq('country_id', countryId);
-  }
-  
-  query = query.order('created_at', { ascending: false });
+    if (countryId) {
+        query = query.eq('country_id', countryId);
+    }
 
-  const { data, error } = await query.limit(4);
-  
-  if (error) {
-    console.error('Error fetching featured cars:', error);
-    return [];
-  }
-  return data as any[];
+    query = query.order('created_at', { ascending: false });
+
+    const { data, error } = await query.limit(4);
+
+    if (error) {
+        console.error('Error fetching featured cars:', error);
+        return [];
+    }
+    return data as any[];
 };
 
 export interface CarsResponse {
-  data: Car[];
-  count: number;
+    data: Car[];
+    count: number;
 }
 
 export type SortOption = 'newest' | 'oldest' | 'price_asc' | 'price_desc' | 'mileage_asc' | 'year_desc';
 
 export interface CarFilters {
-  brandId?: number | null;
-  modelId?: number | null;
-  countryId?: number | null;
-  minPrice?: number;
-  maxPrice?: number;
-  minYear?: number;
-  maxYear?: number;
-  searchQuery?: string;
-  status?: string; 
-  isRental?: boolean;
-  bodyType?: string;
-  fuelType?: string;
-  gearboxType?: string;
-  condition?: string;
-  ignoreFeatured?: boolean; // New Flag to disable featured sorting priority
+    brandId?: number | null;
+    modelId?: number | null;
+    countryId?: number | null;
+    minPrice?: number;
+    maxPrice?: number;
+    minYear?: number;
+    maxYear?: number;
+    searchQuery?: string;
+    status?: string;
+    isRental?: boolean;
+    bodyType?: string;
+    fuelType?: string;
+    gearboxType?: string;
+    condition?: string;
+    ignoreFeatured?: boolean; // New Flag to disable featured sorting priority
 }
 
 export const getCars = async (
-  filters: CarFilters,
-  page: number = 1, 
-  limit: number = 12,
-  sortBy: SortOption = 'newest'
+    filters: CarFilters,
+    page: number = 1,
+    limit: number = 12,
+    sortBy: SortOption = 'newest'
 ): Promise<CarsResponse> => {
-  let query = supabase
-    .from('cars')
-    .select(`
+    let query = supabase
+        .from('cars')
+        .select(`
       *,
       brands (name, name_ar),
       models (name, name_ar),
@@ -180,103 +180,103 @@ export const getCars = async (
       profiles (*)
     `, { count: 'exact' });
 
-  if (filters.status) {
-    if (filters.status !== 'all') {
-        query = query.eq('status', filters.status);
-    }
-  } else {
-    query = query.eq('status', 'approved');
-  }
-
-  if (filters.isRental) {
-     query = query.ilike('description', '%rental%');
-  }
-
-  if (filters.brandId) query = query.eq('brand_id', filters.brandId);
-  if (filters.modelId) query = query.eq('model_id', filters.modelId);
-  if (filters.countryId) query = query.eq('country_id', filters.countryId);
-  
-  if (filters.minPrice) query = query.gte('price', filters.minPrice);
-  if (filters.maxPrice) query = query.lte('price', filters.maxPrice);
-  
-  if (filters.minYear) query = query.gte('year', filters.minYear);
-  if (filters.maxYear) query = query.lte('year', filters.maxYear);
-
-  if (filters.searchQuery) {
-    const q = filters.searchQuery.trim();
-    
-    // Fetch matching Brands and Models IDs first to enable multi-lingual/relation search
-    const [{ data: brandHits }, { data: modelHits }] = await Promise.all([
-        supabase.from('brands').select('id').or(`name.ilike.%${q}%,name_ar.ilike.%${q}%`),
-        supabase.from('models').select('id').or(`name.ilike.%${q}%,name_ar.ilike.%${q}%`)
-    ]);
-
-    const brandIds = brandHits?.map(b => b.id).join(',');
-    const modelIds = modelHits?.map(m => m.id).join(',');
-
-    let orConditions = [
-        `description.ilike.%${q}%`,
-        `exact_model.ilike.%${q}%`
-    ];
-
-    if (brandIds && brandIds.length > 0) {
-        orConditions.push(`brand_id.in.(${brandIds})`);
-    }
-    if (modelIds && modelIds.length > 0) {
-        orConditions.push(`model_id.in.(${modelIds})`);
+    if (filters.status) {
+        if (filters.status !== 'all') {
+            query = query.eq('status', filters.status);
+        }
+    } else {
+        query = query.eq('status', 'approved');
     }
 
-    query = query.or(orConditions.join(','));
-  }
+    if (filters.isRental) {
+        query = query.ilike('description', '%rental%');
+    }
 
-  if (filters.bodyType) query = query.eq('body_type', filters.bodyType);
-  if (filters.fuelType) query = query.eq('fuel_type', filters.fuelType);
-  if (filters.gearboxType) query = query.eq('gearbox_type', filters.gearboxType);
-  if (filters.condition) query = query.eq('condition', filters.condition);
+    if (filters.brandId) query = query.eq('brand_id', filters.brandId);
+    if (filters.modelId) query = query.eq('model_id', filters.modelId);
+    if (filters.countryId) query = query.eq('country_id', filters.countryId);
 
-  // Apply default featured ordering unless disabled
-  if (!filters.ignoreFeatured) {
-      query = query.order('is_featured', { ascending: false });
-  }
+    if (filters.minPrice) query = query.gte('price', filters.minPrice);
+    if (filters.maxPrice) query = query.lte('price', filters.maxPrice);
 
-  switch (sortBy) {
-    case 'price_asc':
-      query = query.order('price', { ascending: true });
-      break;
-    case 'price_desc':
-      query = query.order('price', { ascending: false });
-      break;
-    case 'mileage_asc':
-      query = query.order('mileage', { ascending: true });
-      break;
-    case 'year_desc':
-      query = query.order('year', { ascending: false });
-      break;
-    case 'oldest':
-      query = query.order('created_at', { ascending: true });
-      break;
-    case 'newest':
-    default:
-      query = query.order('created_at', { ascending: false });
-      break;
-  }
+    if (filters.minYear) query = query.gte('year', filters.minYear);
+    if (filters.maxYear) query = query.lte('year', filters.maxYear);
 
-  const from = (page - 1) * limit;
-  const to = from + limit - 1;
-  
-  const { data, error, count } = await query.range(from, to);
+    if (filters.searchQuery) {
+        const q = filters.searchQuery.trim();
 
-  if (error) {
-    console.error('Error fetching cars:', error);
-    return { data: [], count: 0 };
-  }
-  return { data: data as any[], count: count || 0 };
+        // Fetch matching Brands and Models IDs first to enable multi-lingual/relation search
+        const [{ data: brandHits }, { data: modelHits }] = await Promise.all([
+            supabase.from('brands').select('id').or(`name.ilike.%${q}%,name_ar.ilike.%${q}%`),
+            supabase.from('models').select('id').or(`name.ilike.%${q}%,name_ar.ilike.%${q}%`)
+        ]);
+
+        const brandIds = brandHits?.map(b => b.id).join(',');
+        const modelIds = modelHits?.map(m => m.id).join(',');
+
+        let orConditions = [
+            `description.ilike.%${q}%`,
+            `exact_model.ilike.%${q}%`
+        ];
+
+        if (brandIds && brandIds.length > 0) {
+            orConditions.push(`brand_id.in.(${brandIds})`);
+        }
+        if (modelIds && modelIds.length > 0) {
+            orConditions.push(`model_id.in.(${modelIds})`);
+        }
+
+        query = query.or(orConditions.join(','));
+    }
+
+    if (filters.bodyType) query = query.eq('body_type', filters.bodyType);
+    if (filters.fuelType) query = query.eq('fuel_type', filters.fuelType);
+    if (filters.gearboxType) query = query.eq('gearbox_type', filters.gearboxType);
+    if (filters.condition) query = query.eq('condition', filters.condition);
+
+    // Apply default featured ordering unless disabled
+    if (!filters.ignoreFeatured) {
+        query = query.order('is_featured', { ascending: false });
+    }
+
+    switch (sortBy) {
+        case 'price_asc':
+            query = query.order('price', { ascending: true });
+            break;
+        case 'price_desc':
+            query = query.order('price', { ascending: false });
+            break;
+        case 'mileage_asc':
+            query = query.order('mileage', { ascending: true });
+            break;
+        case 'year_desc':
+            query = query.order('year', { ascending: false });
+            break;
+        case 'oldest':
+            query = query.order('created_at', { ascending: true });
+            break;
+        case 'newest':
+        default:
+            query = query.order('created_at', { ascending: false });
+            break;
+    }
+
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    const { data, error, count } = await query.range(from, to);
+
+    if (error) {
+        console.error('Error fetching cars:', error);
+        return { data: [], count: 0 };
+    }
+    return { data: data as any[], count: count || 0 };
 };
 
 export const getUserCars = async (userId: string): Promise<Car[]> => {
-  const { data, error } = await supabase
-    .from('cars')
-    .select(`
+    const { data, error } = await supabase
+        .from('cars')
+        .select(`
       *,
       brands (name, name_ar),
       models (name, name_ar),
@@ -284,42 +284,42 @@ export const getUserCars = async (userId: string): Promise<Car[]> => {
       countries (name, name_ar, currency_code),
       car_images (id, image_url, thumbnail_url, is_main)
     `)
-    .eq('user_id', userId)
-    .neq('status', 'archived')
-    .order('created_at', { ascending: false });
-  
-  if (error) {
-    console.error('Error fetching user cars:', error);
-    return [];
-  }
-  return data as any[];
+        .eq('user_id', userId)
+        .neq('status', 'archived')
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error('Error fetching user cars:', error);
+        return [];
+    }
+    return data as any[];
 };
 
 export const getUserSpareParts = async (userId: string): Promise<SparePart[]> => {
-  const { data, error } = await supabase
-    .from('spare_parts')
-    .select(`
+    const { data, error } = await supabase
+        .from('spare_parts')
+        .select(`
       *,
       brands (*),
       countries (*),
       spare_part_images (*)
     `)
-    .eq('user_id', userId)
-    .neq('status', 'archived')
-    .order('created_at', { ascending: false });
+        .eq('user_id', userId)
+        .neq('status', 'archived')
+        .order('created_at', { ascending: false });
 
-  if (error) {
-    console.error('Error fetching user spare parts:', error);
-    return [];
-  }
-  return data as any[];
+    if (error) {
+        console.error('Error fetching user spare parts:', error);
+        return [];
+    }
+    return data as any[];
 };
 
 // ... Rest of the file unchanged
 export const getBrands = async (): Promise<Brand[]> => {
-  const { data, error } = await supabase.from('brands').select('*').order('name', { ascending: true });
-  if (error) return [];
-  return data as Brand[];
+    const { data, error } = await supabase.from('brands').select('*').order('name', { ascending: true });
+    if (error) return [];
+    return data as Brand[];
 };
 
 export const createBrand = async (brand: Partial<Brand>): Promise<Brand | null> => {
@@ -342,7 +342,7 @@ export const deleteBrand = async (id: number): Promise<boolean> => {
 
 export const getModels = async (brandId: number): Promise<Model[]> => {
     const { data, error } = await supabase.from('models').select('*').eq('brand_id', brandId).order('name', { ascending: true });
-    if(error) return [];
+    if (error) return [];
     return data as Model[];
 };
 
@@ -366,20 +366,20 @@ export const deleteModel = async (id: number): Promise<boolean> => {
 
 export const getCities = async (countryId: number): Promise<City[]> => {
     const { data, error } = await supabase.from('cities').select('*').eq('country_id', countryId);
-    if(error) return [];
+    if (error) return [];
     return data as City[];
 };
 
 export const getSparePartCategories = async (): Promise<SparePartCategory[]> => {
     const { data, error } = await supabase.from('spare_part_categories').select('*').order('name_en', { ascending: true });
-    if(error) return [];
+    if (error) return [];
     return data as SparePartCategory[];
 };
 
 export const getSpareParts = async (search?: string): Promise<SparePart[]> => {
-  let query = supabase
-    .from('spare_parts')
-    .select(`
+    let query = supabase
+        .from('spare_parts')
+        .select(`
       *,
       brands (*),
       models (*),
@@ -389,37 +389,37 @@ export const getSpareParts = async (search?: string): Promise<SparePart[]> => {
       spare_part_images (*),
       profiles (*)
     `)
-    .eq('status', 'approved')
-    .order('created_at', { ascending: false });
+        .eq('status', 'approved')
+        .order('created_at', { ascending: false });
 
-  if (search) {
-    const q = search.trim();
-    const [{ data: brandHits }, { data: modelHits }] = await Promise.all([
-        supabase.from('brands').select('id').or(`name.ilike.%${q}%,name_ar.ilike.%${q}%`),
-        supabase.from('models').select('id').or(`name.ilike.%${q}%,name_ar.ilike.%${q}%`)
-    ]);
+    if (search) {
+        const q = search.trim();
+        const [{ data: brandHits }, { data: modelHits }] = await Promise.all([
+            supabase.from('brands').select('id').or(`name.ilike.%${q}%,name_ar.ilike.%${q}%`),
+            supabase.from('models').select('id').or(`name.ilike.%${q}%,name_ar.ilike.%${q}%`)
+        ]);
 
-    const brandIds = brandHits?.map(b => b.id).join(',');
-    const modelIds = modelHits?.map(m => m.id).join(',');
+        const brandIds = brandHits?.map(b => b.id).join(',');
+        const modelIds = modelHits?.map(m => m.id).join(',');
 
-    let orParts = [
-        `title.ilike.%${q}%`,
-        `description.ilike.%${q}%`
-    ];
-    
-    if (brandIds && brandIds.length > 0) orParts.push(`brand_id.in.(${brandIds})`);
-    if (modelIds && modelIds.length > 0) orParts.push(`model_id.in.(${modelIds})`);
+        let orParts = [
+            `title.ilike.%${q}%`,
+            `description.ilike.%${q}%`
+        ];
 
-    query = query.or(orParts.join(','));
-  }
+        if (brandIds && brandIds.length > 0) orParts.push(`brand_id.in.(${brandIds})`);
+        if (modelIds && modelIds.length > 0) orParts.push(`model_id.in.(${modelIds})`);
 
-  const { data, error } = await query.limit(20);
+        query = query.or(orParts.join(','));
+    }
 
-  if (error) {
-    console.error('Error fetching spare parts:', error);
-    return [];
-  }
-  return data as any[];
+    const { data, error } = await query.limit(20);
+
+    if (error) {
+        console.error('Error fetching spare parts:', error);
+        return [];
+    }
+    return data as any[];
 };
 
 export const getSimilarSpareParts = async (currentId: string, categoryId: number, countryId?: number): Promise<SparePart[]> => {
@@ -471,7 +471,7 @@ export const getSparePartById = async (id: string): Promise<SparePart | null> =>
         `)
         .eq('id', id)
         .single();
-    
+
     if (error) {
         console.error('Error fetching spare part details:', JSON.stringify(error, null, 2));
         return null;
@@ -485,57 +485,57 @@ export const getSparePartById = async (id: string): Promise<SparePart | null> =>
             return a.is_primary ? -1 : 1;
         });
     }
-    
+
     return data as any;
 };
 
 export type DealerSortOption = 'featured' | 'newest' | 'name_asc';
 
 export const getDealerships = async (
-  type: string = 'showroom', 
-  countryId?: number | null,
-  sortBy: DealerSortOption = 'featured',
-  status: string = 'approved' // Default to approved, but allows 'all'
+    type: string = 'showroom',
+    countryId?: number | null,
+    sortBy: DealerSortOption = 'featured',
+    status: string = 'approved' // Default to approved, but allows 'all'
 ): Promise<Dealership[]> => {
-  let query = supabase.from('dealerships').select(`
+    let query = supabase.from('dealerships').select(`
     *,
     cities (name, name_ar),
     countries (name, name_ar, code)
   `);
 
-  if (status !== 'all') {
-      query = query.eq('status', status);
-  }
+    if (status !== 'all') {
+        query = query.eq('status', status);
+    }
 
-  if (countryId) {
-      query = query.eq('country_id', countryId);
-  }
+    if (countryId) {
+        query = query.eq('country_id', countryId);
+    }
 
-  // Filter by type if not 'all'
-  if (type !== 'all') {
-      query = query.eq('dealership_type', type);
-  }
+    // Filter by type if not 'all'
+    if (type !== 'all') {
+        query = query.eq('dealership_type', type);
+    }
 
-  switch (sortBy) {
-      case 'newest':
-          query = query.order('created_at', { ascending: false });
-          break;
-      case 'name_asc':
-          query = query.order('business_name', { ascending: true });
-          break;
-      case 'featured':
-      default:
-          query = query.order('featured', { ascending: false }).order('created_at', { ascending: false });
-          break;
-  }
+    switch (sortBy) {
+        case 'newest':
+            query = query.order('created_at', { ascending: false });
+            break;
+        case 'name_asc':
+            query = query.order('business_name', { ascending: true });
+            break;
+        case 'featured':
+        default:
+            query = query.order('featured', { ascending: false }).order('created_at', { ascending: false });
+            break;
+    }
 
-  // Increased limit to prevent pending dealers from being hidden if there are many entries
-  const { data, error } = await query.limit(200);
-  if (error) {
-    console.error('Error fetching dealerships:', error);
-    return [];
-  }
-  return data as any[];
+    // Increased limit to prevent pending dealers from being hidden if there are many entries
+    const { data, error } = await query.limit(200);
+    if (error) {
+        console.error('Error fetching dealerships:', error);
+        return [];
+    }
+    return data as any[];
 };
 
 export const getDealershipById = async (id: number): Promise<Dealership | null> => {
@@ -547,21 +547,21 @@ export const getDealershipById = async (id: number): Promise<Dealership | null> 
         `)
         .eq('id', id)
         .single();
-    
+
     if (error) return null;
     return data as any;
 };
 
 // NEW FUNCTION to find dealership by user_id
 export const getDealershipByUserId = async (userId: string): Promise<Dealership | null> => {
-  const { data, error } = await supabase
-      .from('dealerships')
-      .select('*')
-      .eq('user_id', userId)
-      .single();
-  
-  if (error) return null;
-  return data as Dealership;
+    const { data, error } = await supabase
+        .from('dealerships')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+    if (error) return null;
+    return data as Dealership;
 };
 
 export const createDealership = async (dealershipData: Partial<Dealership>): Promise<Dealership | null> => {
@@ -583,7 +583,7 @@ export const updateDealership = async (id: number, updates: Partial<Dealership>)
         .from('dealerships')
         .update(updates)
         .eq('id', id);
-        
+
     if (error) {
         console.error("Error updating dealership", error);
         return false;
@@ -599,7 +599,7 @@ export const updateDealerStatus = async (dealerId: number, status: 'approved' | 
         .eq('id', dealerId)
         .select()
         .single();
-        
+
     if (error || !dealer) {
         console.error("Error updating dealer status", error);
         return false;
@@ -613,10 +613,10 @@ export const updateDealerStatus = async (dealerId: number, status: 'approved' | 
             .select('role')
             .eq('id', dealer.user_id)
             .single();
-        
+
         if (fetchError) {
-             console.error("Error fetching user profile for role sync", fetchError);
-             return true; // Return true because dealership status was updated successfully at least
+            console.error("Error fetching user profile for role sync", fetchError);
+            return true; // Return true because dealership status was updated successfully at least
         }
 
         // If user is Admin, do not change their role regardless of dealership status
@@ -626,8 +626,8 @@ export const updateDealerStatus = async (dealerId: number, status: 'approved' | 
 
         // Determine new role based on dealership status
         // Use 'normal_user' as the base role based on DB schema default
-        let newRole = 'normal_user'; 
-        
+        let newRole = 'normal_user';
+
         if (status === 'approved') {
             newRole = 'dealer';
         }
@@ -638,7 +638,7 @@ export const updateDealerStatus = async (dealerId: number, status: 'approved' | 
                 .from('profiles')
                 .update({ role: newRole })
                 .eq('id', dealer.user_id);
-                
+
             if (profileError) {
                 console.error("Error syncing user role:", profileError);
                 // Alert visible to the admin triggering this action
@@ -648,7 +648,7 @@ export const updateDealerStatus = async (dealerId: number, status: 'approved' | 
             }
         }
     }
-    
+
     return true;
 };
 
@@ -658,7 +658,7 @@ export const uploadShowroomLogo = async (file: File): Promise<string | null> => 
     const timestamp = Date.now();
     const randomSuffix = Math.random().toString(36).substring(2, 8);
     const fileName = `logo-${timestamp}-${randomSuffix}.${fileExt}`;
-    
+
     const { data, error } = await supabase.storage
         .from('showroom-logos')
         .upload(fileName, file, {
@@ -704,8 +704,8 @@ export const getServices = async (): Promise<Dealership[]> => {
         .eq('business_type', 'service')
         .eq('status', 'approved')
         .limit(20);
-    
-    if(error) return [];
+
+    if (error) return [];
     return data as Dealership[];
 };
 
@@ -735,7 +735,7 @@ export const createComment = async (comment: Partial<Comment>): Promise<Comment 
         .insert([comment])
         .select(`*, profiles (*)`) // Wildcard to prevent column error
         .single();
-    
+
     if (error) {
         console.error('Error creating comment', error);
         return null;
@@ -749,14 +749,14 @@ export const deleteComment = async (commentId: number): Promise<boolean> => {
 };
 
 export const getUserProfile = async (userId: string): Promise<Profile | null> => {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', userId)
-    .single();
+    const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
 
-  if (error) return null;
-  return data as Profile;
+    if (error) return null;
+    return data as Profile;
 };
 
 export const createUserProfile = async (profile: Profile): Promise<boolean> => {
@@ -765,7 +765,7 @@ export const createUserProfile = async (profile: Profile): Promise<boolean> => {
         .from('profiles')
         .update(updates)
         .eq('id', id);
-        
+
     if (error) {
         console.error("Profile update error", error);
         return false;
@@ -774,17 +774,17 @@ export const createUserProfile = async (profile: Profile): Promise<boolean> => {
 };
 
 export const updateUserProfile = async (userId: string, updates: Partial<Profile>): Promise<boolean> => {
-  const { error } = await supabase
-    .from('profiles')
-    .update(updates)
-    .eq('id', userId);
-  return !error;
+    const { error } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', userId);
+    return !error;
 };
 
 export const getFavorites = async (userId: string): Promise<Favorite[]> => {
-  const { data, error } = await supabase
-    .from('favorites')
-    .select(`
+    const { data, error } = await supabase
+        .from('favorites')
+        .select(`
       *,
       cars (
         *,
@@ -801,43 +801,43 @@ export const getFavorites = async (userId: string): Promise<Favorite[]> => {
         spare_part_images (url, is_primary)
       )
     `)
-    .eq('user_id', userId);
+        .eq('user_id', userId);
 
-  if (error) {
-    console.error('Error fetching favorites:', error);
-    return [];
-  }
-  return data as any[];
+    if (error) {
+        console.error('Error fetching favorites:', error);
+        return [];
+    }
+    return data as any[];
 };
 
 export const toggleFavorite = async (userId: string, entityId: number | string, type: 'car' | 'part'): Promise<boolean> => {
-  let query = supabase.from('favorites').select('id').eq('user_id', userId);
-  
-  if (type === 'car') {
-      query = query.eq('car_id', entityId);
-  } else {
-      query = query.eq('spare_part_id', entityId);
-  }
-  
-  const { data } = await query.single();
+    let query = supabase.from('favorites').select('id').eq('user_id', userId);
 
-  if (data) {
-    const { error } = await supabase.from('favorites').delete().eq('id', data.id);
-    return !error;
-  } else {
-    const payload: any = { user_id: userId };
-    if (type === 'car') payload.car_id = entityId;
-    else payload.spare_part_id = entityId;
-    
-    const { error } = await supabase.from('favorites').insert([payload]);
-    return !error;
-  }
+    if (type === 'car') {
+        query = query.eq('car_id', entityId);
+    } else {
+        query = query.eq('spare_part_id', entityId);
+    }
+
+    const { data } = await query.single();
+
+    if (data) {
+        const { error } = await supabase.from('favorites').delete().eq('id', data.id);
+        return !error;
+    } else {
+        const payload: any = { user_id: userId };
+        if (type === 'car') payload.car_id = entityId;
+        else payload.spare_part_id = entityId;
+
+        const { error } = await supabase.from('favorites').insert([payload]);
+        return !error;
+    }
 };
 
 // Updated: Takes direct path string instead of file+folder
 export const uploadCarImage = async (file: File, path: string): Promise<string | null> => {
     const { data, error } = await supabase.storage
-        .from('car-images') 
+        .from('car-images')
         .upload(path, file, {
             upsert: true
         });
@@ -856,31 +856,20 @@ export const uploadCarImage = async (file: File, path: string): Promise<string |
 
 // Function for Spare Parts Images
 export const uploadSparePartImage = async (file: File, path: string): Promise<string | null> => {
-    // Primary bucket: spare-parts
+    // Primary bucket: spare-part-images (Updated per request)
     const { data, error } = await supabase.storage
-        .from('spare-parts')
+        .from('spare-part-images')
         .upload(path, file, {
             upsert: true
         });
 
     if (error) {
-        // Fallback: spare-parts-images (if user made a typo in creating bucket)
-        console.warn('Spare part image upload error to spare-parts, trying spare-parts-images', error);
-        const { data: fbData, error: fbError } = await supabase.storage
-            .from('spare-parts-images')
-            .upload(path, file, { upsert: true });
-            
-        if (fbError) {
-             console.error("Failed to upload to both spare-parts and spare-parts-images", fbError);
-             return null;
-        }
-        
-        const { data: { publicUrl } } = supabase.storage.from('spare-parts-images').getPublicUrl(path);
-        return publicUrl;
+        console.error('Upload error to spare-part-images', error);
+        return null;
     }
 
     const { data: { publicUrl } } = supabase.storage
-        .from('spare-parts')
+        .from('spare-part-images')
         .getPublicUrl(path);
 
     return publicUrl;
@@ -917,21 +906,21 @@ export const createCar = async (carData: Partial<Car>, images: File[], userId: s
             const timestamp = Date.now();
             const randomSuffix = Math.random().toString(36).substring(2, 8);
             const baseName = `${timestamp}-${randomSuffix}`;
-            
+
             const mainFileName = `${baseName}.webp`;
             const thumbFileName = `${baseName}_thumb.webp`;
-            
+
             // Generate thumbnail file
             const thumbFile = await compressImage(file, false, true);
-            
+
             // Upload Main Image to: {carId}/filename.webp
             const mainPath = `${carId}/${mainFileName}`;
             const mainUrl = await uploadCarImage(file, mainPath);
-            
+
             // Upload Thumbnail to: {carId}/filename_thumb.webp
             const thumbPath = `${carId}/${thumbFileName}`;
             const thumbUrl = await uploadCarImage(thumbFile, thumbPath);
-            
+
             if (mainUrl) {
                 return {
                     car_id: carId,
@@ -961,7 +950,7 @@ export const createCar = async (carData: Partial<Car>, images: File[], userId: s
             .eq('id', car.id);
 
         if (transferError) {
-             console.error('Error transferring car ownership', transferError);
+            console.error('Error transferring car ownership', transferError);
         }
     }
 
@@ -991,10 +980,10 @@ export const createSparePart = async (partData: Partial<SparePart>, images: File
             const timestamp = Date.now();
             const randomSuffix = Math.random().toString(36).substring(2, 8);
             const fileName = `${timestamp}-${randomSuffix}.webp`;
-            
+
             const mainPath = `${partId}/${fileName}`;
             const mainUrl = await uploadSparePartImage(file, mainPath);
-            
+
             if (mainUrl) {
                 return {
                     spare_part_id: partId,
@@ -1021,14 +1010,14 @@ export const createSparePart = async (partData: Partial<SparePart>, images: File
 
 // UPDATE CAR FUNCTION
 export const updateCar = async (
-    carId: number, 
-    updates: Partial<Car>, 
-    newImages: File[], 
-    deletedImageIds: string[], 
+    carId: number,
+    updates: Partial<Car>,
+    newImages: File[],
+    deletedImageIds: string[],
     existingImageIdsInOrder: string[], // New param to handle ordering
     isAdmin: boolean = false // Param to check role for status logic
 ): Promise<boolean> => {
-    
+
     // 0. Set status to pending if not admin
     const updatePayload = { ...updates };
     if (!isAdmin) {
@@ -1056,7 +1045,7 @@ export const updateCar = async (
 
         if (imagesToDelete) {
             const pathsToRemove: string[] = [];
-            
+
             const extractPath = (url: string) => {
                 if (!url) return null;
                 // Supabase URL format: .../storage/v1/object/public/bucket/path/to/file
@@ -1082,7 +1071,7 @@ export const updateCar = async (
             .from('car_images')
             .delete()
             .in('id', deletedImageIds);
-        
+
         if (deleteError) console.error('Error deleting images from DB:', deleteError);
     }
 
@@ -1096,18 +1085,18 @@ export const updateCar = async (
                 const timestamp = Date.now();
                 const randomSuffix = Math.random().toString(36).substring(2, 8);
                 const baseName = `${timestamp}-${randomSuffix}`;
-                
+
                 const mainFileName = `${baseName}.webp`;
                 const thumbFileName = `${baseName}_thumb.webp`;
-                
+
                 const thumbFile = await compressImage(file, false, true);
-                
+
                 const mainPath = `${carId}/${mainFileName}`;
                 const mainUrl = await uploadCarImage(file, mainPath);
-                
+
                 const thumbPath = `${carId}/${thumbFileName}`;
                 const thumbUrl = await uploadCarImage(thumbFile, thumbPath);
-                
+
                 if (mainUrl) {
                     return {
                         car_id: carId,
@@ -1130,15 +1119,15 @@ export const updateCar = async (
             if (imgError) console.error('Error linking images', imgError);
         }
     }
-    
+
     return true;
 };
 
 export const updateSparePart = async (
-    partId: string, 
-    updates: Partial<SparePart>, 
-    newImages: File[], 
-    deletedImageIds: string[], 
+    partId: string,
+    updates: Partial<SparePart>,
+    newImages: File[],
+    deletedImageIds: string[],
     isAdmin: boolean = false
 ): Promise<boolean> => {
     // 0. Set status to pending if not admin
@@ -1170,7 +1159,11 @@ export const updateSparePart = async (
             const pathsToRemove: string[] = [];
             const extractPath = (url: string) => {
                 if (!url) return null;
-                // Check both possible buckets
+                // Check all possible buckets to support migration
+                if (url.includes('/spare-part-images/')) {
+                    const parts = url.split('/spare-part-images/');
+                    return parts.length > 1 ? parts[1].split('?')[0] : null;
+                }
                 if (url.includes('/spare-parts/')) {
                     const parts = url.split('/spare-parts/');
                     return parts.length > 1 ? parts[1].split('?')[0] : null;
@@ -1188,9 +1181,9 @@ export const updateSparePart = async (
             });
 
             if (pathsToRemove.length > 0) {
-                // Try removing from primary first
+                // Try removing from all to be safe
+                await supabase.storage.from('spare-part-images').remove(pathsToRemove);
                 await supabase.storage.from('spare-parts').remove(pathsToRemove);
-                // Try removing from backup/legacy
                 await supabase.storage.from('spare-parts-images').remove(pathsToRemove);
             }
         }
@@ -1199,7 +1192,7 @@ export const updateSparePart = async (
             .from('spare_part_images')
             .delete()
             .in('id', deletedImageIds);
-        
+
         if (deleteError) console.error('Error deleting part images:', deleteError);
     }
 
@@ -1213,10 +1206,10 @@ export const updateSparePart = async (
                 const timestamp = Date.now();
                 const randomSuffix = Math.random().toString(36).substring(2, 8);
                 const fileName = `${timestamp}-${randomSuffix}.webp`;
-                
+
                 const mainPath = `${partId}/${fileName}`;
                 const mainUrl = await uploadSparePartImage(file, mainPath);
-                
+
                 if (mainUrl) {
                     return {
                         spare_part_id: partId,
@@ -1245,13 +1238,13 @@ export const updateSparePart = async (
 export const setPrimarySparePartImage = async (partId: string, imageId: string | null) => {
     // Reset all
     await supabase.from('spare_part_images').update({ is_primary: false }).eq('spare_part_id', partId);
-    if(imageId) {
+    if (imageId) {
         await supabase.from('spare_part_images').update({ is_primary: true }).eq('id', imageId);
     } else {
         // Find latest and set
         const { data } = await supabase.from('spare_part_images').select('id').eq('spare_part_id', partId).order('created_at', { ascending: false }).limit(1).single();
-        if(data) {
-             await supabase.from('spare_part_images').update({ is_primary: true }).eq('id', data.id);
+        if (data) {
+            await supabase.from('spare_part_images').update({ is_primary: true }).eq('id', data.id);
         }
     }
 };
@@ -1260,14 +1253,14 @@ export const setPrimarySparePartImage = async (partId: string, imageId: string |
 export const setMainImage = async (carId: number, imageId: string | null) => {
     // Reset all
     await supabase.from('car_images').update({ is_main: false }).eq('car_id', carId);
-    if(imageId) {
+    if (imageId) {
         await supabase.from('car_images').update({ is_main: true }).eq('id', imageId);
     } else {
         // If imageId is null, it implies a NEW image is main.
         // We find the most recently created image for this car and make it main.
         const { data } = await supabase.from('car_images').select('id').eq('car_id', carId).order('created_at', { ascending: false }).limit(1).single();
-        if(data) {
-             await supabase.from('car_images').update({ is_main: true }).eq('id', data.id);
+        if (data) {
+            await supabase.from('car_images').update({ is_main: true }).eq('id', data.id);
         }
     }
 };
@@ -1278,8 +1271,8 @@ export const searchUsers = async (query: string): Promise<Profile[]> => {
         .select('*')
         .ilike('full_name', `%${query}%`)
         .limit(10);
-    
-    if(error) return [];
+
+    if (error) return [];
     return data as Profile[];
 };
 
@@ -1292,7 +1285,7 @@ export const trackPageView = async (
     try {
         let pageType = 'other';
         let entityId: string | null = null;
-    
+
         // Determine Page Type and Entity ID
         // Check for Home Page: / or /code or /code/
         const isCountryHome = /^\/[a-zA-Z]{2}\/?$/.test(path);
@@ -1305,30 +1298,30 @@ export const trackPageView = async (
             // Example: /qa/cars/123 or /qa/cars
             const possibleId = parts[parts.length - 1];
             if (!isNaN(Number(possibleId)) && possibleId !== '') {
-                 pageType = 'car_detail';
-                 entityId = possibleId;
+                pageType = 'car_detail';
+                entityId = possibleId;
             } else {
-                 pageType = 'cars_list';
+                pageType = 'cars_list';
             }
         } else if (path.includes('/parts')) pageType = 'parts_list';
         else if (path.includes('/dealers') || path.includes('/showrooms')) {
-             if (path.includes('/showrooms/')) {
-                  const parts = path.split('/');
-                  const possibleId = parts[parts.length - 1];
-                  if (!isNaN(Number(possibleId))) {
-                      pageType = 'showroom_detail';
-                      entityId = possibleId;
-                  }
-             } else {
-                 pageType = 'dealers_list';
-             }
+            if (path.includes('/showrooms/')) {
+                const parts = path.split('/');
+                const possibleId = parts[parts.length - 1];
+                if (!isNaN(Number(possibleId))) {
+                    pageType = 'showroom_detail';
+                    entityId = possibleId;
+                }
+            } else {
+                pageType = 'dealers_list';
+            }
         }
         else if (path.includes('/services')) pageType = 'services_list';
         else if (path.includes('/rental')) pageType = 'rental_list';
         else if (path.includes('/login')) pageType = 'login';
         else if (path.includes('/signup')) pageType = 'signup';
         else if (path.includes('/sell')) pageType = 'sell';
-    
+
         let sessionId = localStorage.getItem('mawater_session_id');
         if (!sessionId) {
             sessionId = generateUUID();
@@ -1350,25 +1343,25 @@ export const trackPageView = async (
                     city = data.city;
                     realCountry = data.country_name;
                 } else {
-                     throw new Error('Primary IP service failed');
+                    throw new Error('Primary IP service failed');
                 }
             } catch (e) {
                 // Fallback: ipwho.is
                 try {
-                     const fb = await fetch('https://ipwho.is/');
-                     if (fb.ok) {
-                         const data = await fb.json();
-                         if (data.success) {
-                             ipAddress = data.ip;
-                             city = data.city;
-                             realCountry = data.country; // "country" field is the name here
-                         }
-                     }
+                    const fb = await fetch('https://ipwho.is/');
+                    if (fb.ok) {
+                        const data = await fb.json();
+                        if (data.success) {
+                            ipAddress = data.ip;
+                            city = data.city;
+                            realCountry = data.country; // "country" field is the name here
+                        }
+                    }
                 } catch (err) {
                     console.warn('IP detection failed');
                 }
             }
-            
+
             if (ipAddress) sessionStorage.setItem('mw_client_ip', ipAddress);
             if (city) sessionStorage.setItem('mw_client_city', city);
             if (realCountry) sessionStorage.setItem('mw_client_real_country', realCountry);
@@ -1430,7 +1423,7 @@ export const deleteSparePart = async (partId: string) => {
 
 export const getAllUsers = async () => {
     const { data, error } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
-    if(error) return [];
+    if (error) return [];
     return data as Profile[];
 };
 
@@ -1448,27 +1441,27 @@ export const exportToCSV = (data: any[], filename: string) => {
     const separator = ',';
     const keys = Object.keys(data[0]);
     const csvContent =
-      keys.join(separator) +
-      '\n' +
-      data.map(row => {
-        return keys.map(k => {
-          let cell = row[k] === null || row[k] === undefined ? '' : row[k];
-          cell = cell instanceof Date ? cell.toLocaleString() : cell.toString().replace(/"/g, '""');
-          if (cell.search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
-          return cell;
-        }).join(separator);
-      }).join('\n');
+        keys.join(separator) +
+        '\n' +
+        data.map(row => {
+            return keys.map(k => {
+                let cell = row[k] === null || row[k] === undefined ? '' : row[k];
+                cell = cell instanceof Date ? cell.toLocaleString() : cell.toString().replace(/"/g, '""');
+                if (cell.search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
+                return cell;
+            }).join(separator);
+        }).join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     if (link.download !== undefined) {
-      const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
-      link.setAttribute('download', filename);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', filename);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     }
 };
 
@@ -1477,7 +1470,7 @@ export const exportAllDataJSON = async () => {
     const { data: users } = await supabase.from('profiles').select('*');
     const { data: dealerships } = await supabase.from('dealerships').select('*');
     const { data: spare_parts } = await supabase.from('spare_parts').select('*');
-    
+
     const bundle = {
         timestamp: new Date().toISOString(),
         cars,
@@ -1500,19 +1493,19 @@ export const importDataJSON = async (jsonString: string) => {
         const bundle = JSON.parse(jsonString);
         if (bundle.users) {
             const { error } = await supabase.from('profiles').upsert(bundle.users);
-            if(error) console.error("Error importing users", error);
+            if (error) console.error("Error importing users", error);
         }
         if (bundle.dealerships) {
             const { error } = await supabase.from('dealerships').upsert(bundle.dealerships);
-            if(error) console.error("Error importing dealerships", error);
+            if (error) console.error("Error importing dealerships", error);
         }
         if (bundle.cars) {
             const { error } = await supabase.from('cars').upsert(bundle.cars);
-            if(error) console.error("Error importing cars", error);
+            if (error) console.error("Error importing cars", error);
         }
-         if (bundle.spare_parts) {
+        if (bundle.spare_parts) {
             const { error } = await supabase.from('spare_parts').upsert(bundle.spare_parts);
-            if(error) console.error("Error importing parts", error);
+            if (error) console.error("Error importing parts", error);
         }
         return true;
     } catch (e) {

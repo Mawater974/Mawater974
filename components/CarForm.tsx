@@ -49,12 +49,12 @@ export const CarForm: React.FC<CarFormProps> = ({ isAdmin = false, onSuccess, cu
   const [exactModel, setExactModel] = useState('');
   const [selectedCountry, setSelectedCountry] = useState<number | ''>('');
   const [selectedCity, setSelectedCity] = useState<number | ''>('');
-  const [year, setYear] = useState<number>(currentYear);
+  const [year, setYear] = useState<number | ''>('');
   const [price, setPrice] = useState<number | ''>('');
   const [mileage, setMileage] = useState<number | ''>('');
   const [description, setDescription] = useState('');
 
-  const [selectedColor, setSelectedColor] = useState('');
+  const [color, setColor] = useState('');
   const [fuelType, setFuelType] = useState('');
   const [gearbox, setGearbox] = useState('');
   const [bodyType, setBodyType] = useState('');
@@ -109,7 +109,7 @@ export const CarForm: React.FC<CarFormProps> = ({ isAdmin = false, onSuccess, cu
       setMileage(initialData.mileage);
       setDescription(initialData.description || '');
 
-      setSelectedColor(initialData.color || '');
+      setColor(initialData.color || '');
       setFuelType(initialData.fuel_type || '');
       setGearbox(initialData.gearbox_type || '');
       setBodyType(initialData.body_type || '');
@@ -239,6 +239,15 @@ export const CarForm: React.FC<CarFormProps> = ({ isAdmin = false, onSuccess, cu
     if (!targetUser) return alert('User is required');
     if (!selectedBrand || !selectedModel) return alert('Brand and Model required');
     if (!selectedCountry || !selectedCity) return alert('Location required');
+    if (!year) return alert('Year is required');
+    if (!description) return alert('Description is required');
+
+    // New validation requirements
+    if (!condition) return alert('Condition is required');
+    if (!bodyType) return alert('Body Type is required');
+    if (!fuelType) return alert('Fuel Type is required');
+    if (!gearbox) return alert('Gearbox (Transmission) is required');
+
     if (!termsAccepted) return alert('You must accept the terms and conditions.');
     if (visualImages.length === 0) return alert('Please upload at least one image.');
 
@@ -257,13 +266,13 @@ export const CarForm: React.FC<CarFormProps> = ({ isAdmin = false, onSuccess, cu
       model_id: Number(selectedModel),
       country_id: Number(selectedCountry),
       city_id: Number(selectedCity),
-      year,
+      year: Number(year),
       price: Number(price),
       mileage: Number(mileage),
       description,
       exact_model: exactModel,
 
-      color: selectedColor || undefined,
+      color: color || undefined,
       fuel_type: fuelType || undefined,
       gearbox_type: gearbox || undefined,
       body_type: bodyType || undefined,
@@ -374,24 +383,24 @@ export const CarForm: React.FC<CarFormProps> = ({ isAdmin = false, onSuccess, cu
       {/* Basic Info */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label className="block text-sm font-bold mb-1 text-gray-700 dark:text-gray-300">{t('form.brand')}</label>
+          <label className="block text-sm font-bold mb-1 text-gray-700 dark:text-gray-300">{t('form.brand')} <span className="text-red-500">*</span></label>
           <select required value={selectedBrand} onChange={e => setSelectedBrand(Number(e.target.value))} className={inputClass}>
             <option value="">{t('form.select')} {t('form.brand')}</option>
             {brands.map(b => (
-                <option key={b.id} value={b.id}>
-                    {language === 'ar' ? (b.name_ar || b.name) : b.name}
-                </option>
+              <option key={b.id} value={b.id}>
+                {language === 'ar' ? (b.name_ar || b.name) : b.name}
+              </option>
             ))}
           </select>
         </div>
         <div>
-          <label className="block text-sm font-bold mb-1 text-gray-700 dark:text-gray-300">{t('form.model')}</label>
+          <label className="block text-sm font-bold mb-1 text-gray-700 dark:text-gray-300">{t('form.model')} <span className="text-red-500">*</span></label>
           <select required value={selectedModel} onChange={e => setSelectedModel(Number(e.target.value))} className={inputClass} disabled={!selectedBrand}>
             <option value="">{t('form.select')} {t('form.model')}</option>
             {models.map(m => (
-                <option key={m.id} value={m.id}>
-                    {language === 'ar' ? (m.name_ar || m.name) : m.name}
-                </option>
+              <option key={m.id} value={m.id}>
+                {language === 'ar' ? (m.name_ar || m.name) : m.name}
+              </option>
             ))}
           </select>
         </div>
@@ -408,32 +417,35 @@ export const CarForm: React.FC<CarFormProps> = ({ isAdmin = false, onSuccess, cu
         </div>
 
         <div>
-          <label className="block text-sm font-bold mb-1 text-gray-700 dark:text-gray-300">{t('common.year')}</label>
+          <label className="block text-sm font-bold mb-1 text-gray-700 dark:text-gray-300">{t('common.price')} ({currency}) <span className="text-red-500">*</span></label>
+          <input required type="number" value={price} onChange={e => setPrice(Number(e.target.value))} className={inputClass} placeholder="00000" />
+        </div>
+
+        <div>
+          <label className="block text-sm font-bold mb-1 text-gray-700 dark:text-gray-300">{t('common.mileage')} (km) <span className="text-red-500">*</span></label>
+          <input required type="number" value={mileage} onChange={e => setMileage(Number(e.target.value))} className={inputClass} placeholder="00000" />
+        </div>
+
+        <div>
+          <label className="block text-sm font-bold mb-1 text-gray-700 dark:text-gray-300">{t('common.year')} <span className="text-red-500">*</span></label>
           <select
             required
             value={year}
             onChange={e => setYear(Number(e.target.value))}
             className={inputClass}
           >
+            <option value="">{t('form.select')} {t('common.year')}</option>
             {years.map(y => (
               <option key={y} value={y}>{y}</option>
             ))}
           </select>
         </div>
-        <div>
-          <label className="block text-sm font-bold mb-1 text-gray-700 dark:text-gray-300">{t('common.price')} ({currency})</label>
-          <input required type="number" value={price} onChange={e => setPrice(Number(e.target.value))} className={inputClass} />
-        </div>
 
         <div>
-          <label className="block text-sm font-bold mb-1 text-gray-700 dark:text-gray-300">{t('common.mileage')} (km)</label>
-          <input required type="number" value={mileage} onChange={e => setMileage(Number(e.target.value))} className={inputClass} />
-        </div>
-        <div>
-          <label className="block text-sm font-bold mb-1 text-gray-700 dark:text-gray-300">{t('car.color')}</label>
-          <select value={selectedColor} onChange={e => setSelectedColor(e.target.value)} className={inputClass}>
-            <option value="">{t('form.select')} {t('car.color')}</option>
-            {colors.map(c => <option key={c} value={c}>{t(`color.${c.toLowerCase()}`)}</option>)}
+          <label className="block text-sm font-bold mb-1 text-gray-700 dark:text-gray-300">{t('car.condition')} <span className="text-red-500">*</span></label>
+          <select required value={condition} onChange={e => setCondition(e.target.value)} className={inputClass}>
+            <option value="">{t('form.select')} {t('car.condition')}</option>
+            {conditions.map(c => <option key={c} value={c}>{t(`condition.${c.toLowerCase().replace(' ', '_')}`)}</option>)}
           </select>
         </div>
       </div>
@@ -442,31 +454,31 @@ export const CarForm: React.FC<CarFormProps> = ({ isAdmin = false, onSuccess, cu
         <h3 className="font-bold text-gray-900 dark:text-white mb-4">{t('car.specifications')}</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
-            <label className="block text-xs font-bold mb-1 text-gray-500">{t('car.body_type')}</label>
-            <select value={bodyType} onChange={e => setBodyType(e.target.value)} className={inputClass}>
+            <label className="block text-xs font-bold mb-1 text-gray-500">{t('car.body_type')} <span className="text-red-500">*</span></label>
+            <select required value={bodyType} onChange={e => setBodyType(e.target.value)} className={inputClass}>
               <option value="">{t('form.select')}</option>
               {bodyTypes.map(b => <option key={b} value={b}>{t(`body.${b.toLowerCase()}`)}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-xs font-bold mb-1 text-gray-500">{t('car.condition')}</label>
-            <select value={condition} onChange={e => setCondition(e.target.value)} className={inputClass}>
+            <label className="block text-xs font-bold mb-1 text-gray-500">{t('car.gearbox')} <span className="text-red-500">*</span></label>
+            <select required value={gearbox} onChange={e => setGearbox(e.target.value)} className={inputClass}>
               <option value="">{t('form.select')}</option>
-              {conditions.map(c => <option key={c} value={c}>{t(`condition.${c.toLowerCase().replace(' ', '_')}`)}</option>)}
+              {gearboxTypes.map(g => <option key={g} value={g}>{t(`gearbox.${g.toLowerCase()}`)}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-xs font-bold mb-1 text-gray-500">{t('car.fuel')}</label>
-            <select value={fuelType} onChange={e => setFuelType(e.target.value)} className={inputClass}>
+            <label className="block text-xs font-bold mb-1 text-gray-500">{t('car.fuel')} <span className="text-red-500">*</span></label>
+            <select required value={fuelType} onChange={e => setFuelType(e.target.value)} className={inputClass}>
               <option value="">{t('form.select')}</option>
               {fuelTypes.map(f => <option key={f} value={f}>{t(`fuel.${f.toLowerCase()}`)}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-xs font-bold mb-1 text-gray-500">{t('car.gearbox')}</label>
-            <select value={gearbox} onChange={e => setGearbox(e.target.value)} className={inputClass}>
+            <label className="block text-xs font-bold mb-1 text-gray-500">{t('car.color')} <span className="text-red-500">*</span></label>
+            <select required value={color} onChange={e => setColor(e.target.value)} className={inputClass}>
               <option value="">{t('form.select')}</option>
-              {gearboxTypes.map(g => <option key={g} value={g}>{t(`gearbox.${g.toLowerCase()}`)}</option>)}
+              {colors.map(c => <option key={c} value={c}>{t(`color.${c.toLowerCase()}`)}</option>)}
             </select>
           </div>
           <div>
@@ -500,37 +512,24 @@ export const CarForm: React.FC<CarFormProps> = ({ isAdmin = false, onSuccess, cu
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm font-bold mb-1 text-gray-700 dark:text-gray-300">{t('form.country')}</label>
-          <select
-            required
-            value={selectedCountry}
-            onChange={e => setSelectedCountry(Number(e.target.value))}
-            className={inputClass}
-          >
-            <option value="">{t('form.select')} {t('form.country')}</option>
-            {countries.map(c => <option key={c.id} value={c.id}>{language === 'ar' ? c.name_ar : c.name}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-bold mb-1 text-gray-700 dark:text-gray-300">{t('form.city')}</label>
-          <select
-            required
-            value={selectedCity}
-            onChange={e => setSelectedCity(Number(e.target.value))}
-            className={inputClass}
-            disabled={!selectedCountry}
-          >
-            <option value="">{selectedCountry ? `${t('form.select')} ${t('form.city')}` : 'Select Country First'}</option>
-            {cities.map(c => <option key={c.id} value={c.id}>{language === 'ar' ? c.name_ar : c.name}</option>)}
-          </select>
-        </div>
+      <div>
+        <label className="block text-sm font-bold mb-1 text-gray-700 dark:text-gray-300">{t('form.city')} <span className="text-red-500">*</span></label>
+        <select
+          required
+          value={selectedCity}
+          onChange={e => setSelectedCity(Number(e.target.value))}
+          className={inputClass}
+          disabled={!selectedCountry}
+        >
+          <option value="">{selectedCountry ? `${t('form.select')} ${t('form.city')}` : 'Select Country First'}</option>
+          {cities.map(c => <option key={c.id} value={c.id}>{language === 'ar' ? c.name_ar : c.name}</option>)}
+        </select>
       </div>
 
       <div>
-        <label className="block text-sm font-bold mb-1 text-gray-700 dark:text-gray-300">{t('form.description')}</label>
+        <label className="block text-sm font-bold mb-1 text-gray-700 dark:text-gray-300">{t('form.description')} <span className="text-red-500">*</span></label>
         <textarea
+          required
           rows={4}
           value={description}
           onChange={e => setDescription(e.target.value)}
@@ -543,7 +542,7 @@ export const CarForm: React.FC<CarFormProps> = ({ isAdmin = false, onSuccess, cu
       <div className="space-y-3 pt-4 border-t border-gray-100 dark:border-gray-700">
         <label className="block text-base font-bold text-gray-700 dark:text-gray-300 flex items-center gap-2">
           <ImageIcon className="w-5 h-5 text-primary-600" />
-          {t('form.upload_photos')} <span className="text-sm font-normal text-gray-500">({visualImages.length}/{maxImages})</span>
+          {t('form.upload_photos')} <span className="text-red-500">*</span> <span className="text-sm font-normal text-gray-500">({visualImages.length}/{maxImages})</span>
         </label>
         <p className="text-xs text-gray-500 mb-2">{t('form.photo_instruction')}</p>
 
@@ -647,7 +646,7 @@ export const CarForm: React.FC<CarFormProps> = ({ isAdmin = false, onSuccess, cu
           id="terms"
           checked={termsAccepted}
           onChange={(e) => setTermsAccepted(e.target.checked)}
-          className="mt-1 w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-primary-500 cursor-pointer"
+          className="w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-primary-500 cursor-pointer"
         />
         <label htmlFor="terms" className="text-sm text-gray-600 dark:text-gray-300 cursor-pointer select-none">
           {t('form.terms_agree')} <a href="#" className="text-primary-600 font-bold hover:underline">{t('footer.terms')}</a> & <a href="#" className="text-primary-600 font-bold hover:underline">{t('footer.privacy')}</a>.
