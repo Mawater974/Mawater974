@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider } from './context/AppContext';
 import { AuthProvider } from './context/AuthContext';
 import { Layout } from './components/Layout';
@@ -49,7 +49,7 @@ import { AdminPartsPage } from './pages/admin/AdminPartsPage';
 
 const App: React.FC = () => {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <AppProvider>
         <AuthProvider>
           <PageTracker />
@@ -145,7 +145,7 @@ const App: React.FC = () => {
           </Routes>
         </AuthProvider>
       </AppProvider>
-    </BrowserRouter>
+    </HashRouter>
   );
 };
 
