@@ -45,9 +45,9 @@ const translations: Record<string, Record<Language, string>> = {
   'common.loading': { en: 'Loading...', ar: 'جاري التحميل...' },
 
   // SEO Titles & Descriptions
-  'seo.home.title': { en: 'Mawater974 - Qatar\'s Premium Car Marketplace', ar: 'مواتر ٩٧٤ - سوق السيارات الأول في قطر' },
+  'seo.home.title': { en: 'Mawater974 - Premium Car Marketplace', ar: 'مواتر ٩٧٤ - سوق السيارات الأول' },
   'seo.home.description': { en: 'Buy and sell cars, spare parts, and find showrooms in {country}. The most trusted automotive marketplace.', ar: 'بيع وشراء السيارات، قطع الغيار، واكتشف المعارض في {country}. السوق الأكثر ثقة للسيارات.' },
-  'seo.home.keywords': { en: 'cars, qatar, doha, buy car, sell car, spare parts, toyota, land cruiser', ar: 'سيارات, قطر, الدوحة, بيع سيارة, شراء سيارة, قطع غيار, تويوتا, لاند كروزر' },
+  'seo.home.keywords': { en: 'cars, qatar, dubai, kuwait, bahrain, syria, egypt, oman, saudi arabia, doha, buy car, sell car, spare parts, toyota, land cruiser', ar: 'سيارات, قطر, الدوحة, عمان, الامارات, السعودية, الكويت, البحرين, بيع سيارة, شراء سيارة, قطع غيار, تويوتا, لاند كروزر' },
 
   'seo.cars.title': { en: 'Cars for Sale in {country} | Mawater974', ar: 'سيارات للبيع في {country} | مواتر ٩٧٤' },
   'seo.cars.description': { en: 'Browse thousands of new and used cars in {country}. Verified sellers, trusted dealers, and best prices.', ar: 'تصفح آلاف السيارات الجديدة والمستعملة في {country}. بائعون موثوقون، معارض معتمدة، وأفضل الأسعار.' },
@@ -221,7 +221,7 @@ const translations: Record<string, Record<Language, string>> = {
   'dealers.no_results': { en: 'No showrooms found.', ar: 'لا توجد معارض.' },
 
   // Footer
-  'footer.slogan': { en: "Qatar's #1 Marketplace for Cars, Parts & Services. We connect buyers and sellers with trust and ease.", ar: "أفضل سوق للسيارات وقطع الغيار والخدمات في قطر. نربط البائعين والمشترين بثقة وسهولة." },
+  'footer.slogan': { en: "#1 Marketplace for Cars, Parts & Services. We connect buyers and sellers with trust and ease.", ar: "أفضل سوق للسيارات وقطع الغيار والخدمات. نربط البائعين والمشترين بثقة وسهولة." },
   'footer.marketplace': { en: "Marketplace", ar: "السوق" },
   'footer.company': { en: "Company", ar: "الشركة" },
   'footer.contact': { en: "Contact Us", ar: "اتصل بنا" },
@@ -233,7 +233,7 @@ const translations: Record<string, Record<Language, string>> = {
   'footer.support': { en: "Contact Support", ar: "تواصل مع الدعم" },
   'footer.rights': { en: 'All Rights Reserved', ar: 'جميع الحقوق محفوظة' },
   'footer.address': { en: "West Bay, Doha, Qatar", ar: "الخليج الغربي، الدوحة، قطر" },
-  'footer.pobox': { en: "PO Box 12345", ar: "ص.ب 12345" },
+  'footer.pobox': { en: "PO Box 00000", ar: "ص.ب 00000" },
   'footer.operational': { en: "Systems Operational", ar: "الأنظمة تعمل بكفاءة" },
 
   // Contact
