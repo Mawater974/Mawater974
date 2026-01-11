@@ -30,8 +30,8 @@ export const CountryRedirect: React.FC = () => {
       // 4. Construct new path
       // Remove the leading slash from current pathname to append it cleanly
       // e.g. pathname is "/cars", we want "/qa/cars"
-      const pathSuffix = location.pathname; 
-      
+      const pathSuffix = location.pathname;
+
       // Navigate to /code/suffix + queryParams
       navigate(`/${targetCode}${pathSuffix}${location.search}`, { replace: true });
     };
@@ -41,7 +41,7 @@ export const CountryRedirect: React.FC = () => {
 
   return (
     <div className="flex items-center justify-center min-h-[60vh]">
-       <LoadingSpinner className="w-10 h-10" />
+      <LoadingSpinner className="w-10 h-10" />
     </div>
   );
 };
