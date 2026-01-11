@@ -1,0 +1,12 @@
+
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /my-ads
+Disallow: /profile
+Disallow: /favorites
+Disallow: /dealer-dashboard
+Disallow: /login
+Disallow: /signup
+
+Sitemap: https://mawater974.com/sitemap.xml
