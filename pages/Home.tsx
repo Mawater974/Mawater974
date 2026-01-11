@@ -7,6 +7,7 @@ import { CarCard } from '../components/CarCard';
 import { Search, ChevronRight, ChevronLeft, Car as CarIcon, Settings, Filter, Building2, Store, CheckCircle, Users } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { LoadingSpinner } from '../components/LoadingSpinner';
+import { SEO } from '../components/SEO';
 
 export const Home: React.FC = () => {
   const { t, language, dir, selectedCountryId, countries, selectedCountryCode } = useAppContext();
@@ -70,6 +71,12 @@ export const Home: React.FC = () => {
 
   return (
     <div className="space-y-16 pb-12">
+      <SEO 
+        title={t('seo.home.title')}
+        description={t('seo.home.description', { country: countryName })}
+        keywords={t('seo.home.keywords')}
+      />
+
       {/* Hero Section */}
       <section className="relative h-[600px] -mt-6 -mx-[calc(50vw-50%)] w-[100vw] overflow-hidden dark:shadow-none shadow-[0_25px_50px_rgba(0,0,0,0.25)]">
         {/* Background Image & Overlay */}

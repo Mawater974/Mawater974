@@ -1,46 +1,53 @@
-
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Mawater974 - Premium Car Marketplace</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Tajawal:wght@400;500;700&family=Dancing+Script:wght@400;700&display=swap" rel="stylesheet">
-    <script>
-      tailwind.config = {
-        darkMode: 'class',
-        theme: {
-          extend: {
-            fontFamily: {
-              sans: ['Inter', 'sans-serif'],
-              arabic: ['Tajawal', 'sans-serif'],
-              cursive: ['Dancing Script', 'cursive'],
-            },
-            colors: {
-              primary: {
-                50: '#fbf4f6',
-                100: '#f6e8ec',
-                200: '#edd4da',
-                300: '#dfb0bb',
-                400: '#c67386',
-                500: '#a8465e',
-                600: '#8A1538', // Brand Color
-                700: '#72112e',
-                800: '#601129',
-                900: '#521226',
-                950: '#2f0813',
-              }
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mawater974 - Premium Car Marketplace</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Tajawal:wght@400;500;700&family=Dancing+Script:wght@400;700&display=swap"
+    rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            arabic: ['Tajawal', 'sans-serif'],
+            cursive: ['Dancing Script', 'cursive'],
+          },
+          colors: {
+            primary: {
+              50: '#fbf4f6',
+              100: '#f6e8ec',
+              200: '#edd4da',
+              300: '#dfb0bb',
+              400: '#c67386',
+              500: '#a8465e',
+              600: '#8A1538', // Brand Color
+              700: '#72112e',
+              800: '#601129',
+              900: '#521226',
+              950: '#2f0813',
             }
           }
         }
       }
-    </script>
+    }
+  </script>
+  <script type="importmap">
 
-<link rel="stylesheet" href="/index.css">
+}
+</script>
+  <link rel="stylesheet" href="/index.css">
 </head>
-  <body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-200">
-    <div id="root"></div>
+
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-200">
+  <div id="root"></div>
   <script type="module" src="/index.tsx"></script>
 </body>
+
 </html>

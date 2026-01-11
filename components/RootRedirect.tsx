@@ -3,10 +3,12 @@ import React, { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { FALLBACK_COUNTRIES } from '../services/dataService';
 import { LoadingSpinner } from './LoadingSpinner';
+import { useAppContext } from '../context/AppContext';
 
 export const RootRedirect: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useAppContext();
 
   useEffect(() => {
     // CRITICAL: Check for Supabase Auth tokens in the hash.
@@ -80,7 +82,7 @@ export const RootRedirect: React.FC = () => {
        <div className="text-center flex flex-col items-center">
           <img src="/logo.png" alt="Mawater974" className="h-32 md:h-40 w-auto mb-8 animate-pulse drop-shadow-xl" />
           <LoadingSpinner className="w-12 h-12" />
-          <p className="mt-4 text-gray-400 text-sm font-medium animate-pulse">Loading...</p>
+          <p className="mt-4 text-gray-400 text-sm font-medium animate-pulse">{t('common.loading')}</p>
        </div>
     </div>
   );

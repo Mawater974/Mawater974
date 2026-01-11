@@ -55,14 +55,13 @@ const App: React.FC = () => {
           <PageTracker />
           <Routes>
             {/* 
-               ROOT PATHS: 
-               These paths (e.g. /cars) now act as Redirects to /qa/cars (or user's country).
-               This ensures consistent URL structure for SEO and User Experience.
+               ROOT PATHS (Handling SEO & Redirects):
+               If a user visits /cars, they are redirected to /qa/cars (or their saved country).
             */}
             <Route path="/" element={<Layout />}>
-              <Route index element={<RootRedirect />} /> {/* / -> /qa */}
-
-              {/* Public Pages -> Redirect to /:countryCode/... */}
+              <Route index element={<RootRedirect />} /> {/* Homepage auto-detects */}
+              
+              {/* These paths trigger the CountryRedirect logic */}
               <Route path="cars/*" element={<CountryRedirect />} />
               <Route path="parts/*" element={<CountryRedirect />} />
               <Route path="dealers/*" element={<CountryRedirect />} />
@@ -72,15 +71,15 @@ const App: React.FC = () => {
               <Route path="contact" element={<CountryRedirect />} />
               <Route path="privacy" element={<CountryRedirect />} />
               <Route path="terms" element={<CountryRedirect />} />
-
-              {/* Auth & User Pages -> Redirect */}
+              
+              {/* Auth & User Pages Redirects */}
               <Route path="login" element={<CountryRedirect />} />
               <Route path="signup" element={<CountryRedirect />} />
               <Route path="forgot-password" element={<CountryRedirect />} />
               <Route path="update-password" element={<CountryRedirect />} />
               <Route path="register-showroom" element={<CountryRedirect />} />
               <Route path="dealer-dashboard" element={<CountryRedirect />} />
-
+              
               <Route path="favorites" element={<CountryRedirect />} />
               <Route path="my-ads" element={<CountryRedirect />} />
               <Route path="profile" element={<CountryRedirect />} />
@@ -88,8 +87,8 @@ const App: React.FC = () => {
             </Route>
 
             {/* 
-               COUNTRY SPECIFIC ROUTES:
-               The actual content is rendered here.
+               COUNTRY SPECIFIC ROUTES (The Actual Pages):
+               These render the content based on the :countryCode param.
             */}
             <Route path="/:countryCode" element={<Layout />}>
               <Route index element={<Home />} />
@@ -101,47 +100,47 @@ const App: React.FC = () => {
               <Route path="showrooms/:id" element={<ShowroomDetailsPage />} />
               <Route path="services" element={<ServicesPage />} />
               <Route path="rental" element={<CarRentalPage />} />
-
+              
               <Route path="contact" element={<ContactPage />} />
               <Route path="privacy" element={<PrivacyPage />} />
               <Route path="terms" element={<TermsPage />} />
-
+              
               <Route path="register-showroom" element={<RegisterShowroomPage />} />
               <Route path="dealer-dashboard" element={<DealerDashboard />} />
-
+              
               <Route path="login" element={<LoginPage />} />
               <Route path="signup" element={<SignupPage />} />
               <Route path="forgot-password" element={<ForgotPasswordPage />} />
               <Route path="update-password" element={<UpdatePasswordPage />} />
-
+              
               <Route path="favorites" element={<FavoritesPage />} />
               <Route path="my-ads" element={<MyAdsPage />} />
               <Route path="profile" element={<ProfilePage />} />
               <Route path="sell" element={<SellCarPage />} />
             </Route>
 
-            {/* Admin Routes (Global, no country prefix needed) */}
+            {/* Admin Routes (Global) */}
             <Route path="/admin" element={<AdminLayout />}>
-              <Route index element={<AdminDashboard />} />
-              <Route path="brands" element={<AdminBrandsPage />} />
-              <Route path="cars" element={<AdminCarsPage />} />
-              <Route path="parts" element={<AdminPartsPage />} />
-              <Route path="users" element={<AdminUsersPage />} />
-              <Route path="dealers" element={<AdminDealersPage />} />
-              <Route path="settings" element={<AdminSettingsPage />} />
-              <Route path="reports" element={<AdminReportsPage />} />
-              <Route path="content" element={<AdminContentPage />} />
-
-              <Route path="database" element={<AdminDatabasePage />} />
-              <Route path="security" element={<AdminSecurityPage />} />
-              <Route path="seo" element={<AdminSeoPage />} />
-              <Route path="health" element={<AdminHealthPage />} />
-              <Route path="finance" element={<AdminFinancePage />} />
-
-              <Route path="*" element={<div className="p-10 text-center text-gray-500 text-xl">Page Not Found</div>} />
+               <Route index element={<AdminDashboard />} />
+               <Route path="brands" element={<AdminBrandsPage />} />
+               <Route path="cars" element={<AdminCarsPage />} />
+               <Route path="parts" element={<AdminPartsPage />} />
+               <Route path="users" element={<AdminUsersPage />} />
+               <Route path="dealers" element={<AdminDealersPage />} />
+               <Route path="settings" element={<AdminSettingsPage />} />
+               <Route path="reports" element={<AdminReportsPage />} />
+               <Route path="content" element={<AdminContentPage />} />
+               
+               <Route path="database" element={<AdminDatabasePage />} />
+               <Route path="security" element={<AdminSecurityPage />} />
+               <Route path="seo" element={<AdminSeoPage />} />
+               <Route path="health" element={<AdminHealthPage />} />
+               <Route path="finance" element={<AdminFinancePage />} />
+               
+               <Route path="*" element={<div className="p-10 text-center text-gray-500 text-xl">Page Not Found</div>} />
             </Route>
-
-            {/* Catch all - Redirect to Home if unknown */}
+            
+            {/* Catch all */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AuthProvider>

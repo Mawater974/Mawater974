@@ -21,6 +21,7 @@ interface AppContextProps {
 }
 
 const translations: Record<string, Record<Language, string>> = {
+  // Navigation
   'nav.home': { en: 'Home', ar: 'الرئيسية' },
   'nav.cars': { en: 'Buy Cars', ar: 'شراء سيارات' },
   'nav.parts': { en: 'Spare Parts', ar: 'قطع غيار' },
@@ -38,6 +39,32 @@ const translations: Record<string, Record<Language, string>> = {
   'nav.register_showroom': { en: 'Register Showroom', ar: 'تسجيل معرض' },
   'nav.select_country': { en: 'Select Country', ar: 'اختر الدولة' },
 
+  // Redirects & Loading
+  'redirect.detecting': { en: 'Detecting region...', ar: 'جاري تحديد المنطقة...' },
+  'redirect.switching': { en: 'Switching Region...', ar: 'جاري تغيير المنطقة...' },
+  'common.loading': { en: 'Loading...', ar: 'جاري التحميل...' },
+
+  // SEO Titles & Descriptions
+  'seo.home.title': { en: 'Mawater974 - Qatar\'s Premium Car Marketplace', ar: 'مواتر ٩٧٤ - سوق السيارات الأول في قطر' },
+  'seo.home.description': { en: 'Buy and sell cars, spare parts, and find showrooms in {country}. The most trusted automotive marketplace.', ar: 'بيع وشراء السيارات، قطع الغيار، واكتشف المعارض في {country}. السوق الأكثر ثقة للسيارات.' },
+  'seo.home.keywords': { en: 'cars, qatar, doha, buy car, sell car, spare parts, toyota, land cruiser', ar: 'سيارات, قطر, الدوحة, بيع سيارة, شراء سيارة, قطع غيار, تويوتا, لاند كروزر' },
+
+  'seo.cars.title': { en: 'Cars for Sale in {country} | Mawater974', ar: 'سيارات للبيع في {country} | مواتر ٩٧٤' },
+  'seo.cars.description': { en: 'Browse thousands of new and used cars in {country}. Verified sellers, trusted dealers, and best prices.', ar: 'تصفح آلاف السيارات الجديدة والمستعملة في {country}. بائعون موثوقون، معارض معتمدة، وأفضل الأسعار.' },
+
+  'seo.parts.title': { en: 'Spare Parts in {country} | Mawater974', ar: 'قطع غيار في {country} | مواتر ٩٧٤' },
+  'seo.parts.description': { en: 'Find original and aftermarket spare parts for all car makes in {country}.', ar: 'اعثر على قطع غيار أصلية وتجارية لجميع أنواع السيارات في {country}.' },
+
+  'seo.dealers.title': { en: 'Car Showrooms in {country} | Mawater974', ar: 'معارض السيارات في {country} | مواتر ٩٧٤' },
+  'seo.dealers.description': { en: 'Connect with top car showrooms and service centers in {country}.', ar: 'تواصل مع أفضل معارض السيارات ومراكز الخدمة في {country}.' },
+
+  'seo.services.title': { en: 'Automotive Services | Mawater974', ar: 'خدمات السيارات | مواتر ٩٧٤' },
+  'seo.services.description': { en: 'Find top-rated mechanics, detailing, and car care services in {country}.', ar: 'اعثر على أفضل الميكانيكيين، وخدمات التلميع والعناية بالسيارات في {country}.' },
+
+  'seo.rental.title': { en: 'Car Rental in {country} | Mawater974', ar: 'تأجير السيارات في {country} | مواتر ٩٧٤' },
+  'seo.rental.description': { en: 'Rent luxury and economy cars at best rates in {country}.', ar: 'استأجر سيارات فخمة واقتصادية بأفضل الأسعار في {country}.' },
+
+  // Hero
   'hero.badge': { en: 'Ride in Style', ar: 'قُد بأسلوب' },
   'hero.title1': { en: 'Exclusive Cars', ar: 'سيارات حصرية' },
   'hero.title2': { en: 'in {country}', ar: 'في {country}' },
@@ -47,6 +74,7 @@ const translations: Record<string, Record<Language, string>> = {
   },
   'hero.search': { en: 'Search...', ar: 'بحث...' },
   
+  // Home
   'home.browse_brand': { en: 'Browse by Brand', ar: 'تصفح حسب الماركة' },
   'home.view_all': { en: 'View All', ar: 'عرض الكل' },
   'home.latest_listings': { en: 'Check out the latest premium listings', ar: 'تفقّد أحدث الإعلانات المميزة' },
@@ -67,6 +95,7 @@ const translations: Record<string, Record<Language, string>> = {
   'home.dealer_section.step3': { en: '3. Wait for Approval', ar: '٣. انتظر الموافقة' },
   'home.dealer_section.cta': { en: 'Start Registration', ar: 'ابدأ التسجيل' },
 
+  // Common
   'featured.cars': { en: 'Featured Cars', ar: 'سيارات مميزة' },
   'featured.parts': { en: 'Featured Spare Parts', ar: 'قطع غيار مميزة' },
   'featured.dealers': { en: 'Top Showrooms', ar: 'أفضل المعارض' },
@@ -75,7 +104,6 @@ const translations: Record<string, Record<Language, string>> = {
   'common.year': { en: 'Year', ar: 'السنة' },
   'common.mileage': { en: 'Mileage', ar: 'الممشى' },
   'common.view_details': { en: 'View Details', ar: 'التفاصيل' },
-  'common.loading': { en: 'Loading...', ar: 'جاري التحميل...' },
   'common.no_results': { en: 'No results found', ar: 'لا توجد نتائج' },
   'common.save': { en: 'Save', ar: 'حفظ' },
   'common.optional': { en: '(Optional)', ar: '(اختياري)' },
@@ -83,11 +111,13 @@ const translations: Record<string, Record<Language, string>> = {
   'common.try_adjusting': { en: 'Try adjusting your filters.', ar: 'حاول تعديل الفلاتر.' },
   'common.edit': { en: 'Edit', ar: 'تعديل' },
   'common.delete': { en: 'Delete', ar: 'حذف' },
+  'common.delete_archive': { en: 'Delete (Archive)', ar: 'حذف (أرشفة)' },
   'common.archive': { en: 'Archive', ar: 'أرشفة' },
   'common.share': { en: 'Share', ar: 'مشاركة' },
   'common.change': { en: 'Change', ar: 'تغيير' },
   'common.save_changes': { en: 'Save Changes', ar: 'حفظ التغييرات' },
 
+  // Filters
   'filter.brand': { en: 'Brand', ar: 'الماركة' },
   'filter.all_brands': { en: 'All Brands', ar: 'كل الماركات' },
   'filter.model': { en: 'Model', ar: 'الموديل' },
@@ -104,6 +134,7 @@ const translations: Record<string, Record<Language, string>> = {
   'filter.any': { en: 'Any', ar: 'الكل' },
   'search.placeholder': { en: 'Search by description...', ar: 'ابحث في الوصف...' },
   
+  // Auth
   'login.title': { en: 'Login', ar: 'تسجيل الدخول' },
   'login.email': { en: 'Email Address', ar: 'البريد الإلكتروني' },
   'login.password': { en: 'Password', ar: 'كلمة المرور' },
@@ -147,6 +178,7 @@ const translations: Record<string, Record<Language, string>> = {
   'profile.phone_label': { en: 'Phone Number', ar: 'رقم الهاتف' },
   'profile.phone_hint': { en: 'Used for verifying ads and contact.', ar: 'يستخدم للتحقق من الإعلانات والتواصل.' },
 
+  // Cars
   'car.details': { en: 'Car Details', ar: 'تفاصيل السيارة' },
   'car.description': { en: 'Description', ar: 'الوصف' },
   'car.specifications': { en: 'Specifications', ar: 'المواصفات' },
@@ -188,6 +220,7 @@ const translations: Record<string, Record<Language, string>> = {
   'dealers.subtitle': { en: 'Discover premium showrooms and verified dealers.', ar: 'اكتشف أرقى المعارض والتجار الموثوقين.' },
   'dealers.no_results': { en: 'No showrooms found.', ar: 'لا توجد معارض.' },
   
+  // Footer
   'footer.slogan': { en: "Qatar's #1 Marketplace for Cars, Parts & Services. We connect buyers and sellers with trust and ease.", ar: "أفضل سوق للسيارات وقطع الغيار والخدمات في قطر. نربط البائعين والمشترين بثقة وسهولة." },
   'footer.marketplace': { en: "Marketplace", ar: "السوق" },
   'footer.company': { en: "Company", ar: "الشركة" },
@@ -203,6 +236,7 @@ const translations: Record<string, Record<Language, string>> = {
   'footer.pobox': { en: "PO Box 12345", ar: "ص.ب 12345" },
   'footer.operational': { en: "Systems Operational", ar: "الأنظمة تعمل بكفاءة" },
   
+  // Contact
   'contact.title': { en: 'Contact Us', ar: 'اتصل بنا' },
   'contact.subtitle': { en: 'We are here to help you. Send us your query.', ar: 'نحن هنا لمساعدتك. أرسل لنا استفسارك.' },
   'contact.name': { en: 'Full Name', ar: 'الاسم الكامل' },
@@ -221,6 +255,7 @@ const translations: Record<string, Record<Language, string>> = {
   'contact.thank_you': { en: 'Thank You!', ar: 'شكراً لك!' },
   'contact.send_another': { en: 'Send another message', ar: 'أرسل رسالة أخرى' },
 
+  // Dealer
   'dealer.dashboard': { en: 'Dealer Dashboard', ar: 'لوحة تحكم التاجر' },
   'dealer.overview': { en: 'Overview', ar: 'نظرة عامة' },
   'dealer.inventory': { en: 'Inventory', ar: 'المخزون' },
@@ -239,6 +274,7 @@ const translations: Record<string, Record<Language, string>> = {
   'register_showroom.contact_info': { en: 'Contact Information', ar: 'معلومات الاتصال' },
   'register_showroom.submit': { en: 'Submit Registration', ar: 'إرسال التسجيل' },
 
+  // Sell
   'sell.login_title': { en: 'Login to Sell', ar: 'سجل الدخول للبيع' },
   'sell.login_desc': { en: 'You need an account to post advertisements.', ar: 'تحتاج إلى حساب لنشر الإعلانات.' },
   'sell.login_register': { en: 'Login / Register', ar: 'دخول / تسجيل' },
@@ -247,6 +283,7 @@ const translations: Record<string, Record<Language, string>> = {
   'sell.car_option': { en: 'Sell a Car', ar: 'بيع سيارة' },
   'sell.part_option': { en: 'Sell Spare Part', ar: 'بيع قطع غيار' },
 
+  // Forms
   'form.brand': { en: 'Brand', ar: 'الماركة' },
   'form.model': { en: 'Model', ar: 'الموديل' },
   'form.exact_model': { en: 'Exact Model (Trim)', ar: 'الطراز الدقيق (فئة)' },
@@ -331,7 +368,6 @@ const translations: Record<string, Record<Language, string>> = {
   'part.list_btn': { en: 'List Part', ar: 'اعرض القطعة' },
   'part.update_btn': { en: 'Update Part', ar: 'تحديث القطعة' },
 
-  // New Translations for Spare Parts Page
   'parts.subtitle': { en: 'Find original and aftermarket parts for your vehicle.', ar: 'اعثر على قطع غيار أصلية وتجارية لسيارتك.' },
   'parts.showing_results_for': { en: 'Showing results for:', ar: 'عرض النتائج لـ:' },
   'parts.try_adjusting': { en: 'Try adjusting your search terms or checking category filters.', ar: 'حاول تعديل مصطلحات البحث أو التحقق من فلاتر الفئات.' },
@@ -354,7 +390,6 @@ const translations: Record<string, Record<Language, string>> = {
   'comments.login_action': { en: 'Login / Register', ar: 'دخول / تسجيل' },
   'comments.delete_confirm': { en: 'Delete this comment?', ar: 'حذف هذا التعليق؟' },
 
-  // Privacy Policy Keys
   'privacy.title': { en: 'Privacy Policy', ar: 'سياسة الخصوصية' },
   'privacy.last_updated': { en: 'Last Updated', ar: 'آخر تحديث' },
   'privacy.intro': { 
@@ -377,7 +412,6 @@ const translations: Record<string, Record<Language, string>> = {
     ar: 'لا نشارك معلوماتك الشخصية مع أطراف ثالثة إلا كما هو موضح في هذه السياسة، مثل بموافقتك أو لأسباب قانونية.' 
   },
 
-  // Terms & Conditions Keys
   'terms.title': { en: 'Terms & Conditions', ar: 'الشروط والأحكام' },
   'terms.last_updated': { en: 'Last Updated', ar: 'آخر تحديث' },
   'terms.intro': { 
@@ -400,7 +434,6 @@ const translations: Record<string, Record<Language, string>> = {
     ar: 'نحتفظ بالحق في إنهاء أو تعليق حسابك في أي وقت، دون إشعار، بسبب سلوك نعتقد أنه ينتهك هذه الشروط أو يضر بالمستخدمين الآخرين.' 
   },
 
-  // Additional Keys
   'my_ads.post_ad': { en: '+ Post Ad', ar: '+ أضف إعلان' },
   'my_ads.tab_cars': { en: 'Cars', ar: 'السيارات' },
   'my_ads.tab_parts': { en: 'Spare Parts', ar: 'قطع الغيار' },
@@ -458,12 +491,14 @@ const AppContext = createContext<AppContextProps | undefined>(undefined);
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { countryCode } = useParams<{ countryCode?: string }>();
   
   const [language, setLanguage] = useState<Language>('en');
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
   const [countries, setCountries] = useState<Country[]>(FALLBACK_COUNTRIES);
   const [isLoading, setIsLoading] = useState(false);
+  
+  const pathParts = location.pathname.split('/');
+  const urlCountryCode = pathParts[1]; 
   
   const [selectedCountryId, setSelectedCountryId] = useState<number | null>(null);
 
@@ -478,40 +513,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
 
     const initCountries = async () => {
-      // Logic to sync URL param with state, or default to QA/Saved
-      let targetId: number | null = null;
-
-      // 1. Try URL Param first
-      if (countryCode && countryCode.length === 2) {
-          const matched = FALLBACK_COUNTRIES.find(c => c.code.toLowerCase() === countryCode.toLowerCase());
-          if (matched) targetId = matched.id;
-      }
-
-      // 2. Try LocalStorage if not in URL
-      if (!targetId) {
-          const savedCountryId = localStorage.getItem('app_country');
-          if (savedCountryId) {
-              const matched = FALLBACK_COUNTRIES.find(c => c.id === Number(savedCountryId));
-              if (matched) targetId = matched.id;
+      if (urlCountryCode && urlCountryCode.length === 2 && !selectedCountryId) {
+          const matched = FALLBACK_COUNTRIES.find(c => c.code.toLowerCase() === urlCountryCode.toLowerCase());
+          if (matched) {
+              setSelectedCountryId(matched.id);
           }
-      }
-
-      // 3. Default to Qatar
-      if (!targetId) {
-          targetId = 1; // Qatar
-      }
-
-      if (targetId && targetId !== selectedCountryId) {
-          setSelectedCountryId(targetId);
-          localStorage.setItem('app_country', String(targetId));
       }
 
       const fetchedCountries = await getCountries();
       setCountries(fetchedCountries);
       
-      // Update selected country ID again with fetched data to ensure freshness
-      if (countryCode && countryCode.length === 2) {
-          const matched = fetchedCountries.find(c => c.code.toLowerCase() === countryCode.toLowerCase());
+      if (urlCountryCode && urlCountryCode.length === 2) {
+          const matched = fetchedCountries.find(c => c.code.toLowerCase() === urlCountryCode.toLowerCase());
           if (matched) {
               setSelectedCountryId(matched.id);
               localStorage.setItem('app_country', String(matched.id));
@@ -519,7 +532,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       } 
     };
     initCountries();
-  }, [countryCode]);
+  }, [urlCountryCode]);
 
   const handleSetLanguage = (lang: Language) => {
     setLanguage(lang);
@@ -533,27 +546,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setSelectedCountryId(id);
         localStorage.setItem('app_country', String(id));
         
-        // Navigate to the same page but with new country code prefix
-        // We need to strip existing country code if present
-        const currentPath = location.pathname;
-        const segments = currentPath.split('/').filter(Boolean);
-        
-        let newPath = '';
-        
-        // Check if first segment is a country code
-        if (segments.length > 0 && segments[0].length === 2) {
-            // Replace first segment
-            segments[0] = country.code.toLowerCase();
-            newPath = '/' + segments.join('/');
-        } else {
-            // Prepend new code
-            newPath = `/${country.code.toLowerCase()}${currentPath}`;
-        }
-        
-        // Fix double slashes just in case
-        newPath = newPath.replace('//', '/');
-
-        navigate(newPath);
+        navigate(`/${country.code.toLowerCase()}`);
 
         setTimeout(() => {
             setIsLoading(false);

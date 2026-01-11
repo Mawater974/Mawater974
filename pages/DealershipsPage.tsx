@@ -6,13 +6,16 @@ import { Dealership } from '../types';
 import { MapPin, Building2, CheckCircle, Clock, ChevronRight, SlidersHorizontal, Warehouse } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { LoadingSpinner } from '../components/LoadingSpinner';
+import { SEO } from '../components/SEO';
 
 export const DealershipsPage: React.FC = () => {
-  const { t, language, dir, selectedCountryId } = useAppContext();
+  const { t, language, dir, selectedCountryId, selectedCountry } = useAppContext();
   const { countryCode } = useParams<{ countryCode: string }>();
   const [dealers, setDealers] = useState<Dealership[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<DealerSortOption>('featured');
+
+  const countryName = language === 'ar' ? selectedCountry?.name_ar : selectedCountry?.name;
 
   useEffect(() => {
     const fetch = async () => {
@@ -35,6 +38,11 @@ export const DealershipsPage: React.FC = () => {
 
   return (
     <div>
+      <SEO 
+        title={t('seo.dealers.title', { country: countryName || 'Qatar' })}
+        description={t('seo.dealers.description', { country: countryName || 'Qatar' })}
+      />
+
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-end mb-8 gap-4">
           <div>

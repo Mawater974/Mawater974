@@ -13,8 +13,8 @@ export const SellCarPage: React.FC = () => {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<'car' | 'part'>('car');
 
-    const countryName = language === 'ar'
-        ? (selectedCountry?.name_ar || 'قطر')
+    const countryName = language === 'ar' 
+        ? (selectedCountry?.name_ar || 'قطر') 
         : (selectedCountry?.name || 'Qatar');
 
     if (!user) {
@@ -22,8 +22,8 @@ export const SellCarPage: React.FC = () => {
             <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
                 <h1 className="text-2xl font-bold mb-4">{t('sell.login_title')}</h1>
                 <p className="text-gray-500 mb-6">{t('sell.login_desc')}</p>
-                <button
-                    onClick={() => navigate(`/${selectedCountryCode || 'qa'}/login`)}
+                <button 
+                    onClick={() => navigate(`/${selectedCountryCode || 'qa'}/login`)} 
                     className="bg-primary-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-primary-700 transition"
                 >
                     {t('sell.login_register')}

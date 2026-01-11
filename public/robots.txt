@@ -1,6 +1,8 @@
 
 User-agent: *
 Allow: /
+
+# Private User Areas
 Disallow: /admin/
 Disallow: /my-ads
 Disallow: /profile
@@ -8,5 +10,8 @@ Disallow: /favorites
 Disallow: /dealer-dashboard
 Disallow: /login
 Disallow: /signup
+Disallow: /forgot-password
+Disallow: /update-password
 
+# Sitemap
 Sitemap: https://mawater974.com/sitemap.xml

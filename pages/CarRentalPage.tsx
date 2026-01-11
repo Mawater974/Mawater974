@@ -6,9 +6,10 @@ import { Car } from '../types';
 import { CarCard } from '../components/CarCard';
 import { Car as CarIcon, CalendarRange } from 'lucide-react';
 import { LoadingSpinner } from '../components/LoadingSpinner';
+import { SEO } from '../components/SEO';
 
 export const CarRentalPage: React.FC = () => {
-  const { t, language, selectedCountryId } = useAppContext();
+  const { t, language, selectedCountryId, selectedCountry } = useAppContext();
   const [rentals, setRentals] = useState<Car[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -28,6 +29,11 @@ export const CarRentalPage: React.FC = () => {
 
   return (
     <div>
+      <SEO 
+        title={t('seo.rental.title', { country: selectedCountry?.name || 'Qatar' })}
+        description={t('seo.rental.description', { country: selectedCountry?.name || 'Qatar' })}
+      />
+
       <div className="mb-8 bg-primary-600 rounded-2xl p-8 text-white relative overflow-hidden">
          <div className="relative z-10">
             <h1 className="text-3xl font-bold flex items-center gap-2 mb-2">

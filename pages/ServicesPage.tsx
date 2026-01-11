@@ -5,9 +5,10 @@ import { getServices, getOptimizedImageUrl } from '../services/dataService';
 import { Dealership } from '../types';
 import { MapPin, Wrench, Phone, Star } from 'lucide-react';
 import { LoadingSpinner } from '../components/LoadingSpinner';
+import { SEO } from '../components/SEO';
 
 export const ServicesPage: React.FC = () => {
-  const { t } = useAppContext();
+  const { t, selectedCountry } = useAppContext();
   const [services, setServices] = useState<Dealership[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -23,6 +24,11 @@ export const ServicesPage: React.FC = () => {
 
   return (
     <div>
+      <SEO 
+        title={t('seo.services.title')}
+        description={t('seo.services.description', { country: selectedCountry?.name || 'Qatar' })}
+      />
+
       <div className="mb-8">
          <h1 className="text-3xl font-bold dark:text-white flex items-center gap-2">
             <Wrench className="text-primary-600" /> {t('nav.services')}
