@@ -15,8 +15,8 @@ export const RootRedirect: React.FC = () => {
     // When using BrowserRouter, the hash is strictly in location.hash.
     // We must pause redirection if an auth token is present to allow Supabase SDK to consume it.
     if (location.hash && (location.hash.includes('access_token') || location.hash.includes('type=recovery'))) {
-        console.log("Auth hash detected in RootRedirect, yielding to AuthContext...");
-        return; 
+      console.log("Auth hash detected in RootRedirect, yielding to AuthContext...");
+      return;
     }
 
     const detectAndRedirect = async () => {
@@ -32,7 +32,7 @@ export const RootRedirect: React.FC = () => {
 
       // 2. IP Detection
       let detectedCode: string | null = null;
-      
+
       try {
         // User preferred API logic: https://ipapi.co/json/
         const response = await fetch('https://ipapi.co/json/');
@@ -46,28 +46,28 @@ export const RootRedirect: React.FC = () => {
 
       // Fallback if ipapi.co fails (e.g. adblocker)
       if (!detectedCode) {
-         try {
-            const response = await fetch('https://ipwho.is/');
-            if (response.ok) {
-                const data = await response.json();
-                if (data.success) {
-                    detectedCode = data.country_code;
-                }
+        try {
+          const response = await fetch('https://ipwho.is/');
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+              detectedCode = data.country_code;
             }
-         } catch (e) {
-             console.warn('Fallback IP detection (ipwho.is) failed', e);
-         }
+          }
+        } catch (e) {
+          console.warn('Fallback IP detection (ipwho.is) failed', e);
+        }
       }
 
       // 3. Process Result or Default
       if (detectedCode) {
-          // Ensure case-insensitive match against our supported countries
-          const matchedCountry = FALLBACK_COUNTRIES.find(c => c.code.toLowerCase() === detectedCode?.toLowerCase());
-          
-          if (matchedCountry) {
-              navigate(`/${matchedCountry.code.toLowerCase()}`, { replace: true });
-              return;
-          }
+        // Ensure case-insensitive match against our supported countries
+        const matchedCountry = FALLBACK_COUNTRIES.find(c => c.code.toLowerCase() === detectedCode?.toLowerCase());
+
+        if (matchedCountry) {
+          navigate(`/${matchedCountry.code.toLowerCase()}`, { replace: true });
+          return;
+        }
       }
 
       // 4. Default Fallback (Qatar) if nothing matched or failed
@@ -79,11 +79,10 @@ export const RootRedirect: React.FC = () => {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
-       <div className="text-center flex flex-col items-center">
-          <img src="/logo.png" alt="Mawater974" className="h-32 md:h-40 w-auto mb-8 animate-pulse drop-shadow-xl" />
-          <LoadingSpinner className="w-12 h-12" />
-          <p className="mt-4 text-gray-400 text-sm font-medium animate-pulse">{t('common.loading')}</p>
-       </div>
+      <div className="text-center flex flex-col items-center">
+        <img src="/logo.png" alt="Mawater974" className="h-32 md:h-40 w-auto mb-8 animate-pulse drop-shadow-xl" />
+        <LoadingSpinner className="w-12 h-12" />
+      </div>
     </div>
   );
 };

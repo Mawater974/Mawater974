@@ -24,7 +24,7 @@ export const CountryRedirect: React.FC = () => {
           navigate(`/${country.code.toLowerCase()}${location.pathname}${location.search}`, { replace: true });
           return;
         }
-      } 
+      }
 
       // 2. Check IP Address (For new users)
       try {
@@ -33,10 +33,10 @@ export const CountryRedirect: React.FC = () => {
         if (response.ok) {
           const data = await response.json();
           const detectedCode = data.country_code; // e.g. 'QA', 'AE'
-          
+
           // Check if we support this country
           const supportedCountry = FALLBACK_COUNTRIES.find(c => c.code.toLowerCase() === detectedCode?.toLowerCase());
-          
+
           if (supportedCountry) {
             targetCode = supportedCountry.code.toLowerCase();
           }
@@ -55,10 +55,9 @@ export const CountryRedirect: React.FC = () => {
 
   return (
     <div className="flex items-center justify-center min-h-[60vh]">
-       <div className="flex flex-col items-center gap-4">
-          <LoadingSpinner className="w-10 h-10" />
-          <p className="text-sm text-gray-400">{t('redirect.detecting')}</p>
-       </div>
+      <div className="flex flex-col items-center gap-4">
+        <LoadingSpinner className="w-10 h-10" />
+      </div>
     </div>
   );
 };

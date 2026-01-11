@@ -69,13 +69,12 @@ export const Layout: React.FC = () => {
           <div className="flex flex-col items-center animate-fade-in-up">
             <img src="/logo.png" alt="Mawater974" className="h-20 w-auto mb-6 animate-pulse" />
             <LoadingSpinner className="w-12 h-12" />
-            <p className="mt-4 text-gray-500 font-medium">{t('redirect.switching')}</p>
           </div>
         </div>
       )}
 
       {/* Main Navbar */}
-      <nav className="bg-white dark:bg-gray-900 shadow-lg sticky top-0 z-50 border-b border-gray-100 dark:border-gray-700 h-20">
+      <nav className="bg-white dark:bg-gray-800 shadow-lg sticky top-0 z-50 border-b border-gray-100 dark:border-gray-700 h-20">
         <div className="container mx-auto px-4 h-full">
           <div className="flex justify-between items-center h-full">
 
