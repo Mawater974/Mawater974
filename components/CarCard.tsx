@@ -100,7 +100,7 @@ export const CarCard: React.FC<CarCardProps> = ({
           {/* Featured Badge */}
           {car.is_featured && !isCompareMode && (
             <div className="absolute top-0 left-0 bg-primary-600 text-white text-[10px] font-bold px-2 py-1 rounded-br-lg z-20 flex items-center gap-1 shadow-sm">
-              <Star className="w-3 h-3 fill-current" /> FEATURED
+              <Star className="w-3 h-3 fill-current" /> {t('car.featured')}
             </div>
           )}
 

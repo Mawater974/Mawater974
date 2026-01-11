@@ -53,10 +53,45 @@ const App: React.FC = () => {
         <AuthProvider>
           <PageTracker />
           <Routes>
-            {/* Root Redirect Logic */}
-            <Route path="/" element={<RootRedirect />} />
-            
-            {/* Country Specific Routes */}
+            {/* 
+                We define routes twice: 
+                1. For root paths (default country) e.g., /cars
+                2. For country specific paths e.g., /qa/cars 
+                This allows clean URLs for the default country/global view 
+                while maintaining country-specific routing logic.
+            */}
+
+            {/* Standard Layout Routes */}
+            <Route path="/" element={<Layout />}>
+              <Route index element={<Home />} />
+              <Route path="cars" element={<CarsPage />} />
+              <Route path="cars/:id" element={<CarDetailsPage />} />
+              <Route path="parts" element={<SparePartsPage />} />
+              <Route path="parts/:id" element={<SparePartDetailsPage />} />
+              <Route path="dealers" element={<DealershipsPage />} />
+              <Route path="showrooms/:id" element={<ShowroomDetailsPage />} />
+              <Route path="services" element={<ServicesPage />} />
+              <Route path="rental" element={<CarRentalPage />} />
+              
+              <Route path="contact" element={<ContactPage />} />
+              <Route path="privacy" element={<PrivacyPage />} />
+              <Route path="terms" element={<TermsPage />} />
+              
+              <Route path="register-showroom" element={<RegisterShowroomPage />} />
+              <Route path="dealer-dashboard" element={<DealerDashboard />} />
+              
+              <Route path="login" element={<LoginPage />} />
+              <Route path="signup" element={<SignupPage />} />
+              <Route path="forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="update-password" element={<UpdatePasswordPage />} />
+              
+              <Route path="favorites" element={<FavoritesPage />} />
+              <Route path="my-ads" element={<MyAdsPage />} />
+              <Route path="profile" element={<ProfilePage />} />
+              <Route path="sell" element={<SellCarPage />} />
+            </Route>
+
+            {/* Country Specific Routes (Nested under :countryCode) */}
             <Route path="/:countryCode" element={<Layout />}>
               <Route index element={<Home />} />
               <Route path="cars" element={<CarsPage />} />
@@ -98,7 +133,6 @@ const App: React.FC = () => {
                <Route path="reports" element={<AdminReportsPage />} />
                <Route path="content" element={<AdminContentPage />} />
                
-               {/* New Pages */}
                <Route path="database" element={<AdminDatabasePage />} />
                <Route path="security" element={<AdminSecurityPage />} />
                <Route path="seo" element={<AdminSeoPage />} />
@@ -108,8 +142,8 @@ const App: React.FC = () => {
                <Route path="*" element={<div className="p-10 text-center text-gray-500 text-xl">Page Not Found</div>} />
             </Route>
             
-            {/* Catch all - Redirect to RootRedirect to handle Auth Tokens or 404s */}
-            <Route path="*" element={<RootRedirect />} />
+            {/* Catch all - Redirect to Home if unknown */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AuthProvider>
       </AppProvider>
