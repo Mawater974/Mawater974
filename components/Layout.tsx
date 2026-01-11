@@ -75,7 +75,7 @@ export const Layout: React.FC = () => {
       )}
 
       {/* Main Navbar */}
-      <nav className="bg-white dark:bg-gray-800 shadow-lg sticky top-0 z-50 border-b border-gray-100 dark:border-gray-700 h-20">
+      <nav className="bg-white dark:bg-gray-900 shadow-lg sticky top-0 z-50 border-b border-gray-100 dark:border-gray-700 h-20">
         <div className="container mx-auto px-4 h-full">
           <div className="flex justify-between items-center h-full">
 
