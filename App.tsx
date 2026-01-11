@@ -21,6 +21,7 @@ import { CarRentalPage } from './pages/CarRentalPage';
 import { PageTracker } from './components/PageTracker';
 import { ShowroomDetailsPage } from './pages/ShowroomDetailsPage';
 import { RootRedirect } from './components/RootRedirect';
+import { CountryRedirect } from './components/CountryRedirect';
 import { ContactPage } from './pages/ContactPage';
 import { RegisterShowroomPage } from './pages/RegisterShowroomPage';
 import { DealerDashboard } from './pages/dealer/DealerDashboard';
@@ -54,44 +55,42 @@ const App: React.FC = () => {
           <PageTracker />
           <Routes>
             {/* 
-                We define routes twice: 
-                1. For root paths (default country) e.g., /cars
-                2. For country specific paths e.g., /qa/cars 
-                This allows clean URLs for the default country/global view 
-                while maintaining country-specific routing logic.
+               ROOT PATHS: 
+               These paths (e.g. /cars) now act as Redirects to /qa/cars (or user's country).
+               This ensures consistent URL structure for SEO and User Experience.
             */}
-
-            {/* Standard Layout Routes */}
             <Route path="/" element={<Layout />}>
-              <Route index element={<Home />} />
-              <Route path="cars" element={<CarsPage />} />
-              <Route path="cars/:id" element={<CarDetailsPage />} />
-              <Route path="parts" element={<SparePartsPage />} />
-              <Route path="parts/:id" element={<SparePartDetailsPage />} />
-              <Route path="dealers" element={<DealershipsPage />} />
-              <Route path="showrooms/:id" element={<ShowroomDetailsPage />} />
-              <Route path="services" element={<ServicesPage />} />
-              <Route path="rental" element={<CarRentalPage />} />
+              <Route index element={<RootRedirect />} /> {/* / -> /qa */}
               
-              <Route path="contact" element={<ContactPage />} />
-              <Route path="privacy" element={<PrivacyPage />} />
-              <Route path="terms" element={<TermsPage />} />
+              {/* Public Pages -> Redirect to /:countryCode/... */}
+              <Route path="cars/*" element={<CountryRedirect />} />
+              <Route path="parts/*" element={<CountryRedirect />} />
+              <Route path="dealers/*" element={<CountryRedirect />} />
+              <Route path="showrooms/*" element={<CountryRedirect />} />
+              <Route path="services" element={<CountryRedirect />} />
+              <Route path="rental" element={<CountryRedirect />} />
+              <Route path="contact" element={<CountryRedirect />} />
+              <Route path="privacy" element={<CountryRedirect />} />
+              <Route path="terms" element={<CountryRedirect />} />
               
-              <Route path="register-showroom" element={<RegisterShowroomPage />} />
-              <Route path="dealer-dashboard" element={<DealerDashboard />} />
+              {/* Auth & User Pages -> Redirect */}
+              <Route path="login" element={<CountryRedirect />} />
+              <Route path="signup" element={<CountryRedirect />} />
+              <Route path="forgot-password" element={<CountryRedirect />} />
+              <Route path="update-password" element={<CountryRedirect />} />
+              <Route path="register-showroom" element={<CountryRedirect />} />
+              <Route path="dealer-dashboard" element={<CountryRedirect />} />
               
-              <Route path="login" element={<LoginPage />} />
-              <Route path="signup" element={<SignupPage />} />
-              <Route path="forgot-password" element={<ForgotPasswordPage />} />
-              <Route path="update-password" element={<UpdatePasswordPage />} />
-              
-              <Route path="favorites" element={<FavoritesPage />} />
-              <Route path="my-ads" element={<MyAdsPage />} />
-              <Route path="profile" element={<ProfilePage />} />
-              <Route path="sell" element={<SellCarPage />} />
+              <Route path="favorites" element={<CountryRedirect />} />
+              <Route path="my-ads" element={<CountryRedirect />} />
+              <Route path="profile" element={<CountryRedirect />} />
+              <Route path="sell" element={<CountryRedirect />} />
             </Route>
 
-            {/* Country Specific Routes (Nested under :countryCode) */}
+            {/* 
+               COUNTRY SPECIFIC ROUTES:
+               The actual content is rendered here.
+            */}
             <Route path="/:countryCode" element={<Layout />}>
               <Route index element={<Home />} />
               <Route path="cars" element={<CarsPage />} />
@@ -121,7 +120,7 @@ const App: React.FC = () => {
               <Route path="sell" element={<SellCarPage />} />
             </Route>
 
-            {/* Admin Routes */}
+            {/* Admin Routes (Global, no country prefix needed) */}
             <Route path="/admin" element={<AdminLayout />}>
                <Route index element={<AdminDashboard />} />
                <Route path="brands" element={<AdminBrandsPage />} />
