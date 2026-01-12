@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
-import { getBrands, getModels, getCountries, getCities, getAllUsers, createCar, updateCar, getDealershipByUserId, getOptimizedImageUrl, setMainImage } from '../services/dataService';
+import { getBrands, getModels, getCountries, getCities, getAllUsers, createCar, updateCar, getDealershipByUserId, getOptimizedImageUrl, setMainImage, getProfileByPhone, createGhostAccount } from '../services/dataService';
 import { Brand, Model, Country, City, Profile, Car, CarImage } from '../types';
 import { compressImage } from '../utils/imageOptimizer';
-import { Upload, Loader2, CheckCircle, UserCircle, ArrowLeft, ArrowRight, Image as ImageIcon, Trash2, Star } from 'lucide-react';
+import { Upload, Loader2, CheckCircle, UserCircle, ArrowLeft, ArrowRight, Image as ImageIcon, Trash2, Star, UserPlus, Search, Globe, Lock } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 
 // Options provided
@@ -70,6 +70,13 @@ export const CarForm: React.FC<CarFormProps> = ({ isAdmin = false, onSuccess, cu
   // Admin Specific
   const [targetUser, setTargetUser] = useState<Profile | null>(currentUser);
 
+  // Ghost User Mode State
+  const [isGhostMode, setIsGhostMode] = useState(false);
+  const [ghostName, setGhostName] = useState('');
+  const [ghostPhoneCode, setGhostPhoneCode] = useState('+974');
+  const [ghostPhoneNum, setGhostPhoneNum] = useState('');
+  const [ghostCountryId, setGhostCountryId] = useState<number | ''>('');
+
   // Unified Image State
   const [visualImages, setVisualImages] = useState<VisualImage[]>([]);
   const [deletedImageIds, setDeletedImageIds] = useState<string[]>([]); // Track deletions separately
@@ -90,11 +97,23 @@ export const CarForm: React.FC<CarFormProps> = ({ isAdmin = false, onSuccess, cu
       getAllUsers().then(setAllUsers);
     }
 
-    // Default country from App Context if not set
-    if (!selectedCountry && selectedCountryId && !initialData) {
-      setSelectedCountry(selectedCountryId);
+    // --- Country Selection Logic ---
+    if (!initialData) {
+      if (isAdmin) {
+        // Admins default to current context but can change
+        if (!selectedCountry && selectedCountryId) {
+          setSelectedCountry(selectedCountryId);
+        }
+      } else {
+        // Normal Users: Prefer Profile Country > Context Country
+        if (currentUser?.country_id) {
+          setSelectedCountry(currentUser.country_id);
+        } else if (!selectedCountry && selectedCountryId) {
+          setSelectedCountry(selectedCountryId);
+        }
+      }
     }
-  }, [isAdmin, selectedCountryId]);
+  }, [isAdmin, selectedCountryId, currentUser, initialData]);
 
   // Populate form if initialData exists (Edit Mode)
   useEffect(() => {
@@ -155,15 +174,21 @@ export const CarForm: React.FC<CarFormProps> = ({ isAdmin = false, onSuccess, cu
     }
   }, [selectedCountry]);
 
+  // Update ghost phone code when ghost country changes (Auto-detect from country list if available)
   useEffect(() => {
-    if (isAdmin && targetUser && !initialData) {
-      if (targetUser.country_id) {
-        setSelectedCountry(targetUser.country_id);
-      } else if (selectedCountryId) {
-        setSelectedCountry(selectedCountryId);
+    if (ghostCountryId && countries.length > 0) {
+      const c = countries.find(x => x.id === Number(ghostCountryId));
+      if (c && c.phone_code) {
+        setGhostPhoneCode(c.phone_code);
+      }
+    } else if (!ghostCountryId && selectedCountry && countries.length > 0) {
+      // Default to car country phone code if ghost country not set
+      const c = countries.find(x => x.id === Number(selectedCountry));
+      if (c && c.phone_code) {
+        setGhostPhoneCode(c.phone_code);
       }
     }
-  }, [targetUser, isAdmin, selectedCountryId, initialData]);
+  }, [ghostCountryId, selectedCountry, countries]);
 
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -236,7 +261,12 @@ export const CarForm: React.FC<CarFormProps> = ({ isAdmin = false, onSuccess, cu
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!targetUser) return alert('User is required');
+
+    // Validation
+    if (!isAdmin && !targetUser) return alert('User is required');
+    if (isAdmin && !isGhostMode && !targetUser) return alert('Please select a user to list for.');
+    if (isAdmin && isGhostMode && (!ghostName || !ghostPhoneNum)) return alert('Ghost user details required.');
+
     if (!selectedBrand || !selectedModel) return alert('Brand and Model required');
     if (!selectedCountry || !selectedCity) return alert('Location required');
     if (!year) return alert('Year is required');
@@ -253,14 +283,50 @@ export const CarForm: React.FC<CarFormProps> = ({ isAdmin = false, onSuccess, cu
 
     setUploading(true);
 
-    let dealershipId: number | undefined = undefined;
-    if (targetUser) {
-      const dealership = await getDealershipByUserId(targetUser.id);
-      if (dealership) {
-        dealershipId = dealership.id;
+    let finalUserId: string;
+
+    // 1. Resolve User ID (Admin Mode)
+    if (isAdmin && isGhostMode) {
+      // Construct full phone
+      const fullPhone = `${ghostPhoneCode}${ghostPhoneNum.replace(/\D/g, '')}`;
+
+      // Use Ghost Country dropdown IF selected, otherwise default to Car Location Country
+      const finalGhostCountryId = ghostCountryId || Number(selectedCountry);
+
+      // A. Check existing by phone
+      const existingProfile = await getProfileByPhone(fullPhone);
+
+      if (existingProfile) {
+        finalUserId = existingProfile.id;
+        console.log("Found existing user for offline seller:", existingProfile.full_name);
+      } else {
+        // B. Create new Ghost Account
+        const newId = await createGhostAccount(ghostName, fullPhone, finalGhostCountryId);
+        if (!newId) {
+          alert("Failed to create ghost account. Check phone number format or server logs.");
+          setUploading(false);
+          return;
+        }
+        finalUserId = newId;
+        console.log("Created new ghost user:", newId);
       }
+    } else {
+      // Regular User or Admin selecting existing
+      if (!targetUser) {
+        setUploading(false);
+        return;
+      }
+      finalUserId = targetUser.id;
     }
 
+    // 2. Resolve Dealership (if applicable for finalUser)
+    let dealershipId: number | undefined = undefined;
+    const dealership = await getDealershipByUserId(finalUserId);
+    if (dealership) {
+      dealershipId = dealership.id;
+    }
+
+    // 3. Prepare Data
     const carData: Partial<Car> = {
       brand_id: Number(selectedBrand),
       model_id: Number(selectedModel),
@@ -323,7 +389,7 @@ export const CarForm: React.FC<CarFormProps> = ({ isAdmin = false, onSuccess, cu
     } else {
       // Create Logic
       const filesToUpload = (visualImages.filter(img => img.type === 'new') as Extract<VisualImage, { type: 'new' }>[]).map(img => img.file);
-      success = await createCar(carData, filesToUpload, targetUser.id);
+      success = await createCar(carData, filesToUpload, finalUserId);
     }
 
     setUploading(false);
@@ -347,23 +413,118 @@ export const CarForm: React.FC<CarFormProps> = ({ isAdmin = false, onSuccess, cu
             List On Behalf Of
           </label>
 
-          <select
-            className={inputClass}
-            value={targetUser?.id || ''}
-            onChange={(e) => {
-              const userId = e.target.value;
-              const foundUser = allUsers.find(u => u.id === userId);
-              setTargetUser(foundUser || null);
-            }}
-            disabled={!!initialData} // Disable user change on edit
-          >
-            <option value="">Select a User / Showroom...</option>
-            {allUsers.map(user => (
-              <option key={user.id} value={user.id}>
-                {user.full_name} ({user.role}) - {user.email}
-              </option>
-            ))}
-          </select>
+          {!initialData ? (
+            <>
+              <div className="flex bg-white dark:bg-gray-800 rounded-lg p-1 mb-4 border border-gray-200 dark:border-gray-700">
+                <button
+                  type="button"
+                  onClick={() => setIsGhostMode(false)}
+                  className={`flex-1 py-2 text-sm font-bold rounded-md transition ${!isGhostMode ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                  <Search className="w-4 h-4 inline mr-1" /> Search Database
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsGhostMode(true)}
+                  className={`flex-1 py-2 text-sm font-bold rounded-md transition ${isGhostMode ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                  <UserPlus className="w-4 h-4 inline mr-1" /> Offline Seller
+                </button>
+              </div>
+
+              {!isGhostMode ? (
+                <select
+                  className={inputClass}
+                  value={targetUser?.id || ''}
+                  onChange={(e) => {
+                    const userId = e.target.value;
+                    const foundUser = allUsers.find(u => u.id === userId);
+                    setTargetUser(foundUser || null);
+                  }}
+                >
+                  <option value="">Select a Registered User...</option>
+                  {allUsers.map(user => (
+                    <option key={user.id} value={user.id}>
+                      {user.full_name} {user.is_ghost ? '(Offline Account)' : `(${user.role})`} - {user.email}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <div className="space-y-3 animate-fade-in">
+                  <div className="text-xs text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 p-2 rounded">
+                    <span className="font-bold">Note:</span> If phone number exists, ad will link to existing user. Otherwise, a placeholder account is created.
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 mb-1">Seller Name</label>
+                      <input
+                        type="text"
+                        className={inputClass}
+                        value={ghostName}
+                        onChange={(e) => setGhostName(e.target.value)}
+                        placeholder="e.g. Mohammed Ali"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 mb-1">Phone Number</label>
+                      <div className="flex gap-2">
+                        <select
+                          className="w-24 p-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm outline-none"
+                          value={ghostPhoneCode}
+                          onChange={(e) => setGhostPhoneCode(e.target.value)}
+                        >
+                          <option value="+974">+974 (QA)</option>
+                          <option value="+966">+966 (SA)</option>
+                          <option value="+971">+971 (AE)</option>
+                          <option value="+965">+965 (KW)</option>
+                          <option value="+973">+973 (BH)</option>
+                          <option value="+968">+968 (OM)</option>
+                          <option value="+962">+962 (JO)</option>
+                          <option value="+20">+20 (EG)</option>
+                        </select>
+                        <input
+                          type="tel"
+                          className={inputClass}
+                          value={ghostPhoneNum}
+                          onChange={(e) => setGhostPhoneNum(e.target.value)}
+                          placeholder="33334444"
+                        />
+                      </div>
+                    </div>
+                    {/* User Country Selector for Ghost Account */}
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 mb-1 flex items-center gap-1">
+                        <Globe className="w-3 h-3" /> Seller Country
+                      </label>
+                      <select
+                        className={inputClass}
+                        value={ghostCountryId}
+                        onChange={(e) => setGhostCountryId(Number(e.target.value))}
+                      >
+                        <option value="">Same as Car Location (Default)</option>
+                        {countries.map(c => (
+                          <option key={c.id} value={c.id}>
+                            {language === 'ar' ? c.name_ar : c.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            // Edit Mode: Show read-only user info
+            <div className="flex items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+              <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center font-bold text-xs">
+                {targetUser?.full_name?.[0] || 'U'}
+              </div>
+              <div>
+                <p className="text-sm font-bold dark:text-white">{targetUser?.full_name || 'Unknown User'}</p>
+                <p className="text-xs text-gray-500">{targetUser?.email}</p>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -512,18 +673,40 @@ export const CarForm: React.FC<CarFormProps> = ({ isAdmin = false, onSuccess, cu
         </div>
       </div>
 
-      <div>
-        <label className="block text-sm font-bold mb-1 text-gray-700 dark:text-gray-300">{t('form.city')} <span className="text-red-500">*</span></label>
-        <select
-          required
-          value={selectedCity}
-          onChange={e => setSelectedCity(Number(e.target.value))}
-          className={inputClass}
-          disabled={!selectedCountry}
-        >
-          <option value="">{selectedCountry ? `${t('form.select')} ${t('form.city')}` : 'Select Country First'}</option>
-          {cities.map(c => <option key={c.id} value={c.id}>{language === 'ar' ? c.name_ar : c.name}</option>)}
-        </select>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label className="block text-sm font-bold mb-1 text-gray-700 dark:text-gray-300">
+            {t('form.country')} <span className="text-red-500">*</span>
+          </label>
+          <select
+            required
+            value={selectedCountry}
+            onChange={e => setSelectedCountry(Number(e.target.value))}
+            className={`${inputClass} ${!isAdmin ? 'bg-gray-100 dark:bg-gray-800 cursor-not-allowed opacity-75' : ''}`}
+            disabled={!isAdmin}
+          >
+            <option value="">{t('form.select')} {t('form.country')}</option>
+            {countries.map(c => (
+              <option key={c.id} value={c.id}>{language === 'ar' ? c.name_ar : c.name}</option>
+            ))}
+          </select>
+          {!isAdmin && (
+            <p className="text-xs text-gray-500 mt-1 flex items-center gap-1"><Lock className="w-3 h-3" /> Locked to your profile location.</p>
+          )}
+        </div>
+        <div>
+          <label className="block text-sm font-bold mb-1 text-gray-700 dark:text-gray-300">{t('form.city')} <span className="text-red-500">*</span></label>
+          <select
+            required
+            value={selectedCity}
+            onChange={e => setSelectedCity(Number(e.target.value))}
+            className={inputClass}
+            disabled={!selectedCountry}
+          >
+            <option value="">{selectedCountry ? `${t('form.select')} ${t('form.city')}` : 'Select Country First'}</option>
+            {cities.map(c => <option key={c.id} value={c.id}>{language === 'ar' ? c.name_ar : c.name}</option>)}
+          </select>
+        </div>
       </div>
 
       <div>
@@ -655,7 +838,7 @@ export const CarForm: React.FC<CarFormProps> = ({ isAdmin = false, onSuccess, cu
 
       <button
         type="submit"
-        disabled={uploading || processingImages || (isAdmin && !targetUser) || !termsAccepted}
+        disabled={uploading || processingImages || (isAdmin && !isGhostMode && !targetUser) || !termsAccepted}
         className="w-full bg-primary-600 text-white font-bold py-3.5 rounded-xl hover:bg-primary-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
       >
         {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5" />}

@@ -58,7 +58,7 @@ export const getCarById = async (id: string): Promise<Car | null> => {
       brands (name, name_ar),
       models (name, name_ar),
       cities (name, name_ar),
-      countries (name, name_ar, currency_code),
+      countries (name, name_ar, currency_code, code),
       car_images (id, image_url, thumbnail_url, is_main),
       profiles (*)
     `)
@@ -82,7 +82,7 @@ export const getSimilarCars = async (currentId: number, brandId: number, country
           brands (name, name_ar),
           models (name, name_ar),
           cities (name, name_ar),
-          countries (name, name_ar, currency_code),
+          countries (name, name_ar, currency_code, code),
           car_images (image_url, thumbnail_url, is_main),
           profiles (*)
         `)
@@ -115,7 +115,7 @@ export const getFeaturedCars = async (countryId?: number | null): Promise<Car[]>
       brands (name, name_ar),
       models (name, name_ar),
       cities (name, name_ar),
-      countries (name, name_ar, currency_code),
+      countries (name, name_ar, currency_code, code),
       car_images (image_url, thumbnail_url, is_main)
     `)
         .eq('is_featured', true)
@@ -174,7 +174,7 @@ export const getCars = async (
       brands (name, name_ar),
       models (name, name_ar),
       cities (name, name_ar),
-      countries (name, name_ar, currency_code),
+      countries (name, name_ar, currency_code, code),
       car_images (image_url, thumbnail_url, is_main),
       profiles (*)
     `, { count: 'exact' });
@@ -280,7 +280,7 @@ export const getUserCars = async (userId: string): Promise<Car[]> => {
       brands (name, name_ar),
       models (name, name_ar),
       cities (name, name_ar),
-      countries (name, name_ar, currency_code),
+      countries (name, name_ar, currency_code, code),
       car_images (id, image_url, thumbnail_url, is_main)
     `)
         .eq('user_id', userId)
@@ -726,7 +726,7 @@ export const getDealershipCars = async (userId: string): Promise<Car[]> => {
             brands (name, name_ar),
             models (name, name_ar),
             cities (name, name_ar),
-            countries (name, name_ar, currency_code),
+            countries (name, name_ar, currency_code, code),
             car_images (image_url, thumbnail_url, is_main)
         `)
         .eq('user_id', userId)
@@ -804,11 +804,10 @@ export const createUserProfile = async (profile: Profile): Promise<boolean> => {
     const { id, ...updates } = profile;
     const { error } = await supabase
         .from('profiles')
-        .update(updates)
-        .eq('id', id);
+        .upsert({ id, ...updates }); // Changed update to upsert to handle both insert and update
 
     if (error) {
-        console.error("Profile update error", error);
+        console.error("Profile upsert error", error);
         return false;
     }
     return true;
@@ -1307,6 +1306,122 @@ export const setMainImage = async (carId: number, imageId: string | null) => {
     }
 };
 
+export const deleteCarPermanently = async (carId: number): Promise<boolean> => {
+    // 1. Get images to delete from storage
+    const { data: images } = await supabase
+        .from('car_images')
+        .select('image_url, thumbnail_url')
+        .eq('car_id', carId);
+
+    if (images && images.length > 0) {
+        const pathsToRemove: string[] = [];
+        const extractPath = (url: string) => {
+            if (!url) return null;
+            const parts = url.split('/car-images/');
+            return parts.length > 1 ? parts[1].split('?')[0] : null;
+        };
+
+        images.forEach(img => {
+            const mainPath = extractPath(img.image_url);
+            const thumbPath = extractPath(img.thumbnail_url);
+            if (mainPath) pathsToRemove.push(mainPath);
+            if (thumbPath) pathsToRemove.push(thumbPath);
+        });
+
+        if (pathsToRemove.length > 0) {
+            await supabase.storage.from('car-images').remove(pathsToRemove);
+        }
+    }
+
+    // 2. Delete from DB (Cascade should handle car_images, favorites, comments if foreign keys are set up correctly,
+    // otherwise we might need to delete them manually. Assuming standard Supabase FKs usually restrict or cascade.
+    // If we want to be safe, delete child records first)
+
+    // Explicitly deleting car_images first just in case
+    await supabase.from('car_images').delete().eq('car_id', carId);
+    await supabase.from('favorites').delete().eq('car_id', carId);
+    await supabase.from('comments').delete().eq('car_id', carId);
+
+    // Delete car
+    const { error } = await supabase.from('cars').delete().eq('id', carId);
+
+    if (error) {
+        console.error("Error deleting car permanently:", error);
+        return false;
+    }
+    return true;
+};
+
+export const deleteSparePartPermanently = async (partId: string): Promise<boolean> => {
+    // 1. Get images
+    const { data: images } = await supabase
+        .from('spare_part_images')
+        .select('url')
+        .eq('spare_part_id', partId);
+
+    if (images && images.length > 0) {
+        const pathsToRemove: string[] = [];
+        const extractPath = (url: string) => {
+            if (!url) return null;
+            if (url.includes('/spare-part-images/')) {
+                const parts = url.split('/spare-part-images/');
+                return parts.length > 1 ? parts[1].split('?')[0] : null;
+            }
+            if (url.includes('/spare-parts/')) {
+                const parts = url.split('/spare-parts/');
+                return parts.length > 1 ? parts[1].split('?')[0] : null;
+            }
+            if (url.includes('/spare-parts-images/')) {
+                const parts = url.split('/spare-parts-images/');
+                return parts.length > 1 ? parts[1].split('?')[0] : null;
+            }
+            return null;
+        };
+
+        images.forEach(img => {
+            const p = extractPath(img.url);
+            if (p) pathsToRemove.push(p);
+        });
+
+        if (pathsToRemove.length > 0) {
+            await supabase.storage.from('spare-part-images').remove(pathsToRemove);
+        }
+    }
+
+    // 2. Delete from DB
+    await supabase.from('spare_part_images').delete().eq('spare_part_id', partId);
+    await supabase.from('favorites').delete().eq('spare_part_id', partId);
+    await supabase.from('comments').delete().eq('spare_part_id', partId);
+
+    const { error } = await supabase.from('spare_parts').delete().eq('id', partId);
+
+    if (error) {
+        console.error("Error deleting spare part permanently:", error);
+        return false;
+    }
+    return true;
+};
+
+export const deleteCar = async (carId: number) => {
+    const { error } = await supabase.from('cars').update({ status: 'archived' }).eq('id', carId);
+    return !error;
+};
+
+export const deleteSparePart = async (partId: string) => {
+    const { error } = await supabase.from('spare_parts').update({ status: 'archived' }).eq('id', partId);
+    return !error;
+};
+
+export const updateCarStatus = async (carId: number, status: 'approved' | 'rejected' | 'pending' | 'sold' | 'archived') => {
+    const { error } = await supabase.from('cars').update({ status }).eq('id', carId);
+    return !error;
+};
+
+export const updateCarFeatured = async (carId: number, is_featured: boolean) => {
+    const { error } = await supabase.from('cars').update({ is_featured }).eq('id', carId);
+    return !error;
+};
+
 export const searchUsers = async (query: string): Promise<Profile[]> => {
     const { data, error } = await supabase
         .from('profiles')
@@ -1460,26 +1575,6 @@ export const getAdminStats = async () => {
     };
 };
 
-export const updateCarStatus = async (carId: number, status: 'approved' | 'rejected' | 'pending' | 'sold' | 'archived') => {
-    const { error } = await supabase.from('cars').update({ status }).eq('id', carId);
-    return !error;
-};
-
-export const updateCarFeatured = async (carId: number, is_featured: boolean) => {
-    const { error } = await supabase.from('cars').update({ is_featured }).eq('id', carId);
-    return !error;
-};
-
-export const deleteCar = async (carId: number) => {
-    const { error } = await supabase.from('cars').update({ status: 'archived' }).eq('id', carId);
-    return !error;
-};
-
-export const deleteSparePart = async (partId: string) => {
-    const { error } = await supabase.from('spare_parts').update({ status: 'archived' }).eq('id', partId);
-    return !error;
-};
-
 export const getAllUsers = async () => {
     const { data, error } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
     if (error) return [];
@@ -1571,4 +1666,81 @@ export const importDataJSON = async (jsonString: string) => {
         console.error("Import failed", e);
         return false;
     }
+};
+
+// Check if user already exists by phone (for admin ghost creation)
+export const getProfileByPhone = async (phone: string): Promise<Profile | null> => {
+    // Note: Phone format must match DB exactly (e.g. +97412345678)
+    const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('phone_number', phone)
+        .single();
+
+    if (error) return null;
+    return data as Profile;
+};
+
+// Create Ghost Account
+export const createGhostAccount = async (name: string, phone: string, countryId: number): Promise<string | null> => {
+    // Phone input comes as "+974123..." or just "974123..."
+    // We want the email to be "00974123...@mawater974.com"
+
+    // 1. Remove non-digits
+    const digits = phone.replace(/\D/g, '');
+    // e.g. "97412345678"
+
+    // 2. Prepend "00"
+    const emailPrefix = `00${digits}`;
+    // e.g. "0097412345678"
+
+    const email = `${emailPrefix}@mawater974.com`;
+
+    // Random Secure Password
+    const password = `Mawater-${Math.random().toString(36).slice(-8)}-${Date.now()}`;
+
+    // 2. Sign Up
+    // This logs the current user out if successful!
+    const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+            data: {
+                full_name: name,
+                country_id: countryId,
+                phone_number: phone // Keep original + format for auth metadata if supported by Supabase Auth validation
+            }
+        }
+    });
+
+    if (error) {
+        console.error("Ghost Account SignUp Error:", error);
+        return null;
+    }
+
+    if (data.user) {
+        // 3. Ensure Profile Exists
+        // NOTE: This upsert runs as the NEW ghost user (since signUp changed session).
+        // The RLS policy must allow 'update' on their own profile.
+        // We ensure we pass all required fields explicitly.
+
+        const { error: profileError } = await supabase.from('profiles').upsert({
+            id: data.user.id,
+            full_name: name,
+            email: email,
+            phone_number: phone,
+            country_id: countryId,
+            password_plain: password, // Requires RLS to allow user to write this column
+            role: 'normal_user',
+            is_ghost: true
+        });
+
+        if (profileError) {
+            console.error("Ghost Profile Upsert Error", profileError);
+        }
+
+        return data.user.id;
+    }
+
+    return null;
 };

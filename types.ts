@@ -181,6 +181,7 @@ export interface Profile {
   email?: string;
   phone_number?: string; // Matched DB column name
   password_plain?: string; // Storing plain password as requested
+  is_ghost?: boolean; // Flag for offline/ghost accounts created by admin
 }
 
 export interface Favorite {
