@@ -1,10 +1,9 @@
-
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
-import { getCarById, getOptimizedImageUrl, getSimilarCars } from '../services/dataService';
+import { getCarById, getOptimizedImageUrl, getSimilarCars, toggleFavorite, getFavorites } from '../services/dataService';
 import { Car } from '../types';
-import { MapPin, Calendar, Gauge, Fuel, Settings, Layers, User, Phone, ChevronLeft, ChevronRight, Tag, CheckCircle, MessageCircle, AlertCircle } from 'lucide-react';
+import { MapPin, Calendar, Gauge, Fuel, Settings, Layers, User, Phone, ChevronLeft, ChevronRight, Tag, CheckCircle, MessageCircle, AlertCircle, Heart } from 'lucide-react';
 import { ImageCarousel } from '../components/ImageCarousel';
 import { CommentSection } from '../components/CommentSection';
 import { LoadingSpinner } from '../components/LoadingSpinner';
@@ -12,15 +11,18 @@ import { ImageViewer } from '../components/ImageViewer';
 import { SimilarAdsCarousel } from '../components/SimilarAdsCarousel';
 import { parsePhoneNumber } from 'libphonenumber-js';
 import { SEO } from '../components/SEO';
+import { useAuth } from '../context/AuthContext';
 
 export const CarDetailsPage: React.FC = () => {
    const { id, countryCode } = useParams<{ id: string, countryCode: string }>();
    const { t, language, dir, currency } = useAppContext();
+   const { user } = useAuth();
    const [car, setCar] = useState<Car | null>(null);
    const [similarCars, setSimilarCars] = useState<Car[]>([]);
    const [loading, setLoading] = useState(true);
    const [activeImageIndex, setActiveImageIndex] = useState(0);
    const [isViewerOpen, setIsViewerOpen] = useState(false);
+   const [isFavorite, setIsFavorite] = useState(false);
 
    useEffect(() => {
       const fetchCar = async () => {
@@ -37,6 +39,24 @@ export const CarDetailsPage: React.FC = () => {
       };
       fetchCar();
    }, [id]);
+
+   useEffect(() => {
+      if (user && car) {
+         getFavorites(user.id).then(favs => {
+            const isFav = favs.some(f => f.car_id === car.id);
+            setIsFavorite(isFav);
+         });
+      }
+   }, [user, car]);
+
+   const handleToggleFavorite = async () => {
+      if (!user) {
+         alert(t('comments.login_prompt'));
+         return;
+      }
+      setIsFavorite(!isFavorite);
+      await toggleFavorite(user.id, car!.id, 'car');
+   };
 
    const formatPhone = (num: string | undefined) => {
       if (!num) return "";
@@ -130,12 +150,12 @@ export const CarDetailsPage: React.FC = () => {
 
                {/* Thumbnails */}
                {car.car_images && car.car_images.length > 1 && (
-                  <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600">
+                  <div className="flex gap-3 overflow-x-auto py-1 px-1 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600">
                      {car.car_images.map((img, idx) => (
                         <button
                            key={idx}
                            onClick={() => setActiveImageIndex(idx)}
-                           className={`flex-shrink-0 w-20 h-20 md:w-24 md:h-24 rounded-lg overflow-hidden border-2 transition relative ${activeImageIndex === idx ? 'border-primary-600 ring-2 ring-primary-600 ring-offset-1 dark:ring-offset-gray-900' : 'border-transparent opacity-70 hover:opacity-100'}`}
+                           className={`flex-shrink-0 w-20 h-20 md:w-24 md:h-24 rounded-lg overflow-hidden border-2 transition relative ${activeImageIndex === idx ? 'border-primary-600 ring-2 ring-primary-600 ring-offset-2 dark:ring-offset-gray-900' : 'border-transparent opacity-70 hover:opacity-100'}`}
                         >
                            <img
                               src={getOptimizedImageUrl(img.thumbnail_url || img.image_url, 150)}
@@ -151,16 +171,28 @@ export const CarDetailsPage: React.FC = () => {
             {/* 2. Key Info & CTA (Placed here to appear 2nd on mobile, Right side on Desktop) */}
             <div className="lg:col-span-1 lg:row-span-2 space-y-6">
                <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 sticky top-24">
-                  <div className="mb-2">
-                     <h1 className="text-3xl font-bold dark:text-white">
-                        {brandName} {modelName}
+                  <div className="mb-2 flex justify-between items-start gap-4">
+                     <div>
+                        <h1 className="text-3xl font-bold dark:text-white">
+                           {brandName} {modelName}
+                        </h1>
                         {car.exact_model && <span className="block text-xl font-normal text-gray-500 mt-1">{car.exact_model}</span>}
-                     </h1>
-                     <p className="text-gray-500 flex items-center gap-1 mt-2">
-                        <MapPin className="w-4 h-4" />
-                        {cityName}, {countryName}
-                     </p>
+                     </div>
+                     <button
+                        onClick={handleToggleFavorite}
+                        className={`p-2.5 rounded-full border transition-all flex-shrink-0 ${isFavorite
+                              ? 'bg-red-50 border-red-100 text-red-500'
+                              : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-400 hover:text-red-500 hover:border-red-100'
+                           }`}
+                        title={isFavorite ? "Remove from Favorites" : "Add to Favorites"}
+                     >
+                        <Heart className={`w-6 h-6 ${isFavorite ? 'fill-current' : ''}`} />
+                     </button>
                   </div>
+                  <p className="text-gray-500 flex items-center gap-1 mt-2">
+                     <MapPin className="w-4 h-4" />
+                     {cityName}, {countryName}
+                  </p>
 
                   <div className="my-6">
                      <span className="text-4xl font-bold text-primary-600">{car.price.toLocaleString()}</span>

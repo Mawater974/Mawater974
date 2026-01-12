@@ -1,21 +1,25 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { SparePart, Language } from '../types';
-import { Tag, MapPin, User } from 'lucide-react';
+import { Tag, MapPin, Heart } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
-import { getOptimizedImageUrl } from '../services/dataService';
+import { getOptimizedImageUrl, toggleFavorite } from '../services/dataService';
 import { Link, useParams } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 interface Props {
   part: SparePart;
   language: Language;
   t: (key: string) => string;
+  isFavorite?: boolean;
   actions?: React.ReactNode;
 }
 
-export const SparePartCard: React.FC<Props> = ({ part, language, t, actions }) => {
+export const SparePartCard: React.FC<Props> = ({ part, language, t, isFavorite = false, actions }) => {
+  const { user } = useAuth();
   const { currency: globalCurrency } = useAppContext();
   const { countryCode } = useParams<{ countryCode: string }>();
+  const [favorited, setFavorited] = useState(isFavorite);
 
   // Find primary image or fallback
   const primaryImage = part.spare_part_images?.find(img => img.is_primary) || part.spare_part_images?.[0];
@@ -27,10 +31,18 @@ export const SparePartCard: React.FC<Props> = ({ part, language, t, actions }) =
 
   const displayCurrency = part.countries?.currency_code || part.currency || globalCurrency || 'QAR';
 
+  const handleFavorite = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!user) return;
+    setFavorited(!favorited);
+    await toggleFavorite(user.id, part.id, 'part');
+  };
+
   return (
     <Link
       to={`/${countryCode}/parts/${part.id}`}
-      className="group bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-gray-100 dark:border-gray-700 flex flex-col h-full overflow-hidden"
+      className="group bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-gray-100 dark:border-gray-700 flex flex-col h-full overflow-hidden relative"
     >
       <div className="h-48 w-full overflow-hidden bg-gray-100 dark:bg-gray-700 relative">
         <img
@@ -41,27 +53,31 @@ export const SparePartCard: React.FC<Props> = ({ part, language, t, actions }) =
         />
 
         {/* Badges */}
-        <div className="absolute top-2 left-2 flex gap-1 flex-wrap">
+        <div className="absolute top-2 left-2 flex gap-1 flex-wrap z-10">
           <span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${part.part_type === 'original'
             ? 'bg-blue-600 text-white'
             : 'bg-orange-500 text-white'
             }`}>
             {part.part_type === 'original' ? t('part.original') : t('part.aftermarket')}
           </span>
-          {/* <span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${
-                part.condition === 'new' 
-                ? 'bg-green-500 text-white' 
-                : 'bg-gray-600 text-white'
-            }`}>
-                {t(`condition.${part.condition}`)}
-            </span> */}
         </div>
 
         {part.is_negotiable && (
-          <span className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-sm text-white text-[10px] px-2 py-1 rounded font-medium">
+          <span className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-sm text-white text-[10px] px-2 py-1 rounded font-medium z-10">
             {t('parts.negotiable_badge')}
           </span>
         )}
+
+        {/* Favorite Button Overlay */}
+        <div className="absolute top-2 right-2 z-20">
+          <button
+            onClick={handleFavorite}
+            className={`p-1.5 rounded-full backdrop-blur-sm shadow-sm transition ${favorited ? 'bg-red-50 text-red-500' : 'bg-white/90 text-gray-400 hover:text-red-500'}`}
+            title="Add to Favorites"
+          >
+            <Heart className={`w-4 h-4 ${favorited ? 'fill-current' : ''}`} />
+          </button>
+        </div>
       </div>
 
       <div className="p-4 flex flex-col flex-grow">

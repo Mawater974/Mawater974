@@ -45,7 +45,7 @@ export interface Car {
   mileage: number;
   description?: string;
   exact_model?: string;
-  
+
   // Specs - Made optional
   color?: string;
   fuel_type?: string;
@@ -56,13 +56,14 @@ export interface Car {
   doors?: string;
   drive_type?: string;
   warranty?: string;
-  
+
   is_featured: boolean;
-  status?: 'approved' | 'pending' | 'sold' | 'rejected' | 'archived'; 
+  status?: 'approved' | 'pending' | 'sold' | 'rejected' | 'archived';
   city_id?: number;
   country_id?: number;
   views_count?: number;
-  
+  favorite_count?: number;
+
   // Relations
   brands?: Brand;
   models?: Model;
@@ -97,22 +98,24 @@ export interface SparePart {
   description?: string;
   price: number;
   currency: string;
-  
+
   brand_id?: number;
   model_id?: number;
   category_id?: number;
   city_id?: number;
   country_id?: number; // Changed from country_code
-  
+
   condition: 'new' | 'used' | 'refurbished';
   part_type: 'original' | 'aftermarket';
   is_negotiable: boolean;
-  
+
   // Removed contact_phone and contact_email as per request
-  
+
   is_featured: boolean;
   status?: 'approved' | 'pending' | 'rejected' | 'archived';
-  
+  favorite_count?: number;
+  views_count?: number;
+
   // Relations
   brands?: Brand;
   models?: Model;
@@ -141,14 +144,14 @@ export interface Dealership {
   city_id?: number;
   opening_hours?: string;
   opening_hours_ar?: string;
-  
+
   // New Fields
   contact_number_1?: string;
   contact_number_2?: string;
   contact_number_3?: string;
   email?: string;
   website?: string;
-  
+
   // Relations
   cities?: City;
   countries?: Country;
@@ -172,10 +175,10 @@ export interface Profile {
   full_name: string;
   avatar_url?: string;
   // Strictly matched DB enum: 'normal_user' instead of 'user'
-  role?: 'normal_user' | 'admin' | 'dealer'; 
-  country_id?: number; 
+  role?: 'normal_user' | 'admin' | 'dealer';
+  country_id?: number;
   created_at?: string;
-  email?: string; 
+  email?: string;
   phone_number?: string; // Matched DB column name
   password_plain?: string; // Storing plain password as requested
 }

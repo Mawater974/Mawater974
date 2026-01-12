@@ -1,4 +1,3 @@
-
 import { supabase } from '../supabaseClient';
 import { Car, SparePart, Dealership, Brand, Country, Profile, Favorite, Model, City, Comment, ContactMessage, SparePartCategory } from '../types';
 import { compressImage } from '../utils/imageOptimizer';
@@ -159,7 +158,7 @@ export interface CarFilters {
     fuelType?: string;
     gearboxType?: string;
     condition?: string;
-    ignoreFeatured?: boolean; // New Flag to disable featured sorting priority
+    ignoreFeatured?: boolean;
 }
 
 export const getCars = async (
@@ -315,7 +314,6 @@ export const getUserSpareParts = async (userId: string): Promise<SparePart[]> =>
     return data as any[];
 };
 
-// ... Rest of the file unchanged
 export const getBrands = async (): Promise<Brand[]> => {
     const { data, error } = await supabase.from('brands').select('*').order('name', { ascending: true });
     if (error) return [];
@@ -376,7 +374,19 @@ export const getSparePartCategories = async (): Promise<SparePartCategory[]> => 
     return data as SparePartCategory[];
 };
 
-export const getSpareParts = async (search?: string): Promise<SparePart[]> => {
+export interface SparePartFilters {
+    searchQuery?: string;
+    brandId?: number | null;
+    modelId?: number | null;
+    categoryId?: number | null;
+    countryId?: number | null;
+    minPrice?: number;
+    maxPrice?: number;
+    condition?: string;
+    partType?: string;
+}
+
+export const getSpareParts = async (filters: SparePartFilters = {}): Promise<SparePart[]> => {
     let query = supabase
         .from('spare_parts')
         .select(`
@@ -390,30 +400,67 @@ export const getSpareParts = async (search?: string): Promise<SparePart[]> => {
       profiles (*)
     `)
         .eq('status', 'approved')
+        .order('is_featured', { ascending: false })
         .order('created_at', { ascending: false });
 
-    if (search) {
-        const q = search.trim();
-        const [{ data: brandHits }, { data: modelHits }] = await Promise.all([
-            supabase.from('brands').select('id').or(`name.ilike.%${q}%,name_ar.ilike.%${q}%`),
-            supabase.from('models').select('id').or(`name.ilike.%${q}%,name_ar.ilike.%${q}%`)
-        ]);
+    if (filters.countryId) {
+        query = query.eq('country_id', filters.countryId);
+    }
 
-        const brandIds = brandHits?.map(b => b.id).join(',');
-        const modelIds = modelHits?.map(m => m.id).join(',');
+    if (filters.categoryId) {
+        query = query.eq('category_id', filters.categoryId);
+    }
 
-        let orParts = [
+    if (filters.brandId) {
+        query = query.eq('brand_id', filters.brandId);
+    }
+
+    if (filters.modelId) {
+        query = query.eq('model_id', filters.modelId);
+    }
+
+    if (filters.minPrice) {
+        query = query.gte('price', filters.minPrice);
+    }
+
+    if (filters.maxPrice) {
+        query = query.lte('price', filters.maxPrice);
+    }
+
+    if (filters.condition) {
+        query = query.eq('condition', filters.condition);
+    }
+
+    if (filters.partType) {
+        query = query.eq('part_type', filters.partType);
+    }
+
+    if (filters.searchQuery) {
+        const q = filters.searchQuery.trim();
+        // Search in title, description
+        // Also try to find matching brands/models if not already filtered
+        let orConditions = [
             `title.ilike.%${q}%`,
             `description.ilike.%${q}%`
         ];
 
-        if (brandIds && brandIds.length > 0) orParts.push(`brand_id.in.(${brandIds})`);
-        if (modelIds && modelIds.length > 0) orParts.push(`model_id.in.(${modelIds})`);
+        if (!filters.brandId && !filters.modelId) {
+            const [{ data: brandHits }, { data: modelHits }] = await Promise.all([
+                supabase.from('brands').select('id').or(`name.ilike.%${q}%,name_ar.ilike.%${q}%`),
+                supabase.from('models').select('id').or(`name.ilike.%${q}%,name_ar.ilike.%${q}%`)
+            ]);
 
-        query = query.or(orParts.join(','));
+            const brandIds = brandHits?.map(b => b.id).join(',');
+            const modelIds = modelHits?.map(m => m.id).join(',');
+
+            if (brandIds && brandIds.length > 0) orConditions.push(`brand_id.in.(${brandIds})`);
+            if (modelIds && modelIds.length > 0) orConditions.push(`model_id.in.(${modelIds})`);
+        }
+
+        query = query.or(orConditions.join(','));
     }
 
-    const { data, error } = await query.limit(20);
+    const { data, error } = await query.limit(50);
 
     if (error) {
         console.error('Error fetching spare parts:', error);
@@ -495,7 +542,7 @@ export const getDealerships = async (
     type: string = 'showroom',
     countryId?: number | null,
     sortBy: DealerSortOption = 'featured',
-    status: string = 'approved' // Default to approved, but allows 'all'
+    status: string = 'approved'
 ): Promise<Dealership[]> => {
     let query = supabase.from('dealerships').select(`
     *,
@@ -552,7 +599,6 @@ export const getDealershipById = async (id: number): Promise<Dealership | null> 
     return data as any;
 };
 
-// NEW FUNCTION to find dealership by user_id
 export const getDealershipByUserId = async (userId: string): Promise<Dealership | null> => {
     const { data, error } = await supabase
         .from('dealerships')
@@ -616,23 +662,19 @@ export const updateDealerStatus = async (dealerId: number, status: 'approved' | 
 
         if (fetchError) {
             console.error("Error fetching user profile for role sync", fetchError);
-            return true; // Return true because dealership status was updated successfully at least
+            return true;
         }
 
-        // If user is Admin, do not change their role regardless of dealership status
         if (currentProfile?.role === 'admin') {
             return true;
         }
 
-        // Determine new role based on dealership status
-        // Use 'normal_user' as the base role based on DB schema default
         let newRole = 'normal_user';
 
         if (status === 'approved') {
             newRole = 'dealer';
         }
 
-        // Only perform update if the role is actually changing
         if (currentProfile?.role !== newRole) {
             const { error: profileError } = await supabase
                 .from('profiles')
@@ -641,7 +683,6 @@ export const updateDealerStatus = async (dealerId: number, status: 'approved' | 
 
             if (profileError) {
                 console.error("Error syncing user role:", profileError);
-                // Alert visible to the admin triggering this action
                 alert(`Dealership status updated to '${status}', but failed to update User Role to '${newRole}'. \n\nPossible reasons:\n1. 'normal_user' or 'dealer' is not in the 'user_role' ENUM.\n2. RLS Policies prevent you from updating other users.\n3. Check console for details.`);
             } else {
                 console.log(`User ${dealer.user_id} role updated to ${newRole}`);
@@ -689,7 +730,7 @@ export const getDealershipCars = async (userId: string): Promise<Car[]> => {
             car_images (image_url, thumbnail_url, is_main)
         `)
         .eq('user_id', userId)
-        .neq('status', 'archived') // Returns pending, rejected, approved, and sold. Only archived are hidden.
+        .neq('status', 'archived')
         .order('is_featured', { ascending: false })
         .order('created_at', { ascending: false });
 
@@ -811,22 +852,26 @@ export const getFavorites = async (userId: string): Promise<Favorite[]> => {
 };
 
 export const toggleFavorite = async (userId: string, entityId: number | string, type: 'car' | 'part'): Promise<boolean> => {
+    const numericEntityId = type === 'car' ? parseInt(String(entityId), 10) : entityId;
+
     let query = supabase.from('favorites').select('id').eq('user_id', userId);
 
     if (type === 'car') {
-        query = query.eq('car_id', entityId);
+        query = query.eq('car_id', numericEntityId);
     } else {
         query = query.eq('spare_part_id', entityId);
     }
 
-    const { data } = await query.single();
+    const { data } = await query.maybeSingle();
 
     if (data) {
+        // Remove favorite
         const { error } = await supabase.from('favorites').delete().eq('id', data.id);
         return !error;
     } else {
+        // Add favorite
         const payload: any = { user_id: userId };
-        if (type === 'car') payload.car_id = entityId;
+        if (type === 'car') payload.car_id = numericEntityId;
         else payload.spare_part_id = entityId;
 
         const { error } = await supabase.from('favorites').insert([payload]);
@@ -1008,14 +1053,13 @@ export const createSparePart = async (partData: Partial<SparePart>, images: File
     return true;
 };
 
-// UPDATE CAR FUNCTION
 export const updateCar = async (
     carId: number,
     updates: Partial<Car>,
     newImages: File[],
     deletedImageIds: string[],
-    existingImageIdsInOrder: string[], // New param to handle ordering
-    isAdmin: boolean = false // Param to check role for status logic
+    existingImageIdsInOrder: string[],
+    isAdmin: boolean = false
 ): Promise<boolean> => {
 
     // 0. Set status to pending if not admin
@@ -1234,7 +1278,6 @@ export const updateSparePart = async (
     return true;
 };
 
-// Helper to set primary image for parts
 export const setPrimarySparePartImage = async (partId: string, imageId: string | null) => {
     // Reset all
     await supabase.from('spare_part_images').update({ is_primary: false }).eq('spare_part_id', partId);
@@ -1249,7 +1292,6 @@ export const setPrimarySparePartImage = async (partId: string, imageId: string |
     }
 };
 
-// Helper for UI to call specific Main Image update
 export const setMainImage = async (carId: number, imageId: string | null) => {
     // Reset all
     await supabase.from('car_images').update({ is_main: false }).eq('car_id', carId);
@@ -1293,22 +1335,30 @@ export const trackPageView = async (
         if (path === '/' || path === '' || isCountryHome) {
             pageType = 'home';
         } else if (path.includes('/cars')) {
-            const parts = path.split('/');
-            // Check if last part or second to last is a number (id)
-            // Example: /qa/cars/123 or /qa/cars
+            const parts = path.split('/').filter(p => p !== ''); // Filter empty strings from trailing slashes
             const possibleId = parts[parts.length - 1];
-            if (!isNaN(Number(possibleId)) && possibleId !== '') {
+            // Ensure ID is a valid integer string for cars
+            if (!isNaN(parseInt(possibleId)) && possibleId.length < 10) { // Simple check to distinguish from UUIDs if mixed
                 pageType = 'car_detail';
                 entityId = possibleId;
             } else {
                 pageType = 'cars_list';
             }
-        } else if (path.includes('/parts')) pageType = 'parts_list';
-        else if (path.includes('/dealers') || path.includes('/showrooms')) {
+        } else if (path.includes('/parts')) {
+            const parts = path.split('/').filter(p => p !== '');
+            const possibleId = parts[parts.length - 1];
+            // Parts use UUIDs, check length
+            if (possibleId && possibleId.length > 20) {
+                pageType = 'part_detail';
+                entityId = possibleId;
+            } else {
+                pageType = 'parts_list';
+            }
+        } else if (path.includes('/dealers') || path.includes('/showrooms')) {
             if (path.includes('/showrooms/')) {
-                const parts = path.split('/');
+                const parts = path.split('/').filter(p => p !== '');
                 const possibleId = parts[parts.length - 1];
-                if (!isNaN(Number(possibleId))) {
+                if (!isNaN(parseInt(possibleId))) {
                     pageType = 'showroom_detail';
                     entityId = possibleId;
                 }
@@ -1321,6 +1371,10 @@ export const trackPageView = async (
         else if (path.includes('/login')) pageType = 'login';
         else if (path.includes('/signup')) pageType = 'signup';
         else if (path.includes('/sell')) pageType = 'sell';
+
+        // Update View Counts
+        // NOTE: We no longer manually update `views_count` on the entities.
+        // We rely on database triggers on the `user_page_views1` table to increment the counter.
 
         let sessionId = localStorage.getItem('mawater_session_id');
         if (!sessionId) {
@@ -1368,20 +1422,25 @@ export const trackPageView = async (
         }
 
         // Insert into user_page_views1
-        await supabase.from('user_page_views1').insert({
+        const { error } = await supabase.from('user_page_views1').insert({
             session_id: sessionId,
             user_id: userId || null,
             page_path: path,
             page_type: pageType,
             entity_id: entityId,
-            country_code: countryCode, // From App Context (URL/Selection)
-            real_country_name: realCountry || null, // From IP Detection
-            referrer: window.location.href, // Save the full current URL as requested
+            country_code: countryCode,
+            real_country_name: realCountry || null,
+            referrer: window.location.href,
             user_agent: navigator.userAgent,
             is_authenticated: !!userId,
             ip_address: ipAddress || null,
             city: city || null
         });
+
+        if (error) {
+            console.error("Page View Insert Error:", error);
+        }
+
     } catch (e) {
         console.error("Failed to track page view", e);
     }

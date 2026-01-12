@@ -1,24 +1,26 @@
-
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
-import { getSparePartById, getSimilarSpareParts, getOptimizedImageUrl } from '../services/dataService';
+import { getSparePartById, getSimilarSpareParts, getOptimizedImageUrl, toggleFavorite, getFavorites } from '../services/dataService';
 import { SparePart } from '../types';
-import { MapPin, Calendar, Tag, CheckCircle, ChevronLeft, ChevronRight, Phone, MessageCircle, User, AlertCircle } from 'lucide-react';
+import { MapPin, Calendar, Tag, CheckCircle, ChevronLeft, ChevronRight, Phone, MessageCircle, User, AlertCircle, Heart } from 'lucide-react';
 import { ImageCarousel } from '../components/ImageCarousel';
 import { CommentSection } from '../components/CommentSection';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { SimilarAdsCarousel } from '../components/SimilarAdsCarousel';
 import { SEO } from '../components/SEO';
 import { parsePhoneNumber } from 'libphonenumber-js';
+import { useAuth } from '../context/AuthContext';
 
 export const SparePartDetailsPage: React.FC = () => {
     const { id, countryCode } = useParams<{ id: string, countryCode: string }>();
     const { t, language, dir, currency } = useAppContext();
+    const { user } = useAuth();
     const [part, setPart] = useState<SparePart | null>(null);
     const [similarParts, setSimilarParts] = useState<SparePart[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeImageIndex, setActiveImageIndex] = useState(0);
+    const [isFavorite, setIsFavorite] = useState(false);
 
     useEffect(() => {
         const fetchPart = async () => {
@@ -35,6 +37,24 @@ export const SparePartDetailsPage: React.FC = () => {
         };
         fetchPart();
     }, [id]);
+
+    useEffect(() => {
+        if (user && part) {
+            getFavorites(user.id).then(favs => {
+                const isFav = favs.some(f => f.spare_part_id === part.id);
+                setIsFavorite(isFav);
+            });
+        }
+    }, [user, part]);
+
+    const handleToggleFavorite = async () => {
+        if (!user) {
+            alert(t('comments.login_prompt'));
+            return;
+        }
+        setIsFavorite(!isFavorite);
+        await toggleFavorite(user.id, part!.id, 'part');
+    };
 
     const formatPhone = (num: string | undefined) => {
         if (!num) return "";
@@ -165,15 +185,25 @@ export const SparePartDetailsPage: React.FC = () => {
                 {/* Right Column: Key Info & CTA */}
                 <div className="lg:col-span-1 lg:row-span-2 space-y-6">
                     <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 sticky top-24">
-                        <div className="mb-2">
+                        <div className="mb-2 flex justify-between items-start gap-4">
                             <h1 className="text-2xl font-bold dark:text-white leading-tight">
                                 {part.title}
                             </h1>
-                            <p className="text-gray-500 flex items-center gap-1 mt-2">
-                                <MapPin className="w-4 h-4" />
-                                {cityName}, {countryName}
-                            </p>
+                            <button
+                                onClick={handleToggleFavorite}
+                                className={`p-2.5 rounded-full border transition-all flex-shrink-0 ${isFavorite
+                                        ? 'bg-red-50 border-red-100 text-red-500'
+                                        : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-400 hover:text-red-500 hover:border-red-100'
+                                    }`}
+                                title={isFavorite ? "Remove from Favorites" : "Add to Favorites"}
+                            >
+                                <Heart className={`w-6 h-6 ${isFavorite ? 'fill-current' : ''}`} />
+                            </button>
                         </div>
+                        <p className="text-gray-500 flex items-center gap-1 mt-2">
+                            <MapPin className="w-4 h-4" />
+                            {cityName}, {countryName}
+                        </p>
 
                         <div className="my-6 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
                             <p className="text-sm text-gray-500 mb-1">{t('common.price')}</p>
