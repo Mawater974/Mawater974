@@ -69,6 +69,8 @@ export default async function handler(req: Request) {
       <meta property="og:title" content="${title}">
       <meta property="og:description" content="${description}">
       <meta property="og:image" content="${imageUrl}">
+      <meta property="og:image:width" content="1200">
+      <meta property="og:image:height" content="630">
       <meta property="og:url" content="https://mawater974.com${originalPath}">
       
       <!-- Twitter -->
