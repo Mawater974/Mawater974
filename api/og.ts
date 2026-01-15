@@ -14,8 +14,8 @@ export default async function handler(req: Request) {
     const supabaseKey = process.env.SUPABASE_ANON_KEY;
 
     let title = "Mawater974 - Premium Marketplace";
-    let description = "Buy and sell cars and spare parts in Qatar.";
-    let imageUrl = "https://mawater974.com/logo.png";
+    let description = "Buy and sell cars and spare parts.";
+    let imageUrl = "https://mawater974.com/og-image.png";
 
     try {
         if (type === 'car') {
