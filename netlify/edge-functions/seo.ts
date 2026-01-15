@@ -70,6 +70,7 @@ export default async (request: Request, context: any) => {
         <html lang="en">
         <head>
           <meta charset="UTF-8">
+          <meta property="fb:app_id" content="966242223397117">
           <meta property="og:image" content="${optimizedImageUrl}">
           <meta property="og:image:width" content="600">
           <meta property="og:image:height" content="315">
