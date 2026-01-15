@@ -19,9 +19,10 @@ export default async function handler(req: Request) {
 
     try {
         if (type === 'car') {
-            // Fetch car with brand/model names
+            // Fetch car with brand/model names and only the main image
+            // We use a join with a filter on the nested table
             const res = await fetch(
-                `${supabaseUrl}/rest/v1/cars?id=eq.${id}&select=year,price,description,brands(name,name_ar),models(name,name_ar),car_images(image_url)`,
+                `${supabaseUrl}/rest/v1/cars?id=eq.${id}&select=year,price,description,brands(name,name_ar),models(name,name_ar),car_images(image_url,is_main),countries(currency_code)`,
                 { headers: { apikey: supabaseKey!, Authorization: `Bearer ${supabaseKey}` } }
             );
             const data = await res.json();
@@ -29,26 +30,29 @@ export default async function handler(req: Request) {
                 const car = data[0];
                 const brand = car.brands?.name || '';
                 const model = car.models?.name || '';
+                const currency = car.countries?.currency_code || 'QAR';
+
                 title = `${brand} ${model} ${car.year} | Mawater974`;
-                description = car.description?.substring(0, 160) || `Price: ${car.price} QAR. View details on Mawater974.`;
-                if (car.car_images && car.car_images[0]) {
-                    imageUrl = car.car_images[0].image_url;
-                }
+                description = `Price: ${car.price.toLocaleString()} ${currency}. ${car.description?.substring(0, 100) || 'View details on Mawater974.'}`;
+
+                // Find main image or fallback to first
+                const mainImg = car.car_images?.find((img: any) => img.is_main) || car.car_images?.[0];
+                if (mainImg) imageUrl = mainImg.image_url;
             }
         } else {
-            // Fetch spare part
+            // Fetch spare part with category and primary image
             const res = await fetch(
-                `${supabaseUrl}/rest/v1/spare_parts?id=eq.${id}&select=title,price,description,spare_part_images(url)`,
+                `${supabaseUrl}/rest/v1/spare_parts?id=eq.${id}&select=title,price,currency,description,spare_part_images(url,is_primary)`,
                 { headers: { apikey: supabaseKey!, Authorization: `Bearer ${supabaseKey}` } }
             );
             const data = await res.json();
             if (data && data[0]) {
                 const part = data[0];
-                title = `${part.title} | Spare Parts | Mawater974`;
-                description = part.description?.substring(0, 160) || `Price: ${part.price}. View details on Mawater974.`;
-                if (part.spare_part_images && part.spare_part_images[0]) {
-                    imageUrl = part.spare_part_images[0].url;
-                }
+                title = `${part.title} | Mawater974`;
+                description = `Price: ${part.price.toLocaleString()} ${part.currency}. ${part.description?.substring(0, 100) || 'View details on Mawater974.'}`;
+
+                const mainImg = part.spare_part_images?.find((img: any) => img.is_primary) || part.spare_part_images?.[0];
+                if (mainImg) imageUrl = mainImg.url;
             }
         }
     } catch (e) {
