@@ -69,6 +69,7 @@ export default async function handler(req: Request) {
       <meta name="description" content="${description}">
       
       <!-- Open Graph -->
+      <meta property="fb:app_id" content="966242223397117">
       <meta property="og:type" content="article">
       <meta property="og:title" content="${title}">
       <meta property="og:description" content="${description}">
