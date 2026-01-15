@@ -20,10 +20,7 @@ export default async (request: Request, context: any) => {
             const supabaseUrl = Deno.env.get("SUPABASE_URL");
             const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY");
 
-            if (!supabaseUrl || !supabaseKey) {
-                console.error("Missing Supabase Env Vars in Netlify");
-                return; // Fallback to normal request
-            }
+            if (!supabaseUrl || !supabaseKey) return;
 
             let title = "Mawater974 - Premium Marketplace";
             let description = "Buy and sell cars and spare parts.";
@@ -42,7 +39,7 @@ export default async (request: Request, context: any) => {
                         const model = car.models?.name || '';
                         const currency = car.countries?.currency_code || 'QAR';
                         title = `${brand} ${model} ${car.year} | Mawater974`;
-                        description = `Price: ${car.price.toLocaleString()} ${currency}. ${car.description?.substring(0, 100) || 'View details on Mawater974.'}`;
+                        description = `Price: ${car.price.toLocaleString()} ${currency}. ${car.description?.substring(0, 100) || 'View details.'}`;
                         const mainImg = car.car_images?.find((img: any) => img.is_main) || car.car_images?.[0];
                         if (mainImg) imageUrl = mainImg.image_url;
                     }
@@ -55,7 +52,7 @@ export default async (request: Request, context: any) => {
                     if (data && data[0]) {
                         const part = data[0];
                         title = `${part.title} | Mawater974`;
-                        description = `Price: ${part.price.toLocaleString()} ${part.currency}. ${part.description?.substring(0, 100) || 'View details on Mawater974.'}`;
+                        description = `Price: ${part.price.toLocaleString()} ${part.currency}. ${part.description?.substring(0, 100) || 'View details.'}`;
                         const mainImg = part.spare_part_images?.find((img: any) => img.is_primary) || part.spare_part_images?.[0];
                         if (mainImg) imageUrl = mainImg.url;
                     }
@@ -64,18 +61,15 @@ export default async (request: Request, context: any) => {
                 console.error("SEO Edge Error:", e);
             }
 
-            // Use Supabase image transformation for faster loading in previews
             const optimizedImageUrl = imageUrl.includes('supabase.co')
                 ? `${imageUrl}?width=600&height=315&resize=contain`
                 : imageUrl;
 
-            // Return a minimal HTML page that bots can read
             return new Response(
                 `<!DOCTYPE html>
         <html lang="en">
         <head>
           <meta charset="UTF-8">
-          <!-- OG tags at the top for faster bot processing -->
           <meta property="og:image" content="${optimizedImageUrl}">
           <meta property="og:image:width" content="600">
           <meta property="og:image:height" content="315">
@@ -83,33 +77,19 @@ export default async (request: Request, context: any) => {
           <meta property="og:title" content="${title}">
           <meta property="og:description" content="${description}">
           <meta property="og:url" content="https://mawater974.com${pathname}">
-          
-          <title>${title}</title>
-          <meta name="description" content="${description}">
-          
-          <!-- Twitter -->
           <meta name="twitter:card" content="summary_large_image">
           <meta name="twitter:title" content="${title}">
           <meta name="twitter:description" content="${description}">
           <meta name="twitter:image" content="${optimizedImageUrl}">
-
-          <!-- Fallback/Redirect for humans -->
           <meta http-equiv="refresh" content="0;url=https://mawater974.com${pathname}">
-          <script>window.location.href = "https://mawater974.com${pathname}";</script>
         </head>
         <body>
-          <h1>${title}</h1>
-          <img src="${optimizedImageUrl}" />
-          <p>${description}</p>
+          <script>window.location.href = "https://mawater974.com${pathname}";</script>
         </body>
         </html>`,
                 { headers: { "content-type": "text/html" } }
             );
         }
     }
-
-    // Not a bot, continue to the original request
     return;
 };
-
-// Netlify configuration via the function itself is limited, we use netlify.toml
