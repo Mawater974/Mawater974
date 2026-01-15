@@ -64,31 +64,42 @@ export default async (request: Request, context: any) => {
                 console.error("SEO Edge Error:", e);
             }
 
+            // Use Supabase image transformation for faster loading in previews
+            const optimizedImageUrl = imageUrl.includes('supabase.co')
+                ? `${imageUrl}?width=600&height=315&resize=contain`
+                : imageUrl;
+
             // Return a minimal HTML page that bots can read
             return new Response(
                 `<!DOCTYPE html>
         <html lang="en">
         <head>
           <meta charset="UTF-8">
-          <title>${title}</title>
-          <meta name="description" content="${description}">
-          <meta property="fb:app_id" content="966242223397117">
+          <!-- OG tags at the top for faster bot processing -->
+          <meta property="og:image" content="${optimizedImageUrl}">
+          <meta property="og:image:width" content="600">
+          <meta property="og:image:height" content="315">
           <meta property="og:type" content="article">
           <meta property="og:title" content="${title}">
           <meta property="og:description" content="${description}">
-          <meta property="og:image" content="${imageUrl}">
-          <meta property="og:image:width" content="1200">
-          <meta property="og:image:height" content="630">
-          <meta property="og:url" content="${url.href}">
+          <meta property="og:url" content="https://mawater974.com${pathname}">
+          
+          <title>${title}</title>
+          <meta name="description" content="${description}">
+          
+          <!-- Twitter -->
           <meta name="twitter:card" content="summary_large_image">
           <meta name="twitter:title" content="${title}">
           <meta name="twitter:description" content="${description}">
-          <meta name="twitter:image" content="${imageUrl}">
-          <meta http-equiv="refresh" content="0;url=${url.href}">
+          <meta name="twitter:image" content="${optimizedImageUrl}">
+
+          <!-- Fallback/Redirect for humans -->
+          <meta http-equiv="refresh" content="0;url=https://mawater974.com${pathname}">
+          <script>window.location.href = "https://mawater974.com${pathname}";</script>
         </head>
         <body>
           <h1>${title}</h1>
-          <img src="${imageUrl}" />
+          <img src="${optimizedImageUrl}" />
           <p>${description}</p>
         </body>
         </html>`,
