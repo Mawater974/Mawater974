@@ -85,8 +85,8 @@ export const CarForm: React.FC<CarFormProps> = ({ isAdmin = false, onSuccess, cu
   const [uploading, setUploading] = useState(false);
 
   // Constants
-  const maxImages = isFeatured || isAdmin ? 15 : 10;
-  const isHighRes = isFeatured || isAdmin;
+  const maxImages = isFeatured ? 15 : 10;
+  const isHighRes = isFeatured;
 
   // Initial Load
   useEffect(() => {
